@@ -68,17 +68,29 @@ library(geojsonio)
 
 
 We decided to do central Colombia because it is where the capital is.
+ 
+The largest cities in the country are Bogotá (in the center), Medellín (in the north, close to central), Cali (in the center) and Barranquilla (extreme north).
 
 ## Dataset - First Exploration
 
 ```{r load_data, echo=TRUE}
 colombia_covid <- read_csv("data/colombia_covid.csv")
 unique(colombia_covid$`Departamento o Distrito`)
+#options(tibble.print_max = Inf) # to show all the elements of the list, but set it also for other chunks
+#options(tibble.width = Inf)
 colombia_covid %>%
   group_by(`Departamento o Distrito`) %>%
   summarise
-
 ```
+
+Colombia is divided into 32 departments. According to [Wikipedia](https://en.wikipedia.org/wiki/Departments_of_Colombia) we miss the Departments of Amazonas, Arauca, Caquetá, Chocó, Guainía, Guaviare, Magdalena, Putumayo, Vaupés, Vichada.
+
+Bogotá, Distrito Capital in in the Cundinamarca Department.
+Barranquilla D.E. is a "Distrito Especial" but should be in the Atlántico Department. 
+
+The Districts (Spanish: Distrito) in Colombia are cities that have a feature that highlights them, such as its location and trade, history or tourism. Arguably, the districts are special municipalities. The districts are Bogotá, Barranquilla, Cartagena, Santa Marta, Cúcuta, Popayán, Tunja, Buenaventura, Turbo and Tumaco.
+
+We miss Cúcuta, Popayán, Tunjaa, Buenaventura, Turbo and Tumaco.
 
 ```{r create_gis_df, echo=TRUE}
 #lat-long
@@ -155,7 +167,6 @@ icons <- awesomeIcons(
   markerColor = getColor(gis_data)
 )
 
-
 dept<-geojsonio::geojson_read("Colombia.geo.json", what="sp")
 
 labels <- sprintf(
@@ -179,12 +190,13 @@ m <- leaflet(data=gis_data) %>% addTiles() %>%
                 bringToFront = TRUE),
                 label = labels)
 m
-
 ```
 
-Reading here and there I found that Colombia in divided in 5 regions, the central one comprises: Bayacà, Tolima, Cundinamarca, Meta, Bogotà DC.
+Reading here and there I found that Colombia in divided in 5 regions, the central one comprises: Boyacá, Tolima, Cundinamarca, Meta, Bogotà DC.
 
-However, since in our assignment Colombia is divided in 3 parts, I think that we should add some more regions (e.g. Quindio, Valle de Cauca, Risalda, Celdas, Bayaca and possibly Antioquia and Santander)
+**ANGELA:** Seeing [Wikipedia](https://en.wikipedia.org/wiki/Natural_regions_of_Colombia) I think that the Orinoquía Region (Meta, Arauca, Casanare and Vichada Departments) is in the center, so I would add also **Arauca**, **Casanare** and **Vichada**.
+
+However, since in our assignment Colombia is divided in 3 parts, I think that we should add some more regions (e.g. Quindío, Valle del Cauca, Risaralda, Celdas, Boyacá and possibly Antioquia and Santander)
 
 ```{r central_colombia, echo=TRUE}
 central.colombia.dep<-c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boyacá", "Quindío", "Valle del Cauca", "Risaralda", "Caldas", "Boyacá", "Antioquia", "Santander")
@@ -201,9 +213,9 @@ Let's check the situation (and also the power of ggplot)!
 
 Scattered infos about pandemic in Colombia (https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Colombia): 
 
-  *the quarantine started on the 20th of March, since our data are from 6th of March to 2nd of April, it is very likeliy that quarantine effects are not witnessed in our data;
+  * the quarantine started on the 20th of March, since our data are from 6th of March to 2nd of April, it is very likeliy that quarantine effects are not witnessed in our data.
   
-  *on march the 26th there was a damage in the machine that prepared the samples for processing and subsequent diagnosis of COVID-19, this could explain the very low number of confirmed cases;
+  * on March the 26th there was a damage in the machine that prepared the samples for processing and subsequent diagnosis of COVID-19, which affected the speed at which results were being produced. This could explain the very low number of confirmed cases.
   
 ```{r, echo=TRUE, warning=FALSE}
 theme_set(theme_classic())
@@ -237,9 +249,9 @@ theme_set(theme_classic())
 #fix day column in "international" format so that R can fix the sorting properly
 colombia_covid$`Fecha de diagnóstico`<-as.Date(colombia_covid$`Fecha de diagnóstico`, format="%d/%m/%Y")
 
-dayli_confirmed<-ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
+daily_confirmed<-ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
   scale_fill_brewer(palette = "Spectral")
-dayli_confirmed + geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.8, stat="count") + theme(axis.text.x = element_text(angle=65, vjust=0.6)) +
+daily_confirmed + geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.8, stat="count") + theme(axis.text.x = element_text(angle=65, vjust=0.6)) +
   labs(title = "Daily number of confirmed cases", 
        subtitle = "subdivided across departments",
        x = "Date of confirmation",
@@ -339,6 +351,10 @@ age_pie
 ```
 
 This is quite surprising.. I expected elder people to be more affected by Covid-19!
+
+The overall life expectancy in Colombia at birth is 74.8 years (71.2 years for males and 78.4 years for females). [Wikipedia](https://en.wikipedia.org/wiki/Colombia#Health)
+
+Instead, the median age of the population in 2015 was 29.5 years (30.4 in 2018, 31.3 in 2020), so it is a Country full of young people! [link](https://www.indexmundi.com/colombia/demographics_profile.html) or [link](https://www.statista.com/statistics/368964/average-age-of-the-population-in-colombia/#:~:text=Median%20age%20of%20the%20population%20in%20Colombia%202015&text=It%20is%20a%20single%20index,Colombian%20population%20was%2029.5%20years.) or [link](https://www.google.com/search?sxsrf=ALeKk01gNyeWpDhExBTxkXs2qF621qi2kA%3A1592863896924&ei=mCzxXtPzN4OzmwXqvbboBA&q=average+age+in+colombia&oq=average+age+in+colombia&gs_lcp=CgZwc3ktYWIQAzIGCAAQBxAeMgUIABDLATIGCAAQCBAeMgYIABAIEB4yBggAEAgQHjIGCAAQCBAeOgQIABBHOggIABAIEAcQHjoICAAQCBANEB5QqqgRWJGwEWC8uBFoAHACeACAAX6IAc8GkgEDMC43mAEAoAEBqgEHZ3dzLXdpeg&sclient=psy-ab&ved=0ahUKEwjTn4G2uJbqAhWD2aYKHeqeDU0Q4dUDCAw&uact=5)
 
 Now we can analyze jointly the distribution of age and sex (sex distribution across group of age):
 
