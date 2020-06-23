@@ -1,5 +1,5 @@
 ---
-title: "Colombia COVID-19"
+title: "Colombia COVID-19 - Central region"
 author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
 date: "3/07/2020"
 output:
@@ -69,6 +69,11 @@ library(htmlwidgets)
 
 **GOAL:** Build a model for the number of `confirmed` cases in the different Colombia regions. You have the access to some covariates, such as: `Edad` (age), `Sexo` (Sex), `Pais de procedencia` (origin country) of the individual cases. Try to test the predictive accuracy of your selected model.
 
+**ATTENTION:** Three countries are here considered: Colombia, Mexico and India. Each different group of students should focus on a geographical sub-area of one of the three countries, say the northern, the central or the southern part of the countries, by pooling all the regions/states/departments belonging to the considered area. Say: group A focuses on Northern Mexico, group B on Central Mexico, and so on. The distinction in northern, central and southern is not strict, you have some flexibility.
+
+----
+
+# Our Project
 
 We decided to do central Colombia because it is where the capital is.
  
@@ -201,9 +206,12 @@ m
 #saveWidget(m, file="figs/colombia.html")
 ```
 
+The color of the pins is related with the number of cases: if they are less than 10 the color is "green", if they are less than 100 the color is "orange", otherwise it is "red".\
+On the map there are all the cities/departments for which we have data. We can notice that we don't have any data in the south of the country.
+
 Reading here and there I found that Colombia in divided in 5 regions, the central one comprises: Boyacá, Tolima, Cundinamarca, Meta, Bogotà DC.
 
-**ANGELA:** Seeing [Wikipedia](https://en.wikipedia.org/wiki/Natural_regions_of_Colombia) I think that the Orinoquía Region (Meta, Arauca, Casanare and Vichada Departments) is in the center, so I would add also **Arauca**, **Casanare** and **Vichada**.
+**ANGELA:** Seeing [Wikipedia](https://en.wikipedia.org/wiki/Natural_regions_of_Colombia) I think that the Orinoquía Region (Meta, Arauca, Casanare and Vichada Departments) is in the center, so I would add also **Arauca**, **Casanare** and **Vichada**. I noticed that we only have Casanare, the other two doesn't have data.
 
 **GAIA**: added Casanare, for the others we have no data!
 
