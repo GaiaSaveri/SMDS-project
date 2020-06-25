@@ -289,7 +289,7 @@ waffle_chart <- ggplot(df, aes(x = x, y = y, fill = df$category)) +
         scale_fill_brewer(palette = "Set3") +
         labs(title="Frequency of cases across Departments", subtitle="Waffle Chart") + 
         theme(#panel.border = element_rect(size = 2),
-              plot.title = element_text(size = rel(1.2)),
+        plot.title = element_text(size = rel(1.2)),
               axis.text = element_blank(),
               axis.title = element_blank(),
               axis.ticks = element_blank(),
@@ -486,7 +486,7 @@ imported %>%
 
 ```
 
-here data are a bit dirty, however I don't know if the effort of cleaning them will worth the result.. it depends wheter we decide to use this info in our analysis
+here data are a bit dirty, however I don't know if the effort of cleansing them will worth the result.. it depends wheter we decide to use this info in our analysis
 
 ## Missing
 
@@ -500,6 +500,46 @@ Then we build something more complex (such as a hierarchical model) and see the 
 
 If possible I would put inside something bayesian, since I understood that they really like this kind of stuff! 
 
+**Gaia** I start here with my stream of consciousness about the analysis! 
+
+Let's fix some terminology (references for these are the first two links of the section "Interesting Links"):
+
+  * a `case` is a person who tested positive for Covid-19;
+  * the `epidemic curve` represents the daily incremental incidence;
+  
+Our data are tabulated by date of confirmation by lab test. 
+
+The variable we want to predict, say `y`, (dependent variable) is the (cumulative) number of confirmed cases, namely we want to simulate a (hopefully plausible) epidemic trajectory. Eventually we will project future incidence. 
+
+Since our `y` is a discrete count variable, a linear regression is not appropriate.
+
+The most common choice with count data is to use **Poisson regression**, which belongs to the GLM class of models.
+
+$$
+ln\lambda_i = \beta_0 + \beta_1x_i \\
+y_i \sim \mathcal{Poisson}(\lambda_i)
+$$
+
+I think that, as first step, we should consider the most parsimonious model, taking only the `time` as independent variable.
+Here `time` can be intended both as the `Fecha de diagnostico` attribute of our dataset, or as the number of days elapsed from the earlier day in the dataset (in this case we should derive this attribute).
+
+Further steps will include more covariates, and a model selection phase should follow. At the moment we are basically working with time series data. 
+
+**Important**: recall that modelling count data with a Poisson regression we are assuming *equidispersion* (the mean coincides with the variance), however we have no guarantees that this is true for our data, we need to take this into account!
+
+The days 7/03/20, 8/03/20, 10/03/20 are missing, probably because no case was detected in those days (consistent with the fact that it was the very beginning of the outbreak).
+
+```{r start_analysis, echo=TRUE, warning=FALSE}
+cumulative<-cumulative %>%  
+mutate(BETWEEN0=as.numeric(difftime(`Fecha de diagnóstico`,lag(`Fecha de diagnóstico`,1))),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
+select(-c(BETWEEN0,BETWEEN))
+cumulative
+#just for praticality
+names(cumulative)<-c("date", "y", "elapsed_time")
+#cumulative
+```
+
+
 ## Interesting links
 
 https://timchurches.github.io/blog/posts/2020-02-18-analysing-covid-19-2019-ncov-outbreak-data-with-r-part-1/
@@ -507,5 +547,7 @@ https://timchurches.github.io/blog/posts/2020-02-18-analysing-covid-19-2019-ncov
 https://timchurches.github.io/blog/posts/2020-03-01-analysing-covid-19-2019-ncov-outbreak-data-with-r-part-2/
 
 http://freerangestats.info/blog/2020/05/09/covid-population-incidence
+
+[interpetation glm](https://www.datascienceblog.net/post/machine-learning/interpreting_generalized_linear_models/)
 
 <!-- knitr::knit("Homework4_2020_GROUP_I.Rmd", tangle = TRUE, output ="Homework1_2020_GROUP_I.R") -->
