@@ -486,7 +486,103 @@ imported %>%
 
 ```
 
-here data are a bit dirty, however I don't know if the effort of cleansing them will worth the result.. it depends wheter we decide to use this info in our analysis
+here data are a bit dirty, however I don't know if the effort of cleansing them will worth the result.. it depends wheter we decide to use this info in our analysis.
+
+Analyze the epidemic curve separately for each department, considering only those that have more than 30 cases: 
+
+```{r regions, echo=TRUE, warning=FALSE}
+covid_dp<-colombia_covid %>%
+  group_by(`Fecha de diagnóstico`,`Departamento o Distrito`) %>%
+  count()
+names(covid_dp)<-c("date", "dep", "n")
+#departments with more than 30 cases
+relevant<-c("Bogotá D.C.", "Valle del Cauca", "Antioquia", "Cundinamarca", "Risaralda")
+covid_relevant_dp<-subset(covid_dp, dep %in% relevant)
+covid_relevant_dp
+ggplot(covid_relevant_dp, aes(x=date, y=n, fill=dep)) +
+  geom_bar(stat="identity", show.legend = FALSE) +
+  facet_grid(dep~., scales="free_y") + #every level has a different count axis
+  theme_dark() +
+  theme(strip.text = element_text(face="bold", size=6))+
+  labs(title = "Epidemic curve for different departments",
+       subtitle = "considering only dept. with more than 30 cases",
+       x = "Date of confirmation",
+       y = "count",
+       fill = "Department")
+```
+
+Analyze the curve of cumulative confirmed cases on those "relevant" department:
+
+```{r cumul_dept, echo=FALSE}
+#boring and absolutely not efficient population of the number of cumulative cases
+cumulative_dep<-rep(0,83)
+covid_relevant_dp<-cbind(covid_relevant_dp,cumulative_dep)
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Bogotá D.C."),]))) {
+  if(i==1){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Valle del Cauca"),]))) {
+  if(i==3){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Antioquia"),]))) {
+  if(i==2){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Cundinamarca"),]))) {
+  if(i==13){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Risaralda"),]))) {
+  if(i==14){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+```
+
+```{r plot_cum_dept, echo=TRUE, warning=FALSE}
+ggplot(covid_relevant_dp, aes(x=date, y=cumulative_dep, fill=dep)) +
+  geom_bar(stat="identity", show.legend = FALSE) +
+  facet_grid(dep~., scales="free_y") + #every level has a different count axis
+  theme_gray() +
+  theme(strip.text = element_text(face="bold", size=6))+
+  labs(title = "Cumulative number of cases for different departments",
+       subtitle = "considering only dept. with more than 30 cases",
+       x = "Date of confirmation",
+       y = "count",
+       fill = "Department")
+```
+
+We can see that (except for the Bogotà department) we have a lot of "missing" columns, these are the days in which no data was recorded for the corresponding department, the cumulative number of cases is the same as the previous day reported in the dataset. Maybe there is a way to fix this!
 
 ## Missing
 
@@ -533,12 +629,10 @@ The days 7/03/20, 8/03/20, 10/03/20 are missing, probably because no case was de
 cumulative<-cumulative %>%  
 mutate(BETWEEN0=as.numeric(difftime(`Fecha de diagnóstico`,lag(`Fecha de diagnóstico`,1))),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
 select(-c(BETWEEN0,BETWEEN))
-cumulative
 #just for praticality
 names(cumulative)<-c("date", "y", "elapsed_time")
 #cumulative
 ```
-
 
 ## Interesting links
 
