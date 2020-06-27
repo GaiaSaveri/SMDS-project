@@ -90,7 +90,7 @@ ln\lambda_i = \alpha + \beta\cdot elapsed\_time_i \\
 y_i \sim \mathcal{Poisson}(\lambda_i)
 $$
 
-with $i = 1,\dots,83$.
+with $i = 1,\dots,83$, and $y_i$ represents the number of cases.
 
 Let's compile the model:
 
@@ -102,7 +102,7 @@ Fix things to be able to run the stan model and fit the model:
 
 ```{r arrange_poisson, echo=TRUE, warning=FALSE}
 #arrange things
-model.Poisson.data<-list(
+model.data<-list(
   N = nrow(data),
   cases = data$n,
   time = data$elapsed_time
@@ -110,7 +110,7 @@ model.Poisson.data<-list(
 #str(model.Poisson.data)
 
 #run the model 
-fit.model.Poisson<-sampling(model.Poisson, data=model.Poisson.data)
+fit.model.Poisson<-sampling(model.Poisson, data=model.data)
 
 #inferred parameters
 print(fit.model.Poisson, pars=c("alpha", "beta"))
@@ -128,7 +128,7 @@ Check the posterior:
 
 ```{r poisson_posterior, echo=TRUE, warning=FALSE}
 y_rep<-as.matrix(fit.model.Poisson, pars="y_rep")
-ppc_dens_overlay(y = model.Poisson.data$cases, y_rep[1:200,]) 
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
 ```
 
 The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis: 
@@ -136,13 +136,52 @@ The fit is not satisfactory, it is probably due to overdispersion, we can check 
 ```{r first_residual, echo=TRUE, warning=FALSE}
 #in this way we check the standardized residuals
 mean_y_rep<-colMeans(y_rep)
-std_residual<-(model.Poisson.data$cases - mean_y_rep) / sqrt(mean_y_rep)
+std_residual<-(model.data$cases - mean_y_rep) / sqrt(mean_y_rep)
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
 The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at +2 and -2 indicates approximate 95% error bounds). The variance of the standardized residuals is much greater than 1, indicating a large amount of overdispersion. 
 
 Classically the problem of having overdispersed data is solved using the negative binomial model instead of the Poisson one. To be continued!
+
+## Negative binomial model
+
+In order to deal with the problem of overdispersed data, we can try to fit the following Negative Binomial model:
+
+$$
+ln\lambda_i = \alpha + \beta\cdot elapsed\_time_i \\
+y_i \sim \mathcal{Negative Binomial}(\lambda_i, \phi)
+$$
+
+Where the parameter $\phi$ is called *precision* and it is such that:
+
+$$
+E[y_i] = \lambda \\  Var[y_i] = \lambda + \frac{\lambda^2}{\phi}
+$$
+
+again $i=1,\dots,83$. As $\phi \rightarrow \infty$ the negative binomial approaches the Poisson distribution.
+
+Let's compile and run the stan model: 
+
+```{r compile_nb, echo=TRUE, warning=FALSE}
+#compile
+model.NB<-stan_model("stan/negative_binomial.stan")
+#fit
+fit.model.NB<-sampling(model.NB, data=model.data)
+#inferred parameters
+print(fit.model.NB)
+```
+
+Chains have reached convergence, let's check the fit:
+
+```{r NB_posterior, echo=TRUE, warning=FALSE}
+y_rep<-as.matrix(fit.model.NB, pars="y_rep")
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+```
+
+Didn't changed much :(
+
+
 
 ## Reference
 
