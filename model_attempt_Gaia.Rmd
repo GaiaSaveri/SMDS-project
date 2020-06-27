@@ -1,0 +1,150 @@
+---
+title: "First Analysis"
+author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
+date: "3/07/2020"
+output:
+  html_document:
+    highlight: kate
+    lightbox: true
+    gallery: true
+    toc: yes
+    toc_depth: 3
+  ioslides_presentation:
+    highlight: kate
+  rmdformats::readthedown:
+  include: null
+  beamer_presentation:
+    highlight: kate
+  pdf_document:
+    highlight: kate
+    keep_tex: yes
+    toc: yes
+  slide_level: 2
+  slidy_presentation:
+    fig.height: 3
+    fig.width: 4
+    highlight: kate
+header-includes:
+- \usepackage{color}
+- \definecolor{Purple}{HTML}{911146}
+- \definecolor{Orange}{HTML}{CF4A30}
+- \setbeamercolor{alerted text}{fg=Orange}
+- \setbeamercolor{frametitle}{bg=Purple}
+institute: University of Udine & University of Trieste
+graphics: yes
+fontsize: 10pt
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align = 'center', warning=FALSE, message=FALSE, fig.asp=0.625, dev='png', global.par = TRUE, dev.args=list(pointsize=10), fig.path = 'figs/')
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+local({
+  hook_plot = knit_hooks$get('plot')
+  knit_hooks$set(plot = function(x, options) {
+    paste0('\n\n----\n\n', hook_plot(x, options))
+  })
+})
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
+```
+
+```{r message=FALSE}
+library(readr)
+library(rstan)
+library(dplyr)
+library(ggplot2)
+library(bayesplot)
+library(lubridate)
+```
+
+## Load Data
+
+
+```{r load_data, echo=TRUE, warning=FALSE}
+df<-read_csv("data/central_colombia.csv")
+ggplot(df, aes(x = date, y = n)) + 
+  geom_line(aes(linetype = "New daily cases")) + 
+  geom_point(color = "black") + 
+  facet_wrap(~dep, scales = "free_y", ncol = 4, labeller = label_both) + 
+  scale_y_continuous(name = "", limits = range(df$n)) + 
+  scale_linetype_discrete(name = "")
+```
+
+Please ignore tha fact that the picture is horrible, I'm starting convincing myself that we should include only the departments that have a "significant" number of cases.. maybe more than 30 cases is enough.
+
+```{r data2, echo=TRUE, warning=FALSE}
+data<-read_csv("data/central_colombia_relevant.csv")
+data<-data[order(data$dep),]
+data<-data[,c(1,5,2,3,4)]
+head(data)
+```
+
+## Poisson regression
+
+As a first attempt, we can try to fit a simple Poisson regression:
+
+$$
+ln\lambda_i = \alpha + \beta\cdot elapsed\_time_i \\
+y_i \sim \mathcal{Poisson}(\lambda_i)
+$$
+
+with $i = 1,\dots,83$.
+
+Let's compile the model:
+
+```{r compile_poisson_regression, echo=TRUE, warning=FALSE}
+model.Poisson<-stan_model("stan/poisson_regression.stan")
+```
+
+Fix things to be able to run the stan model and fit the model:
+
+```{r arrange_poisson, echo=TRUE, warning=FALSE}
+#arrange things
+model.Poisson.data<-list(
+  N = nrow(data),
+  cases = data$n,
+  time = data$elapsed_time
+)
+#str(model.Poisson.data)
+
+#run the model 
+fit.model.Poisson<-sampling(model.Poisson, data=model.Poisson.data)
+
+#inferred parameters
+print(fit.model.Poisson, pars=c("alpha", "beta"))
+```
+
+Looking at `Rhat` we can see that we have reached the convergence.
+
+```{r first_plot, echo=TRUE, warning=FALSE}
+theme_set(bayesplot::theme_default())
+
+mcmc_scatter(as.matrix(fit.model.Poisson, pars=c("alpha", "beta") ), alpha=0.2)
+```
+
+Check the posterior:
+
+```{r poisson_posterior, echo=TRUE, warning=FALSE}
+y_rep<-as.matrix(fit.model.Poisson, pars="y_rep")
+ppc_dens_overlay(y = model.Poisson.data$cases, y_rep[1:200,]) 
+```
+
+The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis: 
+
+```{r first_residual, echo=TRUE, warning=FALSE}
+#in this way we check the standardized residuals
+mean_y_rep<-colMeans(y_rep)
+std_residual<-(model.Poisson.data$cases - mean_y_rep) / sqrt(mean_y_rep)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at +2 and -2 indicates approximate 95% error bounds). The variance of the standardized residuals is much greater than 1, indicating a large amount of overdispersion. 
+
+Classically the problem of having overdispersed data is solved using the negative binomial model instead of the Poisson one. To be continued!
+
+## Reference
+
+At the moment -i'm using as a reference the book `Hierarchical_Models.pdf` in the folder `books`.. and a lot of Google!
+<!-- knitr::knit("first_analysis.Rmd", tangle = TRUE, output ="first_analysis.R") -->

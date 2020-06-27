@@ -584,6 +584,28 @@ ggplot(covid_relevant_dp, aes(x=date, y=cumulative_dep, fill=dep)) +
 
 We can see that (except for the Bogotà department) we have a lot of "missing" columns, these are the days in which no data was recorded for the corresponding department, the cumulative number of cases is the same as the previous day reported in the dataset. Maybe there is a way to fix this!
 
+```{r}
+covid_dp<-as.data.frame(covid_dp)
+covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
+
+covid_dp<-covid_dp %>%  
+mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
+select(-c(BETWEEN0,BETWEEN))
+
+write_csv(covid_dp, "central_colombia.csv")
+
+covid_relevant_dp<-as.data.frame(covid_relevant_dp)
+covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
+
+covid_relevant_dp<-covid_relevant_dp %>%  
+mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
+select(-c(BETWEEN0,BETWEEN))
+
+covid_relevant_dp
+
+write_csv(covid_relevant_dp, "central_colombia_relevant.csv")
+```
+
 ## Missing
 
 I still didn't integrate the "other part" of the dataset, the one concerning deaths!
@@ -631,8 +653,9 @@ mutate(BETWEEN0=as.numeric(difftime(`Fecha de diagnóstico`,lag(`Fecha de diagn�
 select(-c(BETWEEN0,BETWEEN))
 #just for praticality
 names(cumulative)<-c("date", "y", "elapsed_time")
-#cumulative
+cumulative
 ```
+
 
 ## Interesting links
 
