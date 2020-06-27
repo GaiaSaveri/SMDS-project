@@ -131,6 +131,8 @@ y_rep<-as.matrix(fit.model.Poisson, pars="y_rep")
 ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
 ```
 
+The model is not able to capture low and high numbers of new cases.
+
 The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis: 
 
 ```{r first_residual, echo=TRUE, warning=FALSE}
@@ -169,19 +171,44 @@ model.NB<-stan_model("stan/negative_binomial.stan")
 #fit
 fit.model.NB<-sampling(model.NB, data=model.data)
 #inferred parameters
-print(fit.model.NB)
+print(fit.model.NB, pars=c("alpha", "beta"))
 ```
 
 Chains have reached convergence, let's check the fit:
 
 ```{r NB_posterior, echo=TRUE, warning=FALSE}
-y_rep<-as.matrix(fit.model.NB, pars="y_rep")
+#posterior predictive chiecking
+samples_NB<-rstan::extract(fit.model.NB)
+y_rep<-samples_NB$y_rep
 ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
 ```
 
-Didn't changed much :(
+The fit seems better now! Both the tails and the peak are well captured by the model now. 
 
+Let's look again at the standardized residuals:
 
+```{r NB_residuals, echo=TRUE, warning=FALSE}
+mean_inv_phi<-mean(samples_NB$inv_phi)
+mean_y_rep<-colMeans(y_rep)
+std_residual<-(model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+The situation has improved a lot, we still have a few large standardized residual. 
+
+Maybe because the situation across regions is very different, let's check!
+
+```{r regions, echo=TRUE, warning=FALSE}
+ppc_stat_grouped(
+  y = model.data$cases,
+  yrep = y_rep,
+  group = data$dep,
+  stat = "mean",
+  binwidth = 0.2
+)
+```
+
+Maybe we should take into account the difference across departments, since most prediction are not accurate!
 
 ## Reference
 

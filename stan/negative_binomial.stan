@@ -34,14 +34,11 @@ model {
   cases ~ neg_binomial_2_log(eta, phi);
 } 
 generated quantities {
-  //vector[N] mu;
-  //vector[N] log_lik;
-  vector[N] y_rep;
-  //mu = exp(eta);
+  int y_rep[N];
+  vector[N] log_lik;
   for (n in 1:N) {
     real eta_n = alpha + beta * time[n];
-    y_rep[n] = neg_binomial_2_rng(exp(eta_n), phi);
-    //log_lik[i] = neg_binomial_2_log_lpmf(cases[i] | eta[i], phi);
-    //y_rep[i] = neg_binomial_2_rng(mu[i], phi);
+    y_rep[n] = neg_binomial_2_log_safe_rng(eta_n, phi);
+    log_lik[n] = neg_binomial_2_log_lpmf(cases[n]|eta_n, phi);  
   }
 }
