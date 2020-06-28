@@ -165,7 +165,7 @@ again $i=1,\dots,83$. As $\phi \rightarrow \infty$ the negative binomial approac
 
 Let's compile and run the stan model: 
 
-```{r compile_nb, echo=TRUE, warning=FALSE}
+```{r compile_nb, echo=TRUE, warning=FALSE, eval=FALSE}
 #compile
 model.NB<-stan_model("stan/negative_binomial.stan")
 #fit
@@ -209,6 +209,36 @@ ppc_stat_grouped(
 ```
 
 Maybe we should take into account the difference across departments, since most prediction are not accurate!
+
+## Hierarchical modeling
+
+Consider the following model:
+
+$$
+ln\lambda_{d,i} = \alpha_d + \beta\cdot elapsed\_time_i \\
+\alpha_{d} \sim \mathcal{N}(\mu + \beta_{dep}\cdot dep\_id_d, \sigma) \\
+y_{d,i} \sim \mathcal{Negative Binomial}(\lambda_i, \phi)
+$$
+where $d$ stands for department, and $\alpha_d$ is an intercept that veries from department  to department. 
+
+Maybe we could include some more info about departemnts, e.g. the total number of people living there, or the density of inhabitants, the total surface.. 
+
+As first thing we should convert the variable `dep` from a categorical to a numerical one:
+
+```{r fix, echo=TRUE, warning=FALSE}
+data <- data %>%
+  mutate(dep_idx = factor(dep, levels=unique(dep)),
+         dep_id = as.integer(dep_idx)) %>%
+  select(-dep_idx)
+data<-data[,c(1,2,3,6,4,5)]
+```
+
+Compile the model:
+
+```{r first_hier, echo=TRUE, warning=FALSE}
+#compile
+model2.NB<-stan_model("stan/NB_model2.stan")
+```
 
 ## Reference
 
