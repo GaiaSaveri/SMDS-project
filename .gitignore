@@ -51,6 +51,7 @@ vignettes/*.pdf
 
 # Folders
 figs/
+presentation-figure/
 
 # Various
 .DS_Store
