@@ -592,7 +592,7 @@ covid_dp<-covid_dp %>%
 mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
 select(-c(BETWEEN0,BETWEEN))
 
-write_csv(covid_dp, "central_colombia.csv")
+write_csv(covid_dp, "data/central_colombia.csv")
 
 covid_relevant_dp<-as.data.frame(covid_relevant_dp)
 covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
@@ -603,7 +603,7 @@ select(-c(BETWEEN0,BETWEEN))
 
 covid_relevant_dp
 
-write_csv(covid_relevant_dp, "central_colombia_relevant.csv")
+write_csv(covid_relevant_dp, "data/central_colombia_relevant.csv")
 ```
 
 ## Missing
