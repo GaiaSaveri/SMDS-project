@@ -82,7 +82,7 @@ The largest cities in the country are Bogotá (in the center), Medellín (in the
 ## Dataset - First Exploration
 
 ```{r load_data, echo=TRUE}
-colombia_covid <- read_csv("colombia_covid.csv")
+colombia_covid <- read_csv("data/colombia_covid.csv")
 unique(colombia_covid$`Departamento o Distrito`)
 #options(tibble.print_max = Inf) # to show all the elements of the list, but set it also for other chunks
 #options(tibble.width = Inf)
@@ -180,7 +180,7 @@ icons <- awesomeIcons(
   markerColor = getColor(gis_data)
 )
 
-dept<-geojsonio::geojson_read("Colombia.geo.json", what="sp")
+dept<-geojsonio::geojson_read("data/Colombia.geo.json", what="sp")
 
 labels <- sprintf(
   "<strong>%s</strong><br/>",
@@ -328,7 +328,7 @@ Let's check the general trend by looking at the cumulative number of confirmed c
 
 ```{r, echo=TRUE, waring=FALSE}
 #the max of the ID de caso for each date is the cumulative number of cases confirmed up to that date
-cumulative<- as.data.frame(colombia_covid %>%
+cumulative <- as.data.frame(colombia_covid %>%
   group_by(`Fecha de diagnóstico`) %>%
   summarise(max(`ID de caso`)))
   
@@ -597,8 +597,8 @@ write_csv(covid_dp, "central_colombia.csv")
 covid_relevant_dp<-as.data.frame(covid_relevant_dp)
 covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
 
-covid_relevant_dp<-covid_relevant_dp %>%  
-mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
+covid_relevant_dp <- covid_relevant_dp %>%  
+mutate(BETWEEN0 = as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
 select(-c(BETWEEN0,BETWEEN))
 
 covid_relevant_dp
@@ -664,7 +664,8 @@ cumulative2
 #Dropping the variables "Ciudad de ubicación","Atención**", "Tipo*" and "`País de procedencia`".
 #Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in diving the region in departments and not in cities.
 #Considering the variable "Atención**" at the moment I think is not relevant to know how many confirmed cases there will be, but we can add later and check. 
-#Considering the variable "Tipo*" many observations are "in study", so it is better to use just the variable country of origin (`País de procedencia`), because they consider the ones "in study" as Colombia. However, the variable `País de procedencia` is very dirty and we have to prepare it to be able to use it. So as a first analysis I won't consider it. 
+#Considering the variable "Tipo*" many observations are "in study", so it is better to use just the variable country of origin (`País de procedencia`), because they consider the ones "in study" as Colombia. However, the variable `País de procedencia` is very dirty and we have to prepare it to be able to use it. So as a first analysis I won't consider it.
+colnames(colombia_covid)[8] <- "Tipo*"
 covid19 <- select(colombia_covid,-c(`Ciudad de ubicación`,`Atención**`,`Tipo*`,`País de procedencia`))
 
 #Transforming the age values into age ranges to be able to transform it in a dummy variable
@@ -677,10 +678,10 @@ covid19<-covid19 %>% mutate(Edad = case_when(Edad <= 18 ~ "0 a 18",
 
 #Transform the categorical variables into dummy variables
 library(fastDummies)
-covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito","Edad","Sexo"),remove_first_dummy = TRUE,ignore_na=TRUE,split="-",remove_selected_columns=TRUE)
+covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito", "Edad", "Sexo"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
 
 #fix day column in "international" format so that R can fix the sorting properly
-covid19_dummy$`Fecha de diagnóstico`<-as.Date(covid19_dummy$`Fecha de diagnóstico`, format="%d/%m/%Y")
+covid19_dummy$`Fecha de diagnóstico` <- as.Date(covid19_dummy$`Fecha de diagnóstico`, format="%d/%m/%Y")
 
 #Grouping the dummy variables by date and deleting the `Fecha de diagnóstico` and `ID de caso` because I will bind with the cumulative table made by Gaia. 
 
@@ -689,7 +690,7 @@ group_dummy <- covid19_dummy %>%
   summarise_all(funs(sum)) %>%
   select(-c(`Fecha de diagnóstico`,`ID de caso`))
 
-data1 <- bind_cols(cumulative,group_dummy)
+data1 <- bind_cols(cumulative, group_dummy)
 data1
 ```
 
