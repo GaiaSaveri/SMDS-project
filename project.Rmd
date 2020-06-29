@@ -82,7 +82,7 @@ The largest cities in the country are Bogotá (in the center), Medellín (in the
 ## Dataset - First Exploration
 
 ```{r load_data, echo=TRUE}
-colombia_covid <- read_csv("colombia_covid.csv")
+colombia_covid <- read_csv("data/colombia_covid.csv")
 unique(colombia_covid$`Departamento o Distrito`)
 #options(tibble.print_max = Inf) # to show all the elements of the list, but set it also for other chunks
 #options(tibble.width = Inf)
@@ -180,7 +180,7 @@ icons <- awesomeIcons(
   markerColor = getColor(gis_data)
 )
 
-dept<-geojsonio::geojson_read("Colombia.geo.json", what="sp")
+dept<-geojsonio::geojson_read("data/Colombia.geo.json", what="sp")
 
 labels <- sprintf(
   "<strong>%s</strong><br/>",
@@ -592,7 +592,7 @@ covid_dp<-covid_dp %>%
 mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
 select(-c(BETWEEN0,BETWEEN))
 
-write_csv(covid_dp, "central_colombia.csv")
+write_csv(covid_dp, "data/central_colombia.csv")
 
 covid_relevant_dp<-as.data.frame(covid_relevant_dp)
 covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
@@ -853,7 +853,77 @@ est.overdispersion <- sum(res.st4^2)/5
 est.overdispersion
 ```
 
-Now the residuals are behaving differently and the overdispersion reduced significantly and it is inside the range assumed by a Poisson model, that is from -1 to 1. 
+Now the residuals are behaving differently and the overdispersion reduced significantly and it is inside the range assumed by a Poisson model, that is from -1 to 1.
+
+
+## Country of origin
+
+We clean the column `País de procedencia` by making sure that there are no cities instead of countries and that the countries are separated with a dash (we'll use it with dummy variables)
+
+```{r fix_countries}
+sort(unique(colombia_covid$`País de procedencia`))
+which(colombia_covid$`País de procedencia`=="0")
+colombia_covid[911,] # this one has 0 as País de procedencia
+
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Isla Martin - Caribe"] <- "Islas San Martin"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Israel Egipto"] <- "Israel - Egipto"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Jamaica - Isla Caimán - Panamá"] <- "Jamaica - Panamá - Isla Caimán"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Madrid"] <- "España"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Londres"] <- "Inglaterra"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Alemania - Estambul"] <- "Alemania - Turquía"
+
+# What to do with "Jamaica - Panamá - Islas del caribe - Cartagena"? Put it as "Jamaica - Panamá - Colombia"?
+```
+
+```{r create_continents}
+Europa <- c("Alemania", "Bélgica", "Europa",  "Croacia", "España", "España - Croacia", "España - Croacia - Bosnia",  "España - Francia", "España - Italia", "Francia", "Francia - Holanda", "Grecia", "Inglaterra", "Italia", "Italia - Ucrania - España", "Suiza")
+Asia <- c("Arabia", "Emiratos Árabes", "Turquía")
+África <- c("Egipto", "Marruecos")
+Norteamérica <- c("Canadá", "Estados Unidos")
+Centroamérica <- c("Costa Rica", "Cuba", "Guatemala", "Islas San Martin", "Jamaica", "Jamaica - Panamá - Isla Caimán", "Jamaica - Panamá - Islas del caribe - Cartagena", "México", "Panamá", "Panamá - Jamaica", "Puerto Rico", "República Dominicana", "Venezuela")
+Sudamerica <- c("Argentina", "Aruba", "Brasil", "Chile", "Ecuador", "Perú")
+# Alemania - Turquía", "España - India", "España - Turquia", "Italia - España - Turquía", "Turquía - Grecia" -> "Europa - Asia"
+# "España - Egipto" -> "Europa - África"
+# "Israel - Egipto" -> "Asia - África"
+# "Italia - Jamaica - Panamá" -> "Europa - Centroamérica"
+# "Colombia" -> "Colombia"
+
+for (i in 1:nrow(colombia_covid)) {
+  if (colombia_covid$`País de procedencia`[i] %in% Europa){
+    colombia_covid$`Continente de procedencia`[i] <- "Europa"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Asia){
+    colombia_covid$`Continente de procedencia`[i] <- "Asia"}
+  else if (colombia_covid$`País de procedencia`[i] %in% África){
+    colombia_covid$`Continente de procedencia`[i] <- "África"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Norteamérica){
+    colombia_covid$`Continente de procedencia`[i] <- "Norteamérica"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Centroamérica){
+    colombia_covid$`Continente de procedencia`[i] <- "Centroamérica"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Sudamerica){
+    colombia_covid$`Continente de procedencia`[i] <- "Sudamerica"}
+  else if (colombia_covid$`País de procedencia`[i] == "Colombia"){
+    colombia_covid$`Continente de procedencia`[i] <- "Colombia"}
+  else if (colombia_covid$`País de procedencia`[i] == "Alemania - Turquía"){
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"}
+  else if (colombia_covid$`País de procedencia`[i] == "España - India")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "España - Turquia")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "Italia - España - Turquía")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "Turquía - Grecia")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "España - Egipto")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - África"
+  else if (colombia_covid$`País de procedencia`[i] == "Israel - Egipto")
+    colombia_covid$`Continente de procedencia`[i] <- "Asia - África"
+  else if (colombia_covid$`País de procedencia`[i] == "Italia - Jamaica - Panamá")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Centroamérica"
+}
+
+View(colombia_covid)
+```
+
 
 
 ## Interesting links

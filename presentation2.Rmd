@@ -161,7 +161,7 @@ icons <- awesomeIcons(
   markerColor = getColor(gis_data)
 )
 
-dept<-geojsonio::geojson_read("Colombia.geo.json", what="sp")
+dept<-geojsonio::geojson_read("data/Colombia.geo.json", what="sp")
 
 labels <- sprintf(
   "<strong>%s</strong><br/>",
