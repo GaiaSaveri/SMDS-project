@@ -82,7 +82,7 @@ The largest cities in the country are Bogotá (in the center), Medellín (in the
 ## Dataset - First Exploration
 
 ```{r load_data, echo=TRUE}
-colombia_covid <- read_csv("data/colombia_covid.csv")
+colombia_covid <- read_csv("colombia_covid.csv")
 unique(colombia_covid$`Departamento o Distrito`)
 #options(tibble.print_max = Inf) # to show all the elements of the list, but set it also for other chunks
 #options(tibble.width = Inf)
@@ -180,7 +180,7 @@ icons <- awesomeIcons(
   markerColor = getColor(gis_data)
 )
 
-dept<-geojsonio::geojson_read("data/Colombia.geo.json", what="sp")
+dept<-geojsonio::geojson_read("Colombia.geo.json", what="sp")
 
 labels <- sprintf(
   "<strong>%s</strong><br/>",
@@ -592,7 +592,7 @@ covid_dp<-covid_dp %>%
 mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
 select(-c(BETWEEN0,BETWEEN))
 
-write_csv(covid_dp, "data/central_colombia.csv")
+write_csv(covid_dp, "central_colombia.csv")
 
 covid_relevant_dp<-as.data.frame(covid_relevant_dp)
 covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
@@ -603,7 +603,7 @@ select(-c(BETWEEN0,BETWEEN))
 
 covid_relevant_dp
 
-write_csv(covid_relevant_dp, "data/central_colombia_relevant.csv")
+write_csv(covid_relevant_dp, "central_colombia_relevant.csv")
 ```
 
 ## Missing
@@ -656,45 +656,64 @@ names(cumulative2)<-c("date", "y", "elapsed_time")
 cumulative2
 ```
 
-##Giullia's part
+## Preparation of the dataset to run the Poisson regression
+
+**Giullia** So, as we have to group the data by date to be able to run the models, we have to count the occurance of the categorical variables in each day. So that's what I did below and described each step in detail. 
 
 ```{r Giullia1, echo=TRUE, warning=FALSE}
-#Manipulation of the dataset to use it to run the models
-
 #Dropping the variables "Ciudad de ubicación","Atención**", "Tipo*" and "`País de procedencia`".
-#Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in diving the region in departments and not in cities.
+#Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in dividing the region in departments and not in cities.
 #Considering the variable "Atención**" at the moment I think is not relevant to know how many confirmed cases there will be, but we can add later and check. 
-#Considering the variable "Tipo*" many observations are "in study", so it is better to use just the variable country of origin (`País de procedencia`), because they consider the ones "in study" as Colombia. However, the variable `País de procedencia` is very dirty and we have to prepare it to be able to use it. So as a first analysis I won't consider it.
+#Considering the variable "Tipo*" many observations are "in study", so it is better to use just the variable country of origin (`País de procedencia`), because they consider the ones "in study" as Colombia. However, the variable `País de procedencia` is very dirty and we have to prepare it to be able to use it. So to simplify as a first analysis I won't consider it.
+
 colnames(colombia_covid)[8] <- "Tipo*"
 covid19 <- select(colombia_covid,-c(`Ciudad de ubicación`,`Atención**`,`Tipo*`,`País de procedencia`))
+```
 
+```{r Giullia1a, echo=TRUE, warning=FALSE}
 #Transforming the age values into age ranges to be able to transform it in a dummy variable
+
 covid19<-covid19 %>% mutate(Edad = case_when(Edad <= 18 ~ "0 a 18",
                                                             Edad >= 19  & Edad <= 30 ~ "19 a 30",
                                                             Edad >=  31 & Edad <= 45 ~ "31 a 45",
                                                             Edad >= 46 & Edad <= 60 ~ "46 a 60",
                                                             Edad >=61 & Edad <= 75 ~ "60 a 75",
                                                             Edad >=76 ~ "76+"))
+```
 
+```{r Giullia1b, echo=TRUE, warning=FALSE}
 #Transform the categorical variables into dummy variables
+
 library(fastDummies)
 covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito", "Edad", "Sexo"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
+```
 
+```{r Giullia1c, echo=TRUE, warning=FALSE}
 #fix day column in "international" format so that R can fix the sorting properly
-covid19_dummy$`Fecha de diagnóstico` <- as.Date(covid19_dummy$`Fecha de diagnóstico`, format="%d/%m/%Y")
 
-#Grouping the dummy variables by date and deleting the `Fecha de diagnóstico` and `ID de caso` because I will bind with the cumulative table made by Gaia. 
+covid19_dummy$`Fecha de diagnóstico` <- as.Date(covid19_dummy$`Fecha de diagnóstico`, format="%d/%m/%Y")
+```
+
+```{r Giullia1d, echo=TRUE, warning=FALSE}
+#Counting the occurance of the dummy variables by date and deleting the `Fecha de diagnóstico` and `ID de caso` because I will bind with the cumulative table made by Gaia.
 
 group_dummy <- covid19_dummy %>%
   group_by(`Fecha de diagnóstico`) %>%
   summarise_all(funs(sum)) %>%
   select(-c(`Fecha de diagnóstico`,`ID de caso`))
-
-data1 <- bind_cols(cumulative, group_dummy)
-data1
 ```
 
-Running Poisson 
+```{r Giullia1e, echo=TRUE, warning=FALSE}
+#Biding
+
+data1 <- bind_cols(cumulative, group_dummy)
+
+```
+
+
+## Running Poisson 
+
+### `Cumulative confirmed` as response and `Fecha de diagnóstico` as predictor.
 
 ```{r Giullia2, echo=TRUE, warning=FALSE}
 #Running poisson with just the variable representing the time 
@@ -711,10 +730,10 @@ Results show the variable is very significant
 pred.pois <- poisson1$fitted.values
 res.st <- (`Cumulative confirmed`-pred.pois)/sqrt(pred.pois)
 
-#plotting it again to check using the default R command
 plot(pred.pois, res.st)
 abline(h=0,lty=3,col="gray75")
 
+#plotting it again to check using the default R command
 par(mfrow=c(1,2))
 plot(poisson1, which=c(1,3))
 ```
@@ -723,7 +742,10 @@ So the residuals are also distributed according to a Poisson. This is surprising
 
 ```{r Giullia4, echo=TRUE, warning=FALSE}
 #calculating overdispersion
-est.overdispersion <- sum(res.st^2)/16
+#n=25 
+#k=2
+#n-k=23
+est.overdispersion <- sum(res.st^2)/23
 est.overdispersion
 ```
 Extremely high!!!
@@ -735,14 +757,19 @@ summary(poisson1quasi)
 
 #plotting standardized residuals versus the fitted values
 pred.poisq <- poisson1quasi$fitted.values
-res.stq <- (`Cumulative confirmed`-pred.poisq)/sqrt(pred.poisq)
+res.stq <- (`Cumulative confirmed`-pred.poisq)/sqrt(summary(poisson1quasi)$dispersion*pred.poisq)
+plot(pred.poisq, res.stq)
+abline(h=0,lty=3,col="gray75")
 
 #calculating overdispersion
-est.overdispersion <- sum(res.stq^2)/16
+est.overdispersion <- sum(res.stq^2)/23
 est.overdispersion
 ```
 
-So I applied the quasi poisson and nothing changed. Have to understand what is going on here.
+So I applied the quasi poisson and the overdispersion reduced to 1, which is very good. Anyway, the residuals are still behaving like a distribution. Have to understand why is that.
+
+
+### `Cumulative confirmed` as response and `Fecha de diagnóstico` + `Sexo_M` as predictors.
 
 ```{r Giullia6, echo=TRUE, warning=FALSE}
 #Running poisson with the variable representing time plus gender
@@ -751,6 +778,9 @@ summary(poisson2)
 ```
 
 Results show that the variable gender is not signficant and thus doesn't change the performance of the model
+
+
+### `Cumulative confirmed` as response and `Fecha de diagnóstico` + the gender variables `Edad_19 a 30`, `Edad_31 a 45`, `Edad_46 a 60`, `Edad_60 a 75` and `Edad_76+` as predictors.
 
 ```{r Giullia7, echo=TRUE, warning=FALSE}
 #Running poisson with the variable representing time plus the age variables
@@ -765,14 +795,41 @@ Furthermore, it can be seen that the AIC reduced in comparison with the model th
 #plotting the residuals versus fit and calculating the overdispersion 
 pred.pois3 <- poisson3$fitted.values
 res.st3 <- (`Cumulative confirmed`-pred.pois3)/sqrt(pred.pois3)
+plot(pred.pois3, res.st3)
+abline(h=0,lty=3,col="gray75")
 
-est.overdispersion <- sum(res.st3^2)/16
+#calculating overdispersion
+#n=25 
+#k=7
+#n-k=18
+est.overdispersion <- sum(res.st3^2)/18
 est.overdispersion
 ```
 
-The plot shows the same behavior of the model poisson1 but the overdispersion parameter decreased
+The overdispersion is high and again the residuals continue to behave like a distribution.
 
 ```{r Giullia9, echo=TRUE, warning=FALSE}
+#Let's apply a quasi poisson and see what happens
+poisson3quasi <- glm(`Cumulative confirmed`~`Fecha de diagnóstico`+`Edad_19 a 30`+`Edad_31 a 45`+`Edad_46 a 60`+`Edad_60 a 75`+`Edad_76+`,family=quasipoisson)
+summary(poisson3quasi)
+
+#plotting standardized residuals versus the fitted values
+pred.poisq3 <- poisson3quasi$fitted.values
+res.stq3 <- (`Cumulative confirmed`-pred.poisq3)/sqrt(summary(poisson3quasi)$dispersion*pred.poisq3)
+plot(pred.poisq3, res.stq3)
+abline(h=0,lty=3,col="gray75")
+
+#calculating overdispersion
+est.overdispersion <- sum(res.stq3^2)/18
+est.overdispersion
+```
+
+So I applied the quasi poisson and the overdispersion reduced to 1, which is very good and again the residuals are still behaving like a distribution.
+
+
+### `Cumulative confirmed` as response and all the other variables as predictors.
+
+```{r Giullia10, echo=TRUE, warning=FALSE}
 #Finally, running poisson with the variable representing time plus the age variables and the departments variables (also runned gender together because it is easy to encode, but later can remove)
 poisson4 <- glm(`Cumulative confirmed`~.,data=data1,family=poisson)
 summary(poisson4)
@@ -780,16 +837,24 @@ summary(poisson4)
 
 The result of the significance of the variables is awkward, because just `Fecha de diagnóstico` has high significance but anyway the AIC reduced by half in comparisson to the poisson3 model!
 
-```{r Giullia10, echo=TRUE, warning=FALSE}
+```{r Giullia11, echo=TRUE, warning=FALSE}
 #plotting the residuals versus fit and calculating the overdispersion 
 pred.pois4 <- poisson4$fitted.values
 res.st4 <- (`Cumulative confirmed`-pred.pois4)/sqrt(pred.pois4)
+plot(pred.pois4, res.st4)
+abline(h=0,lty=3,col="gray75")
 
-est.overdispersion <- sum(res.st4^2)/16
+#Calculating the overdispersion
+#calculating overdispersion
+#n=25 
+#k=20
+#n-k=5
+est.overdispersion <- sum(res.st4^2)/5
 est.overdispersion
 ```
 
-The plot shows the same behavior of the model poisson1 but the overdispersion parameter decreased significantly!!!
+Now the residuals are behaving differently and the overdispersion reduced significantly and it is inside the range assumed by a Poisson model, that is from -1 to 1. 
+
 
 ## Interesting links
 
