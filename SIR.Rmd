@@ -237,4 +237,6 @@ stan_dens(fit.model2, pars=c("beta", "gamma"), separate_chains=TRUE)
 [how to deduce S-I-R numbers from our data](https://www.kaggle.com/lisphilar/covid-19-data-with-sir-model)
 
 [choice of priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations)
+
+[inspiration](https://github.com/saudiwin/corona_tscs/tree/master/Paper)
   
