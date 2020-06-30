@@ -328,7 +328,11 @@ Let's check the general trend by looking at the cumulative number of confirmed c
 
 ```{r, echo=TRUE, waring=FALSE}
 #the max of the ID de caso for each date is the cumulative number of cases confirmed up to that date
+<<<<<<< HEAD
 cumulative<- as.data.frame(colombia_covid %>%
+=======
+cumulative <- as.data.frame(colombia_covid %>%
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
   group_by(`Fecha de diagnóstico`) %>%
   summarise(max(`ID de caso`)))
   
@@ -592,18 +596,31 @@ covid_dp<-covid_dp %>%
 mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
 select(-c(BETWEEN0,BETWEEN))
 
+<<<<<<< HEAD
 write_csv(covid_dp, "central_colombia.csv")
+=======
+write_csv(covid_dp, "data/central_colombia.csv")
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 
 covid_relevant_dp<-as.data.frame(covid_relevant_dp)
 covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
 
+<<<<<<< HEAD
 covid_relevant_dp<-covid_relevant_dp %>%  
 mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
+=======
+covid_relevant_dp <- covid_relevant_dp %>%  
+mutate(BETWEEN0 = as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 select(-c(BETWEEN0,BETWEEN))
 
 covid_relevant_dp
 
+<<<<<<< HEAD
 #write_csv(covid_relevant_dp, "central_colombia_relevant.csv")
+=======
+write_csv(covid_relevant_dp, "central_colombia_relevant.csv")
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 ```
 
 ## Missing
@@ -654,6 +671,7 @@ select(-c(BETWEEN0,BETWEEN))
 #just for praticality
 names(cumulative2)<-c("date", "y", "elapsed_time")
 cumulative2
+<<<<<<< HEAD
 #write.csv(cumulative2, "data/SIR_data.csv")
 ```
 
@@ -669,12 +687,34 @@ cumulative2
 covid19 <- select(colombia_covid,-c(`Ciudad de ubicación`,`Atención**`,`Tipo*`,`País de procedencia`))
 
 #Transforming the age values into age ranges to be able to transform it in a dummy variable
+=======
+```
+
+## Preparation of the dataset to run the Poisson regression
+
+**Giullia** So, as we have to group the data by date to be able to run the models, we have to count the occurance of the categorical variables in each day. So that's what I did below and described each step in detail. 
+
+```{r Giullia1, echo=TRUE, warning=FALSE}
+#Dropping the variables "Ciudad de ubicación","Atención**", "Tipo*" and "`País de procedencia`".
+#Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in dividing the region in departments and not in cities.
+#Considering the variable "Atención**" at the moment I think is not relevant to know how many confirmed cases there will be, but we can add later and check. 
+#Considering the variable "Tipo*" many observations are "in study", so it is better to use just the variable country of origin (`País de procedencia`), because they consider the ones "in study" as Colombia. However, the variable `País de procedencia` is very dirty and we have to prepare it to be able to use it. So to simplify as a first analysis I won't consider it.
+
+colnames(colombia_covid)[8] <- "Tipo*"
+covid19 <- select(colombia_covid,-c(`Ciudad de ubicación`,`Atención**`,`Tipo*`,`País de procedencia`))
+```
+
+```{r Giullia1a, echo=TRUE, warning=FALSE}
+#Transforming the age values into age ranges to be able to transform it in a dummy variable
+
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 covid19<-covid19 %>% mutate(Edad = case_when(Edad <= 18 ~ "0 a 18",
                                                             Edad >= 19  & Edad <= 30 ~ "19 a 30",
                                                             Edad >=  31 & Edad <= 45 ~ "31 a 45",
                                                             Edad >= 46 & Edad <= 60 ~ "46 a 60",
                                                             Edad >=61 & Edad <= 75 ~ "60 a 75",
                                                             Edad >=76 ~ "76+"))
+<<<<<<< HEAD
 
 #Transform the categorical variables into dummy variables
 library(fastDummies)
@@ -684,17 +724,52 @@ covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito
 covid19_dummy$`Fecha de diagnóstico`<-as.Date(covid19_dummy$`Fecha de diagnóstico`, format="%d/%m/%Y")
 
 #Grouping the dummy variables by date and deleting the `Fecha de diagnóstico` and `ID de caso` because I will bind with the cumulative table made by Gaia. 
+=======
+```
+
+```{r Giullia1b, echo=TRUE, warning=FALSE}
+#Transform the categorical variables into dummy variables
+
+library(fastDummies)
+covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito", "Edad", "Sexo"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
+```
+
+```{r Giullia1c, echo=TRUE, warning=FALSE}
+#fix day column in "international" format so that R can fix the sorting properly
+
+covid19_dummy$`Fecha de diagnóstico` <- as.Date(covid19_dummy$`Fecha de diagnóstico`, format="%d/%m/%Y")
+```
+
+```{r Giullia1d, echo=TRUE, warning=FALSE}
+#Counting the occurance of the dummy variables by date and deleting the `Fecha de diagnóstico` and `ID de caso` because I will bind with the cumulative table made by Gaia.
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 
 group_dummy <- covid19_dummy %>%
   group_by(`Fecha de diagnóstico`) %>%
   summarise_all(funs(sum)) %>%
   select(-c(`Fecha de diagnóstico`,`ID de caso`))
+<<<<<<< HEAD
 
 data1 <- bind_cols(cumulative,group_dummy)
 data1
 ```
 
 Running Poisson 
+=======
+```
+
+```{r Giullia1e, echo=TRUE, warning=FALSE}
+#Biding
+
+data1 <- bind_cols(cumulative, group_dummy)
+
+```
+
+
+## Running Poisson 
+
+### `Cumulative confirmed` as response and `Fecha de diagnóstico` as predictor.
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 
 ```{r Giullia2, echo=TRUE, warning=FALSE}
 #Running poisson with just the variable representing the time 
@@ -711,10 +786,17 @@ Results show the variable is very significant
 pred.pois <- poisson1$fitted.values
 res.st <- (`Cumulative confirmed`-pred.pois)/sqrt(pred.pois)
 
+<<<<<<< HEAD
 #plotting it again to check using the default R command
 plot(pred.pois, res.st)
 abline(h=0,lty=3,col="gray75")
 
+=======
+plot(pred.pois, res.st)
+abline(h=0,lty=3,col="gray75")
+
+#plotting it again to check using the default R command
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 par(mfrow=c(1,2))
 plot(poisson1, which=c(1,3))
 ```
@@ -723,7 +805,14 @@ So the residuals are also distributed according to a Poisson. This is surprising
 
 ```{r Giullia4, echo=TRUE, warning=FALSE}
 #calculating overdispersion
+<<<<<<< HEAD
 est.overdispersion <- sum(res.st^2)/16
+=======
+#n=25 
+#k=2
+#n-k=23
+est.overdispersion <- sum(res.st^2)/23
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 est.overdispersion
 ```
 Extremely high!!!
@@ -735,6 +824,7 @@ summary(poisson1quasi)
 
 #plotting standardized residuals versus the fitted values
 pred.poisq <- poisson1quasi$fitted.values
+<<<<<<< HEAD
 res.stq <- (`Cumulative confirmed`-pred.poisq)/sqrt(pred.poisq)
 
 #calculating overdispersion
@@ -743,6 +833,21 @@ est.overdispersion
 ```
 
 So I applied the quasi poisson and nothing changed. Have to understand what is going on here.
+=======
+res.stq <- (`Cumulative confirmed`-pred.poisq)/sqrt(summary(poisson1quasi)$dispersion*pred.poisq)
+plot(pred.poisq, res.stq)
+abline(h=0,lty=3,col="gray75")
+
+#calculating overdispersion
+est.overdispersion <- sum(res.stq^2)/23
+est.overdispersion
+```
+
+So I applied the quasi poisson and the overdispersion reduced to 1, which is very good. Anyway, the residuals are still behaving like a distribution. Have to understand why is that.
+
+
+### `Cumulative confirmed` as response and `Fecha de diagnóstico` + `Sexo_M` as predictors.
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 
 ```{r Giullia6, echo=TRUE, warning=FALSE}
 #Running poisson with the variable representing time plus gender
@@ -752,6 +857,12 @@ summary(poisson2)
 
 Results show that the variable gender is not signficant and thus doesn't change the performance of the model
 
+<<<<<<< HEAD
+=======
+
+### `Cumulative confirmed` as response and `Fecha de diagnóstico` + the gender variables `Edad_19 a 30`, `Edad_31 a 45`, `Edad_46 a 60`, `Edad_60 a 75` and `Edad_76+` as predictors.
+
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 ```{r Giullia7, echo=TRUE, warning=FALSE}
 #Running poisson with the variable representing time plus the age variables
 poisson3 <- glm(`Cumulative confirmed`~`Fecha de diagnóstico`+`Edad_19 a 30`+`Edad_31 a 45`+`Edad_46 a 60`+`Edad_60 a 75`+`Edad_76+`,family=poisson)
@@ -765,6 +876,7 @@ Furthermore, it can be seen that the AIC reduced in comparison with the model th
 #plotting the residuals versus fit and calculating the overdispersion 
 pred.pois3 <- poisson3$fitted.values
 res.st3 <- (`Cumulative confirmed`-pred.pois3)/sqrt(pred.pois3)
+<<<<<<< HEAD
 
 est.overdispersion <- sum(res.st3^2)/16
 est.overdispersion
@@ -773,6 +885,43 @@ est.overdispersion
 The plot shows the same behavior of the model poisson1 but the overdispersion parameter decreased
 
 ```{r Giullia9, echo=TRUE, warning=FALSE}
+=======
+plot(pred.pois3, res.st3)
+abline(h=0,lty=3,col="gray75")
+
+#calculating overdispersion
+#n=25 
+#k=7
+#n-k=18
+est.overdispersion <- sum(res.st3^2)/18
+est.overdispersion
+```
+
+The overdispersion is high and again the residuals continue to behave like a distribution.
+
+```{r Giullia9, echo=TRUE, warning=FALSE}
+#Let's apply a quasi poisson and see what happens
+poisson3quasi <- glm(`Cumulative confirmed`~`Fecha de diagnóstico`+`Edad_19 a 30`+`Edad_31 a 45`+`Edad_46 a 60`+`Edad_60 a 75`+`Edad_76+`,family=quasipoisson)
+summary(poisson3quasi)
+
+#plotting standardized residuals versus the fitted values
+pred.poisq3 <- poisson3quasi$fitted.values
+res.stq3 <- (`Cumulative confirmed`-pred.poisq3)/sqrt(summary(poisson3quasi)$dispersion*pred.poisq3)
+plot(pred.poisq3, res.stq3)
+abline(h=0,lty=3,col="gray75")
+
+#calculating overdispersion
+est.overdispersion <- sum(res.stq3^2)/18
+est.overdispersion
+```
+
+So I applied the quasi poisson and the overdispersion reduced to 1, which is very good and again the residuals are still behaving like a distribution.
+
+
+### `Cumulative confirmed` as response and all the other variables as predictors.
+
+```{r Giullia10, echo=TRUE, warning=FALSE}
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 #Finally, running poisson with the variable representing time plus the age variables and the departments variables (also runned gender together because it is easy to encode, but later can remove)
 poisson4 <- glm(`Cumulative confirmed`~.,data=data1,family=poisson)
 summary(poisson4)
@@ -780,6 +929,7 @@ summary(poisson4)
 
 The result of the significance of the variables is awkward, because just `Fecha de diagnóstico` has high significance but anyway the AIC reduced by half in comparisson to the poisson3 model!
 
+<<<<<<< HEAD
 ```{r Giullia10, echo=TRUE, warning=FALSE}
 #plotting the residuals versus fit and calculating the overdispersion 
 pred.pois4 <- poisson4$fitted.values
@@ -790,6 +940,96 @@ est.overdispersion
 ```
 
 The plot shows the same behavior of the model poisson1 but the overdispersion parameter decreased significantly!!!
+=======
+```{r Giullia11, echo=TRUE, warning=FALSE}
+#plotting the residuals versus fit and calculating the overdispersion 
+pred.pois4 <- poisson4$fitted.values
+res.st4 <- (`Cumulative confirmed`-pred.pois4)/sqrt(pred.pois4)
+plot(pred.pois4, res.st4)
+abline(h=0,lty=3,col="gray75")
+
+#Calculating the overdispersion
+#calculating overdispersion
+#n=25 
+#k=20
+#n-k=5
+est.overdispersion <- sum(res.st4^2)/5
+est.overdispersion
+```
+
+Now the residuals are behaving differently and the overdispersion reduced significantly and it is inside the range assumed by a Poisson model, that is from -1 to 1.
+
+
+## Country of origin
+
+We clean the column `País de procedencia` by making sure that there are no cities instead of countries and that the countries are separated with a dash (we'll use it with dummy variables)
+
+```{r fix_countries}
+sort(unique(colombia_covid$`País de procedencia`))
+which(colombia_covid$`País de procedencia`=="0")
+colombia_covid[911,] # this one has 0 as País de procedencia
+
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Isla Martin - Caribe"] <- "Islas San Martin"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Israel Egipto"] <- "Israel - Egipto"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Jamaica - Isla Caimán - Panamá"] <- "Jamaica - Panamá - Isla Caimán"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Madrid"] <- "España"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Londres"] <- "Inglaterra"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Alemania - Estambul"] <- "Alemania - Turquía"
+
+# What to do with "Jamaica - Panamá - Islas del caribe - Cartagena"? Put it as "Jamaica - Panamá - Colombia"?
+```
+
+```{r create_continents}
+Europa <- c("Alemania", "Bélgica", "Europa",  "Croacia", "España", "España - Croacia", "España - Croacia - Bosnia",  "España - Francia", "España - Italia", "Francia", "Francia - Holanda", "Grecia", "Inglaterra", "Italia", "Italia - Ucrania - España", "Suiza")
+Asia <- c("Arabia", "Emiratos Árabes", "Turquía")
+África <- c("Egipto", "Marruecos")
+Norteamérica <- c("Canadá", "Estados Unidos")
+Centroamérica <- c("Costa Rica", "Cuba", "Guatemala", "Islas San Martin", "Jamaica", "Jamaica - Panamá - Isla Caimán", "Jamaica - Panamá - Islas del caribe - Cartagena", "México", "Panamá", "Panamá - Jamaica", "Puerto Rico", "República Dominicana", "Venezuela")
+Sudamerica <- c("Argentina", "Aruba", "Brasil", "Chile", "Ecuador", "Perú")
+# Alemania - Turquía", "España - India", "España - Turquia", "Italia - España - Turquía", "Turquía - Grecia" -> "Europa - Asia"
+# "España - Egipto" -> "Europa - África"
+# "Israel - Egipto" -> "Asia - África"
+# "Italia - Jamaica - Panamá" -> "Europa - Centroamérica"
+# "Colombia" -> "Colombia"
+
+for (i in 1:nrow(colombia_covid)) {
+  if (colombia_covid$`País de procedencia`[i] %in% Europa){
+    colombia_covid$`Continente de procedencia`[i] <- "Europa"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Asia){
+    colombia_covid$`Continente de procedencia`[i] <- "Asia"}
+  else if (colombia_covid$`País de procedencia`[i] %in% África){
+    colombia_covid$`Continente de procedencia`[i] <- "África"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Norteamérica){
+    colombia_covid$`Continente de procedencia`[i] <- "Norteamérica"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Centroamérica){
+    colombia_covid$`Continente de procedencia`[i] <- "Centroamérica"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Sudamerica){
+    colombia_covid$`Continente de procedencia`[i] <- "Sudamerica"}
+  else if (colombia_covid$`País de procedencia`[i] == "Colombia"){
+    colombia_covid$`Continente de procedencia`[i] <- "Colombia"}
+  else if (colombia_covid$`País de procedencia`[i] == "Alemania - Turquía"){
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"}
+  else if (colombia_covid$`País de procedencia`[i] == "España - India")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "España - Turquia")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "Italia - España - Turquía")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "Turquía - Grecia")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "España - Egipto")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - África"
+  else if (colombia_covid$`País de procedencia`[i] == "Israel - Egipto")
+    colombia_covid$`Continente de procedencia`[i] <- "Asia - África"
+  else if (colombia_covid$`País de procedencia`[i] == "Italia - Jamaica - Panamá")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Centroamérica"
+}
+
+View(colombia_covid)
+```
+
+
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 
 ## Interesting links
 

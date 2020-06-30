@@ -209,6 +209,7 @@ ppc_stat_grouped(
 
 Maybe we should take into account the difference across departments, since most prediction are not accurate!
 
+<<<<<<< HEAD
 ## Hierarchical modeling
 
 Consider the following model:
@@ -246,6 +247,75 @@ iters<-2000
 model.hierarchical<-stan_glmer(n~elapsed_time+(1|dep_id), data=data, family=poisson, iter=iters)
 ```
 
+=======
+## Hierarchical modeling 
+
+We include an intercept term which should take into account the difference among regions. 
+
+So the model (varying intercept model) that we take into account is now:
+
+$$
+ln\lambda_{i,d} = \alpha_d + \beta\cdot elapsed\_time_i \\
+\alpha_d \sim \mathcal{N}(\mu, \sigma)\\
+y_i \sim \mathcal{Negative Binomial}(\lambda_{i,d}, \phi)
+$$
+
+where $d$ stands for department. 
+
+```{r hier_first, echo=TRUE, warning=FALSE}
+data<- data %>%  
+  mutate(dep_idx = factor(dep, levels = unique(dep)),
+          dep_id = as.integer(dep_idx)) %>%
+  select(-dep_idx)
+data<-data[,c(1,2,3,6,4,5)]
+data
+length(unique(data$dep_id))
+#compile
+model2.NB<-stan_model("stan/NB_model2.stan")
+
+#modify model data to add necessary things
+model2.data<-with(data,
+                  list(D=length(unique(data$dep_id)),
+                       N=nrow(data),
+                       cases = n,
+                       dep = data$dep_id,
+                       time = data$elapsed_time
+                       )
+)
+#fit
+fit.model2.NB<-sampling(model2.NB, model2.data)
+#save sampling
+samples_NB2<-rstan::extract(fit.model.NB)
+y_rep<-samples_NB2$y_rep
+ppc_dens_overlay(y = model2.data$cases, y_rep[1:200,]) 
+```
+
+Let's check if there is difference in the accuracy across departments with respect to the previous model:
+
+```{r accuracy_dep, echo=TRUE, warning=FALSE}
+ppc_stat_grouped(
+  y = model2.data$cases,
+  yrep = y_rep,
+  group = data$dep,
+  stat = "mean",
+  binwidth = 0.5
+)
+```
+
+Unfortunately the situation has not changed under this point of view :(
+
+Let's check the residuals:
+
+```{r NB2_residuals, echo=TRUE, warning=FALSE}
+mean_inv_phi<-mean(samples_NB2$inv_phi)
+mean_y_rep<-colMeans(y_rep)
+std_residual<-(model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+very few points are outside the 95% confidence interval now!
+
+>>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
 ## Reference
 
 At the moment -i'm using as a reference the book `Hierarchical_Models.pdf` in the folder `books`.. and a lot of Google!
