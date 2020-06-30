@@ -78,7 +78,6 @@ Please ignore tha fact that the picture is horrible, I'm starting convincing mys
 data<-read_csv("data/central_colombia_relevant.csv")
 data<-data[order(data$dep),]
 data<-data[,c(1,5,2,3,4)]
-head(data)
 ```
 
 ## Poisson regression
@@ -238,6 +237,13 @@ Compile the model:
 ```{r first_hier, echo=TRUE, warning=FALSE}
 #compile
 model2.NB<-stan_model("stan/NB_model2.stan")
+data
+```
+
+```{r try_built_in, echo=TRUE, warning=FALSE}
+library(rstanarm)
+iters<-2000
+model.hierarchical<-stan_glmer(n~elapsed_time+(1|dep_id), data=data, family=poisson, iter=iters)
 ```
 
 ## Reference

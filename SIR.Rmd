@@ -1,0 +1,210 @@
+---
+title: "SIR temptative model"
+author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
+date: "3/07/2020"
+output:
+  html_document:
+    highlight: kate
+    lightbox: true
+    gallery: true
+    toc: yes
+    toc_depth: 3
+  ioslides_presentation:
+    highlight: kate
+  rmdformats::readthedown:
+  include: null
+  beamer_presentation:
+    highlight: kate
+  pdf_document:
+    highlight: kate
+    keep_tex: yes
+    toc: yes
+  slide_level: 2
+  slidy_presentation:
+    fig.height: 3
+    fig.width: 4
+    highlight: kate
+header-includes:
+- \usepackage{color}
+- \definecolor{Purple}{HTML}{911146}
+- \definecolor{Orange}{HTML}{CF4A30}
+- \setbeamercolor{alerted text}{fg=Orange}
+- \setbeamercolor{frametitle}{bg=Purple}
+institute: University of Udine & University of Trieste
+graphics: yes
+fontsize: 10pt
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align = 'center', warning=FALSE, message=FALSE, fig.asp=0.625, dev='png', global.par = TRUE, dev.args=list(pointsize=10), fig.path = 'figs/')
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+local({
+  hook_plot = knit_hooks$get('plot')
+  knit_hooks$set(plot = function(x, options) {
+    paste0('\n\n----\n\n', hook_plot(x, options))
+  })
+})
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
+```
+
+```{r message=FALSE}
+library(readr)
+library(rstan)
+library(dplyr)
+library(ggplot2)
+library(bayesplot)
+library(lubridate)
+```
+
+## The SIR model 
+
+The SIR model (which is an acronym for Susceptible, Infected, Recovered or Removed) is a *population-based* model, which subdivide the population into homogeneous time-dependent groups, called *compartments*. The flows between compartments can be described by a system of ODEs. 
+
+The temporal dynamic of the sizes of each of the compartmnerts are governed by the following system of ODEs:
+
+$$
+\frac{dS}{dt} = -\beta\cdot S \cdot \frac{I}{N} \\
+\frac{dI}{dt} = \beta \cdot S \cdot \frac{I}{N} - \gamma\cdot I \\
+\frac{dR}{dt} = \gamma\cdot I
+$$
+
+where $S(t)$ is the number of people suscptible to becoming infected, $I(t)$ is the number of people currently infected, $R(t)$ is the number of people that are recovered or removed (dead). 
+
+The $\beta$ is called *effective contact rate* and controls the rate of spread which represents the probability of transmitting disease between a susceptible and an infectious individual. 
+
+The $\gamma$ is called *recoverity and mortality* rate and it is determined by the average duration of infection. 
+
+Assumption behind this model are that:
+
+  * $N=S+I+R$ remains constant, namely births and deaths (except the ones due to the disease) are not contributing to the dynamics;
+  
+  * recovered individual cannot be susceptible again (full immunity);
+  
+  * infection rate and recovery rate are constant;
+  
+  * individuals meet any other individual uniformely at random and recovery time follows an exponential distribution woth mean $\frac{1}{\gamma}$.
+  
+This is the mathematical framework of the SIR model, now we need to give it a statistical formulation. 
+
+## Statistical model
+
+Let's start by the likelihood, also called *sampling distribution* $p(Y|\theta)$ which tells us, given the parameters, how to generate the data. We want to link the solution we get from the ODEs to the observed data. Let's say that $\hat{I}(t)$ are the number of infected people at time $t$ as predictedd by the SIR model, while $I(t)$ is the number of observed infected people at time $t$ (comfirmed cases as given by our data). 
+
+As we proposed in other models (the class of glm) we can model the number of infected people with a count distribution, such as the Negative Binomial, having $\hat{I}(t)$ as expected value and a parameter $\phi$ that allows for overdispersion. 
+
+$$
+I(t) \sim \mathcal{NagativeBinomial}(\hat{I}(t), \phi)
+$$
+
+With this model, the set of parameters we have to deal with now is $\theta = (\beta, \gamma, \phi)$. 
+
+Being our model a Bayesian one, we need to put a prior (which encodes the information about the parameters we have before observing the data) over these parameters, $p(\theta)$.  
+
+We can use non-informative priors for them such as:
+
+$$
+\beta \sim \mathcal{N}(2,1) \\
+\gamma \sim \mathcal{N}(0.4, 0.5) \\
+\frac{1}{\phi} \sim \mathcal{Exp}(5)
+$$
+
+Having the likelihood and the prior, we are at this point ready to apply Bayes theorem to estimate the posterior $p(\theta|Y) \propto p(Y|theta)\cdot p(\theta)$, by fitting the model.
+
+Then we can compute a posterior distribution of predictions $p(Y_{pred}|Y) = \int p(Y_{pred}|\theta)p(\theta|Y)d\theta$.
+
+A very famous and important qauntity that depends on the model parameters, hence we can compute, is the basic reproduction number $R_0$, defined as the expected number of secondary infections produced from one infected individual in a fully susceptible population through the entire duration of the infectious period. 
+
+By means of Bayesian inference we can build a posterior for $R_0$, that being $p(R_0|Y)$.
+
+## Building the model
+
+Guess what.. need to fix the data! 
+
+```{r data_fix, echo=TRUE, warning=FALSE}
+data<-read_csv("data/SIR_data.csv")
+data<- data %>% select(-X1)
+data<-data[,c(1,3,2)]
+missing.data<-read_csv("data/dead_recovered.csv")
+missing.data<-missing.data %>% select(-"confirmed")
+missing.data<-missing.data %>% select(-"confirmed_daily")
+missing.data<-missing.data[-1,]
+missing.data<-missing.data[-c(2,3,5),]
+deaths<-missing.data$deaths
+recovered<-missing.data$recovered
+
+data$`cumulative_deaths`<-deaths
+data$`cumulative_recoveries`<-recovered
+#pop in millions
+bogotà_pop<-7.4 
+antioquia_pop<-6.4
+cundimarca_pop<-2.9
+caldas_pop<-0.99
+valle_cauca_pop<-4.4
+meta_pop<-1
+risaralda_pop<-0.94
+santander_pop<-2.1
+quindio_pop<-0.53
+tolima_pop<-1.3
+cauca_pop<-1.4
+casanare_pop<-0.42
+boyaca_pop<-1.2
+
+tot_pop<-N<-7.4+6.4+2.9+0.99+4.4+1+0.94+2.1+0.53+1.3+1.4+0.42+1.2
+N<-N*10^6 #from millions to individuals
+```
+
+We can compute the S-I-R quantities we need as follows:
+
+  * S := Susceptible = All - Confirmed;
+  
+  * I := Infected = Confirmed - Recovered - Deaths;
+  
+  * R := Recovered or fatal = Recovered + Deaths.
+
+```{r data_sir, echo=TRUE, warning = FALSE}
+All<-as.vector(rep(N,25))
+data$S<-All-data$y
+data$I<-data$y-data$cumulative_deaths-data$cumulative_recoveries
+data$R<-data$cumulative_deaths+data$cumulative_recoveries
+
+SIR.data<-data[,c(2,3,6,7,8)]
+head(SIR.data)
+```
+
+Let's fix things up to fix the stan model:
+
+```{r stan_prep, echo=TRUE, warning=FALSE}
+cases<-SIR.data$y
+n_days<-length(cases)
+t<-seq(0, n_days, by=1)
+#I.C. for the ODEs
+t0<-0
+t<-t[-1]
+i0<-1
+s0<-N-i0
+r0<-0
+y0 = c(S=s0, I=i0, R=r0)
+
+Sir.data<-list(n_days = n_days,
+               y0 = y0,
+               t0 = t0,
+               ts = t,
+               N = N,
+               cases = cases)
+
+#compile the model 
+Sir.model<-stan_model("stan/Sir.stan")
+
+#run the model 
+#fit.model<-sampling(Sir.model, data=Sir.data)
+```
+
+## References
+
+[tutorial on stan for SIR model](https://mc-stan.org/users/documentation/case-studies/boarding_school_case_study.html#ref-Mihaljevic_tutorial_2016)
+
+[how to deduce S-I-R numbers from our data](https://www.kaggle.com/lisphilar/covid-19-data-with-sir-model)
+  

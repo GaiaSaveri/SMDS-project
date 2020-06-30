@@ -82,7 +82,7 @@ The largest cities in the country are Bogotá (in the center), Medellín (in the
 ## Dataset - First Exploration
 
 ```{r load_data, echo=TRUE}
-colombia_covid <- read_csv("colombia_covid.csv")
+colombia_covid <- read_csv("data/colombia_covid.csv")
 unique(colombia_covid$`Departamento o Distrito`)
 #options(tibble.print_max = Inf) # to show all the elements of the list, but set it also for other chunks
 #options(tibble.width = Inf)
@@ -180,7 +180,7 @@ icons <- awesomeIcons(
   markerColor = getColor(gis_data)
 )
 
-dept<-geojsonio::geojson_read("Colombia.geo.json", what="sp")
+dept<-geojsonio::geojson_read("data/Colombia.geo.json", what="sp")
 
 labels <- sprintf(
   "<strong>%s</strong><br/>",
@@ -603,7 +603,7 @@ select(-c(BETWEEN0,BETWEEN))
 
 covid_relevant_dp
 
-write_csv(covid_relevant_dp, "central_colombia_relevant.csv")
+#write_csv(covid_relevant_dp, "central_colombia_relevant.csv")
 ```
 
 ## Missing
@@ -654,6 +654,7 @@ select(-c(BETWEEN0,BETWEEN))
 #just for praticality
 names(cumulative2)<-c("date", "y", "elapsed_time")
 cumulative2
+#write.csv(cumulative2, "data/SIR_data.csv")
 ```
 
 ##Giullia's part
