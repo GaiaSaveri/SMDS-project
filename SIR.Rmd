@@ -196,15 +196,45 @@ Sir.data<-list(n_days = n_days,
                cases = cases)
 
 #compile the model 
-Sir.model<-stan_model("stan/Sir.stan")
+Sir.model<-stan_model("stan/SIR.stan")
 
 #run the model 
-#fit.model<-sampling(Sir.model, data=Sir.data)
+fit.model<-sampling(Sir.model, data=Sir.data)
 ```
+
+Let's check the correctness of the nference of the model:
+
+```{r sir_first_check, echo=TRUE, warning=FALSE}
+pars<-c("beta", "gamma", "R0", "recovery_time")
+print(fit.model, pars=pars)
+
+stan_dens(fit.model, pars=c("beta", "gamma"), separate_chains=TRUE)
+```
+
+looking at $\hat{R}$ we can see that it is $1$ for `R0` and `recovery_time`, but it is a little higher for the other two, moreover for `beta` and `gamma` the `n_eff` is really low.. this could be a symptom of the poorly mixing of the Markov chains (maybe we need to take stronger priors). 
+
+Indeed Markov chains do not agree much. 
+
+```{r different_priors, echo=TRUE, warning=FALSE}
+
+#compile the model 
+Sir.model2<-stan_model("stan/SIR.stan")
+
+#run the model 
+fit.model2<-sampling(Sir.model2, data=Sir.data)
+
+pars<-c("beta", "gamma", "R0", "recovery_time")
+print(fit.model2, pars=pars)
+
+stan_dens(fit.model2, pars=c("beta", "gamma"), separate_chains=TRUE)
+```
+
 
 ## References
 
 [tutorial on stan for SIR model](https://mc-stan.org/users/documentation/case-studies/boarding_school_case_study.html#ref-Mihaljevic_tutorial_2016)
 
 [how to deduce S-I-R numbers from our data](https://www.kaggle.com/lisphilar/covid-19-data-with-sir-model)
+
+[choice of priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations)
   
