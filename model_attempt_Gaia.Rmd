@@ -209,7 +209,18 @@ ppc_stat_grouped(
 
 Maybe we should take into account the difference across departments, since most prediction are not accurate!
 
-<<<<<<< HEAD
+```{r another_check, echo=TRUE, warning=FALSE}
+data
+ppc_intervals(
+  y = data$n, 
+  yrep = y_rep,
+  x = data$elapsed_time
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+We still have some large number of cases that the model consider extremely unlikely events. 
+
 ## Hierarchical modeling
 
 Consider the following model:
@@ -219,6 +230,7 @@ ln\lambda_{d,i} = \alpha_d + \beta\cdot elapsed\_time_i \\
 \alpha_{d} \sim \mathcal{N}(\mu + \beta_{dep}\cdot dep\_id_d, \sigma) \\
 y_{d,i} \sim \mathcal{Negative Binomial}(\lambda_i, \phi)
 $$
+
 where $d$ stands for department, and $\alpha_d$ is an intercept that veries from department  to department. 
 
 Maybe we could include some more info about departemnts, e.g. the total number of people living there, or the density of inhabitants, the total surface.. 
@@ -233,21 +245,96 @@ data <- data %>%
 data<-data[,c(1,2,3,6,4,5)]
 ```
 
-Compile the model:
+We can try to add the number of inhabitants (in million people) of each department:
 
-```{r first_hier, echo=TRUE, warning=FALSE}
-#compile
+```{r add_inhabitants, echo=TRUE, warning=FALSE}
+data$people<-rep(0, nrow(data))
+
+data[which(data$dep_id==1),]$people<-6.4
+data[which(data$dep_id==2),]$people<-7.4
+data[which(data$dep_id==3),]$people<-2.9
+data[which(data$dep_id==4),]$people<-0.94
+data[which(data$dep_id==5),]$people<-4.4
+
+cc<-read_csv("data/colombia_covid.csv")
+tail(cc)
+central.colombia.dep<-c("Bogotá D.C.", "Cundinamarca",  "Valle del Cauca", "Risaralda", "Antioquia")
+central.colombia.rows<-which(cc$`Departamento o Distrito` %in% central.colombia.dep)
+cc<-cc[central.colombia.rows,]
+
+bogota_mean_age<-cc[which(cc$`Departamento o Distrito`=="Bogotá D.C."),] %>% 
+  group_by(`Fecha de diagnóstico`) %>% 
+  summarise_at(vars(Edad), funs(mean(.,na.rm=TRUE)))
+cundinamarca_mean_age<-cc[which(cc$`Departamento o Distrito`=="Cundinamarca"),] %>% 
+  group_by(`Fecha de diagnóstico`) %>% 
+  summarise_at(vars(Edad), funs(mean(.,na.rm=TRUE)))
+valle_cauca_mean_age<-cc[which(cc$`Departamento o Distrito`=="Valle del Cauca"),] %>% 
+  group_by(`Fecha de diagnóstico`) %>% 
+  summarise_at(vars(Edad), funs(mean(.,na.rm=TRUE)))
+risaralda_mean_age<-cc[which(cc$`Departamento o Distrito`=="Risaralda"),] %>% 
+  group_by(`Fecha de diagnóstico`) %>% 
+  summarise_at(vars(Edad), funs(mean(.,na.rm=TRUE)))
+antioquia_mean_age<-cc[which(cc$`Departamento o Distrito`=="Antioquia"),] %>% 
+  group_by(`Fecha de diagnóstico`) %>% 
+  summarise_at(vars(Edad), funs(mean(.,na.rm=TRUE)))
+data$age<-rep(0,nrow(data))
+
+data[which(data$dep_id==1),]$age<-unname(unlist(c(antioquia_mean_age[2])))
+data[which(data$dep_id==2),]$age<-unname(unlist(c(bogota_mean_age[2])))
+data[which(data$dep_id==3),]$age<-unname(unlist(c(cundinamarca_mean_age[2])))
+data[which(data$dep_id==4),]$age<-unname(unlist(c(risaralda_mean_age[2])))
+data[which(data$dep_id==5),]$age<-unname(unlist(c(valle_cauca_mean_age[2])))
+```
+
+We can try to include these new variables in the model, for example (varying intercept model, considering people as exposure term):
+
+$$
+ln\lambda_{i,d} = \alpha_d + \beta_{time}\cdot elapsed\_time_i + \beta_{age}age_i + log(people_i) \\
+\alpha_d \sim \mathcal{N}(\mu, \sigma)\\
+y_i \sim \mathcal{Negative Binomial}(\lambda_{i,d}, \phi)
+$$
+
+where $d$ stands for department. 
+
+Try to compile and run:
+
+```{r model_more_info, echo=TRUE, warning=FALSE}
 model2.NB<-stan_model("stan/NB_model2.stan")
-data
+
+#arrange things
+model.data2<-list(
+  N = nrow(data),
+  cases = data$n,
+  time = data$elapsed_time,
+  age = data$age,
+  log_people = log(data$people*10)
+  #D = 5,
+  #dep = data$dep_id,
+  #id = data$dep_id
+)
+
+#fit
+fit.model2.NB<-sampling(model2.NB, model.data2)
+
+#posterior predictive chiecking
+samples_NB2<-rstan::extract(fit.model2.NB)
+y_rep<-samples_NB2$y_rep
+#ppc_dens_overlay(y = model .data2$cases, y_rep[1:200,]) 
+ppc_stat_grouped(
+  y = model.data2$cases,
+  yrep = y_rep,
+  group = data$dep,
+  stat = "mean",
+  binwidth = 0.2
+)
+ppc_intervals(
+  y = data$n, 
+  yrep = y_rep,
+  x = data$elapsed_time
+) + 
+  labs(x = "Days", y = "Cases")
 ```
 
-```{r try_built_in, echo=TRUE, warning=FALSE}
-library(rstanarm)
-iters<-2000
-model.hierarchical<-stan_glmer(n~elapsed_time+(1|dep_id), data=data, family=poisson, iter=iters)
-```
-
-=======
 ## Hierarchical modeling 
 
 We include an intercept term which should take into account the difference among regions. 
@@ -315,8 +402,8 @@ qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 
 very few points are outside the 95% confidence interval now!
 
->>>>>>> d1161e2cf231d60c7b1be97bc1eca5dbee8877f1
+
 ## Reference
 
-At the moment -i'm using as a reference the book `Hierarchical_Models.pdf` in the folder `books`.. and a lot of Google!
+At the moment I'm using as a reference the book `Hierarchical_Models.pdf` in the folder `books`.. and a lot of Google!
 <!-- knitr::knit("first_analysis.Rmd", tangle = TRUE, output ="first_analysis.R") -->

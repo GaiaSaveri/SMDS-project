@@ -239,63 +239,61 @@ params <- lapply(t, function(i){sprintf("y[%s,2]", i)})
 yhat <- as.data.frame(summary(fit.model, 
                                pars = params, probs = c(0.05, 0.5, 0.95))$summary)
 colnames(yhat) <- make.names(colnames(yhat))
-
-ggplot(yhat, mapping = aes(x = t)) +
-  geom_ribbon(aes(ymin = X5., ymax = X95.), fill = "red", alpha = 0.3) +
-  geom_line(mapping = aes(x = t, y = X50.)) + 
+yhat
+SIR.data$elapsed_time[1:19]
+ggplot(yhat[1:18,], mapping = aes(x = SIR.data$elapsed_time[1:18])) +
+  #geom_ribbon(aes(ymin = -yhat$se_mean, ymax = yhat$se_mean), fill = "red", alpha = 0.3) +
+  geom_line(mapping = aes(x = SIR.data$elapsed_time[1:18], y = yhat$mean[1:18])) + 
+  geom_point(aes(y=SIR.data$I[1:18])) +
   labs(x="Days after first case", y="Number of infected people")
 ```
 
-So far we have estimated the cumulative number of cases, let's see what we can get by modifying the Stan code in order to predict the number of new cases each day (namely the quantity $S(t)-S(t+1) = All(t)-Confirmed(t)-All(t+1)+Confirmed(t+1) = Confirmed(t+1)-Confirmed(t)$). In this case we say that we are modeling *incidence data* (reference 1). 
+## Try to be frequentist
 
-```{r incidence_fit, echo=TRUE, warning=FALSE}
-#compile the model 
-Sir.model2<-stan_model("stan/SIR2.stan")
+Let's try to fit the previous model with a "classic approach". In this case we want to minimize the Residual Sum of Squares (RSS): $RSS(\beta, \gamma) = \sum_{t}(I(t)-\hat{I}(t)^2$. 
 
-Sir2.data<-list(n_days = n_days,
-               #y0 = y0,
-               t0 = 0,
-               ts = SIR.data$elapsed_time,
-               N = N,
-               cases = SIR.data$y)
+```{r frequentist_sir, echo=TRUE, warning=FALSE}
+SIR<-function(time, state, parameters) {
+  par<-as.list(c(state, parameters))
+  with(par, {
+    dS<--beta*I*S/N
+    dI<-beta*I*S/N - gamma*I
+    dR<-gamma*I
+    list(c(dS, dI, dR))
+  })
+}
 
-#run the model 
-fit.model2<-sampling(Sir.model2, data=Sir2.data)
+init<-c(S = SIR.data$S[1], I = SIR.data$I[1], R=0)
 
-pars<-c("thet[0]", "theta[1]") #, "R0", "recovery_time")
-#print(fit.model2, pars=pars)
+library(deSolve)
 
-stan_dens(fit.model2, pars=pars, separate_chains=TRUE)
+#RSS to optimize the parameters
+RSS<-function(parameters) {
+  names(parameters)<-c("beta", "gamma")
+  out <-ode(y=init, times=SIR.data$elapsed_time, func=SIR, parms=parameters)
+  fit<-out[,3]
+  sum((SIR.data$y-fit)^2)
+}
 
-#prediction check
-pred2<-cbind(as.data.frame(summary(fit.model2, pars="pred_cases", probs = c(0.05, 0.5, 0.95))$summary), t, cases)
-colnames(pred2)<-make.names(colnames(pred2))
+Opt<-optim(c(0.5,0.5), RSS, method="L-BFGS-B", lower=c(0,0))
 
-#number of infected for each day
-params <- lapply(t, function(i){sprintf("y[%s,2]", i)})
-yhat2 <- as.data.frame(summary(fit.model2, 
-                               pars = params, probs = c(0.025, 0.5, 0.975))$summary)
-colnames(yhat2) <- make.names(colnames(yhat2))
-colnames(yhat2)
+#check if optim coverged--> it did
+Opt$message
 
-ggplot(yhat2, mapping = aes(x = t)) +
-  geom_ribbon(aes(ymin = X2.5., ymax = X97.5.), fill = "red", alpha = 0.3) +
-  geom_line(mapping = aes(x = t, y = X50.)) + 
-  labs(x="Days after first case", y="Number of infected people")
+Opt.par<-setNames(Opt$par, c("beta", "gamma"))
+Opt.par
 
-y_rep <- as.matrix(fit.model2, pars = "incidence")
-ppc_dens_overlay(
-  y = SIR.data$y_new,
-  yrep = y_rep[1:200,]
-)
+fitted.cumulative.incidence<-data.frame(ode(y=init, times=SIR.data$elapsed_time, func=SIR, parms = Opt.par))
 
-fit2 <- extract(fit.model2)
-prop<-as.data.frame(abs((apply(fit2$pred_cases, 2, mean) - SIR.data$y_new))<20) 
-names(prop)<-c("accuracy")
-prop %>% group_by(accuracy) %>% count()
+ggplot(SIR.data,aes(x=SIR.data$elapsed_time)) + geom_line(aes(y=SIR.data$y), colour="red") +
+  geom_point(aes(y=fitted.cumulative.incidence$I), colour="orange")+
+  labs(x = "Days",y="Cumulative Incidence", title="Fitted vs observed cases")
 
-
+R0<-as.numeric(Opt.par[1]/Opt.par[2])
+R0
 ```
+
+
 
 ## References
 

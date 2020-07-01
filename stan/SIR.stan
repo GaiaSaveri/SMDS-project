@@ -30,8 +30,8 @@ transformed data {
   int x_i[1] = { N };
 }
 parameters {
-  real<lower=0> gamma;
-  real<lower=0> beta;
+  real<lower=0, upper=1> gamma;
+  real<lower=0, upper=1> beta;
   real<lower=0> phi_inv;
 }
 transformed parameters{
@@ -49,9 +49,12 @@ model {
   //priors
   //beta ~ normal(2, 1);--> no good 
   beta ~ lognormal(log(0.4), 0.5); 
+  //beta ~ uniform(0.60, 0.80);
+  //gamma ~ uniform(0.35, 0.50);
   //gamma ~ normal(0.4, 0.5); --> no_good
-  gamma ~ lognormal(log(0.1), 0.2);
-  phi_inv ~ exponential(5);
+  gamma ~ normal(0.4, 0.2);
+  //phi_inv ~ exponential(5);
+  phi_inv ~ cauchy(0., 5);
   
   //sampling distribution
   //col(matrix x, int n) - The n-th column of matrix x. Here the number of infected people 
