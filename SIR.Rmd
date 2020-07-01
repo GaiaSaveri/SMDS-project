@@ -87,6 +87,8 @@ Assumption behind this model are that:
   
   * individuals meet any other individual uniformely at random and recovery time follows an exponential distribution woth mean $\frac{1}{\gamma}$.
   
+Basically we have that the disease enters the susceptible population, reduces its size by infecting a fraction of people and the infected fraction is reduced by the fraction of individuals who recover (or die) from the disease.
+
 This is the mathematical framework of the SIR model, now we need to give it a statistical formulation. 
 
 ## Statistical model
@@ -103,11 +105,11 @@ With this model, the set of parameters we have to deal with now is $\theta = (\b
 
 Being our model a Bayesian one, we need to put a prior (which encodes the information about the parameters we have before observing the data) over these parameters, $p(\theta)$.  
 
-We can use non-informative priors for them such as:
+We can use non-informative priors for them such as (choice of the priors has been inspired by the 5th reference):
 
 $$
-\beta \sim \mathcal{N}(2,1) \\
-\gamma \sim \mathcal{N}(0.4, 0.5) \\
+\beta \sim \mathcal{LogNormal}(log(0.4),0.5) \\
+\gamma \sim \mathcal{LogNormal}(log(0.1), 0.2) \\
 \frac{1}{\phi} \sim \mathcal{Exp}(5)
 $$
 
@@ -171,6 +173,12 @@ data$I<-data$y-data$cumulative_deaths-data$cumulative_recoveries
 data$R<-data$cumulative_deaths+data$cumulative_recoveries
 
 SIR.data<-data[,c(2,3,6,7,8)]
+
+
+y_new<-c(1,as.vector(SIR.data$y[2:nrow(SIR.data)])-as.vector(SIR.data$y[1:nrow(SIR.data)-1]))
+SIR.data$y_new<-y_new
+SIR.data<-SIR.data[,c(1,2,6,3,4,5)]
+
 head(SIR.data)
 ```
 
@@ -202,41 +210,102 @@ Sir.model<-stan_model("stan/SIR.stan")
 fit.model<-sampling(Sir.model, data=Sir.data)
 ```
 
-Let's check the correctness of the nference of the model:
+Let's check the correctness of the inference of the model:
 
 ```{r sir_first_check, echo=TRUE, warning=FALSE}
 pars<-c("beta", "gamma", "R0", "recovery_time")
 print(fit.model, pars=pars)
 
-stan_dens(fit.model, pars=c("beta", "gamma"), separate_chains=TRUE)
+stan_dens(fit.model, pars=pars, separate_chains=TRUE)
 ```
 
-looking at $\hat{R}$ we can see that it is $1$ for `R0` and `recovery_time`, but it is a little higher for the other two, moreover for `beta` and `gamma` the `n_eff` is really low.. this could be a symptom of the poorly mixing of the Markov chains (maybe we need to take stronger priors). 
+the $\hat{R}$ coefficient is 1 for all the parameters, indicating that the 4 Markov Chains are in agreement one another, also the `n_eff`, the effective sample size is significantly big, meaning that the chains were able to explore enough the parameter space. 
 
-Indeed Markov chains do not agree much. 
+The plots show indeed that the chains are in agreement one another. 
 
-```{r different_priors, echo=TRUE, warning=FALSE}
+Now we know that we can trust our inference! 
 
+## Posterior predictive check
+
+Let's check if the produced simulations are consitent with the observed data (if the predictions correctly capture the structure of the data). This is done by sampling $p(Y_{pred}|Y)$.
+
+
+```{r predictive_check, echo=TRUE, warning=FALSE}
+pred<-cbind(as.data.frame(summary(fit.model, pars="pred_cases", probs = c(0.05, 0.5, 0.95))$summary), t, cases)
+colnames(pred)<-make.names(colnames(pred))
+
+#number of infected for each day
+params <- lapply(t, function(i){sprintf("y[%s,2]", i)})
+yhat <- as.data.frame(summary(fit.model, 
+                               pars = params, probs = c(0.05, 0.5, 0.95))$summary)
+colnames(yhat) <- make.names(colnames(yhat))
+
+ggplot(yhat, mapping = aes(x = t)) +
+  geom_ribbon(aes(ymin = X5., ymax = X95.), fill = "red", alpha = 0.3) +
+  geom_line(mapping = aes(x = t, y = X50.)) + 
+  labs(x="Days after first case", y="Number of infected people")
+```
+
+So far we have estimated the cumulative number of cases, let's see what we can get by modifying the Stan code in order to predict the number of new cases each day (namely the quantity $S(t)-S(t+1) = All(t)-Confirmed(t)-All(t+1)+Confirmed(t+1) = Confirmed(t+1)-Confirmed(t)$). In this case we say that we are modeling *incidence data* (reference 1). 
+
+```{r incidence_fit, echo=TRUE, warning=FALSE}
 #compile the model 
-Sir.model2<-stan_model("stan/SIR.stan")
+Sir.model2<-stan_model("stan/SIR2.stan")
+
+Sir2.data<-list(n_days = n_days,
+               #y0 = y0,
+               t0 = 0,
+               ts = SIR.data$elapsed_time,
+               N = N,
+               cases = SIR.data$y)
 
 #run the model 
-fit.model2<-sampling(Sir.model2, data=Sir.data)
+fit.model2<-sampling(Sir.model2, data=Sir2.data)
 
-pars<-c("beta", "gamma", "R0", "recovery_time")
-print(fit.model2, pars=pars)
+pars<-c("thet[0]", "theta[1]") #, "R0", "recovery_time")
+#print(fit.model2, pars=pars)
 
-stan_dens(fit.model2, pars=c("beta", "gamma"), separate_chains=TRUE)
+stan_dens(fit.model2, pars=pars, separate_chains=TRUE)
+
+#prediction check
+pred2<-cbind(as.data.frame(summary(fit.model2, pars="pred_cases", probs = c(0.05, 0.5, 0.95))$summary), t, cases)
+colnames(pred2)<-make.names(colnames(pred2))
+
+#number of infected for each day
+params <- lapply(t, function(i){sprintf("y[%s,2]", i)})
+yhat2 <- as.data.frame(summary(fit.model2, 
+                               pars = params, probs = c(0.025, 0.5, 0.975))$summary)
+colnames(yhat2) <- make.names(colnames(yhat2))
+colnames(yhat2)
+
+ggplot(yhat2, mapping = aes(x = t)) +
+  geom_ribbon(aes(ymin = X2.5., ymax = X97.5.), fill = "red", alpha = 0.3) +
+  geom_line(mapping = aes(x = t, y = X50.)) + 
+  labs(x="Days after first case", y="Number of infected people")
+
+y_rep <- as.matrix(fit.model2, pars = "incidence")
+ppc_dens_overlay(
+  y = SIR.data$y_new,
+  yrep = y_rep[1:200,]
+)
+
+fit2 <- extract(fit.model2)
+prop<-as.data.frame(abs((apply(fit2$pred_cases, 2, mean) - SIR.data$y_new))<20) 
+names(prop)<-c("accuracy")
+prop %>% group_by(accuracy) %>% count()
+
+
 ```
-
 
 ## References
 
-[tutorial on stan for SIR model](https://mc-stan.org/users/documentation/case-studies/boarding_school_case_study.html#ref-Mihaljevic_tutorial_2016)
+1.  [tutorial on stan for SIR model](https://mc-stan.org/users/documentation/case-studies/boarding_school_case_study.html#ref-Mihaljevic_tutorial_2016)
 
-[how to deduce S-I-R numbers from our data](https://www.kaggle.com/lisphilar/covid-19-data-with-sir-model)
+2. [how to deduce S-I-R numbers from our data](https://www.kaggle.com/lisphilar/covid-19-data-with-sir-model)
 
-[choice of priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations)
+3. [choice of priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations)
 
-[inspiration](https://github.com/saudiwin/corona_tscs/tree/master/Paper)
+4. [inspiration](https://github.com/saudiwin/corona_tscs/tree/master/Paper)
+
+5. [enlightenment](https://science.sciencemag.org/content/early/2020/05/14/science.abb9789.full)
   

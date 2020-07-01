@@ -48,9 +48,9 @@ transformed parameters{
 model {
   //priors
   //beta ~ normal(2, 1);--> no good 
-  beta ~ normal(0, 1); 
+  beta ~ lognormal(log(0.4), 0.5); 
   //gamma ~ normal(0.4, 0.5); --> no_good
-  gamma ~ normal(0, 0.5);
+  gamma ~ lognormal(log(0.1), 0.2);
   phi_inv ~ exponential(5);
   
   //sampling distribution
@@ -61,6 +61,11 @@ generated quantities {
   real R0 = beta / gamma;
   real recovery_time = 1 / gamma;
   real pred_cases[n_days];
-  pred_cases = neg_binomial_2_rng(col(to_matrix(y), 2), phi);
+  vector[n_days] log_lik;
+  //pred_cases = neg_binomial_2_rng(col(to_matrix(y), 2), phi);
+  for(n in 1:n_days) {
+    pred_cases[n] = neg_binomial_2_rng(y[n,2], phi);
+    log_lik[n] = neg_binomial_2_log_lpmf(cases[n]| col(to_matrix(y), 2), phi);
+  }
 }
 
