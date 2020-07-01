@@ -318,14 +318,24 @@ head(colombia_covid)
 covid_dp <- colombia_covid %>%
   group_by(`Fecha de diagnóstico`,`Departamento o Distrito`) %>%
   count()
-names(covid_dp) <- c("Date", "Department", "New cases/day")
-#departments with more than 30 cases
-relevant <- c("Bogotá D.C.", "Valle del Cauca", "Antioquia", "Cundinamarca", "Risaralda")
-covid_relevant_dp <- as.data.frame(subset(covid_dp, Department %in% relevant))
+#the max of the ID de caso for each date is the cumulative number of cases confirmed up to that date
+cumulative <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`, `Departamento o Distrito`) %>%
+  summarise(max(`ID de caso`))
+names(cumulative)[3] <- "Cumulative cases"
+covid_dp <- bind_cols(covid_dp, cumulative %>% ungroup() %>%
+  dplyr::select(-c(`Fecha de diagnóstico`, `Departamento o Distrito`)))
+covid_dp <- as.data.frame(covid_dp)
+covid_dp <- covid_dp %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
+            BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
+              cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
 ```
 
 
 ```{r cumul_dept, include=FALSE}
+#departments with more than 30 cases
+relevant <- c("Bogotá D.C.", "Valle del Cauca", "Antioquia", "Cundinamarca", "Risaralda")
+covid_relevant_dp <- as.data.frame(subset(covid_dp, Department %in% relevant))
 #boring and absolutely not efficient population of the number of cumulative cases
 cumulative_dep <- rep(0, 83)
 covid_relevant_dp <- cbind(covid_relevant_dp, cumulative_dep)
@@ -382,14 +392,6 @@ for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Departme
 ```
 
 ```{r dataset_cumulative}
-covid_dp <- as.data.frame(covid_dp)
-covid_dp <- covid_dp %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
-            BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), elapsed_time = cumsum(as.numeric(BETWEEN))) %>%
-            dplyr::select(-c(BETWEEN0,BETWEEN))
-
-covid_relevant_dp <- covid_relevant_dp %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1),
-                      units = "days")), BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), elapsed_time =
-                      cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
 covid_relevant_dp <- covid_relevant_dp[order(covid_relevant_dp$Department), ]
 covid_relevant_dp <- covid_relevant_dp[, c(1,5,2,3,4)]
 names(covid_relevant_dp) <- c("Date", "Elapsed time", "Department", "New cases/day", "Cumulative cases/Department")
@@ -421,9 +423,13 @@ daily_confirmed + geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.
 
 # The frequentist approach
 
-## Other slide
+### Running poisson with `Elapsed time` as predictor 
 
-Something.
+```{r Giullia2, warning=FALSE}
+#Running poisson with just the variable representing the time as predictor 
+poisson1 <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=covid_relevant_dp, family=poisson)
+summary(poisson1)
+```
 
 # The Bayesian approach
 
@@ -483,6 +489,29 @@ qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at +2 and -2 indicates approximate 95% error bounds). The variance of the standardized residuals is much greater than 1, indicating a large amount of overdispersion. 
 
 Classically the problem of having overdispersed data is solved using the negative binomial model instead of the Poisson one.
+
+## Angela stan
+
+```{r stan_pois_2}
+model.Poisson<-stan_model("stan/poisson_regression.stan")
+#arrange things
+model.data<-list(
+  N = nrow(data1),
+  cases = data1$y,
+  time = data1$elapsed_time
+)
+#str(model.Poisson.data)
+
+#run the model 
+fit.model.Poisson<-sampling(model.Poisson, data=model.data)
+
+#inferred parameters
+print(fit.model.Poisson, pars=c("alpha", "beta"))
+
+y_rep<-as.matrix(fit.model.Poisson, pars="y_rep")
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+```
+
 
 ## Negative binomial model
 

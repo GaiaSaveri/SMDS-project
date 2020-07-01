@@ -856,6 +856,30 @@ paste0(c("Null deviance: ", "Residual deviance: "),
        round(c(poisson1$null.deviance, deviance(poisson1)), 2))
 ```
 
+### Stan model just to compare
+
+```{r stan1}
+model.Poisson<-stan_model("stan/poisson_regression.stan")
+#arrange things
+model.data<-list(
+  N = nrow(data1),
+  cases = data1$y,
+  time = data1$elapsed_time
+)
+#str(model.Poisson.data)
+
+#run the model 
+fit.model.Poisson<-sampling(model.Poisson, data=model.data)
+
+#inferred parameters
+print(fit.model.Poisson, pars=c("alpha", "beta"))
+
+y_rep<-as.matrix(fit.model.Poisson, pars="y_rep")
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+```
+
+
+
 Let's apply a quasi poisson and see what happens
 
 ```{r Giullia5, echo=TRUE, warning=FALSE}
@@ -884,6 +908,12 @@ summary(poisson2)
 ```
 
 Results show that the variable gender is not signficant and thus doesn't change the performance of the model. We were already expecting this as in the data visualization step the gender is equaly distributed across the confirmed cases.
+
+```{r Giullia6, echo=TRUE, warning=FALSE}
+#Running poisson with the variable representing time plus gender
+poisson2b <- glm(`Fecha de diagnóstico` ~ elapsed_time + Sexo, data=colombia_covid, family=poisson)
+summary(poisson2b)
+```
 
 ### Running poisson with the variable representing time plus the age variables
 
