@@ -1,0 +1,179 @@
+---
+title: "Colombia COVID-19 - Central region"
+author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
+date: "3/07/2020"
+output:
+  ioslides_presentation:
+    highlight: kate
+    lightbox: true
+    widescreen: true
+    smaller: true
+    logo: Logo_units_blu.png #logo_dssc_alt.png
+  rmdformats::readthedown:
+  beamer_presentation:
+    highlight: tango
+    theme: "metropolis"
+    colortheme: "metropolis"
+    fonttheme: "structurebold"
+    always_allow_html: true
+  slidy_presentation:
+    fig.height: 3
+    fig.width: 4
+    highlight: kate
+  html_document:
+    highlight: kate
+    lightbox: true
+    gallery: true
+    toc: yes
+    toc_depth: 3
+  include: null
+  pdf_document:
+    highlight: kate
+    keep_tex: yes
+    toc: yes
+  slide_level: 2
+header-includes:
+- \usepackage{color}
+- \definecolor{Purple}{HTML}{911146}
+- \definecolor{Orange}{HTML}{CF4A30}
+- \setbeamercolor{alerted text}{fg=Orange}
+- \setbeamercolor{frametitle}{bg=Purple}
+institute: University of Trieste
+graphics: yes
+fontsize: 8pt
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align = 'center', warning=FALSE, message=FALSE, fig.asp=0.625, dev='png', global.par = TRUE, dev.args=list(pointsize=10), fig.path = 'figs/')
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+local({
+  hook_plot = knit_hooks$get('plot')
+  knit_hooks$set(plot = function(x, options) {
+    paste0('\n\n----\n\n', hook_plot(x, options))
+  })
+})
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
+```
+
+```{r message=FALSE, include=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(leaflet)
+library(geojsonio)
+library(htmltools)
+library(htmlwidgets)
+```
+
+
+## Loading the dataset
+
+```{r loading}
+colombia_covid <- as.data.frame(read_csv("data/datasets_567855_1056808_Casos1.csv"))
+colnames(colombia_covid)[5] <- "Atención"
+colnames(colombia_covid)[8] <- "Tipo"
+# slicing the main dataset
+central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boyacá", "Quindío", "Cauca",
+    "Valle del Cauca", "Risaralda", "Caldas", "Boyacá", "Antioquia", "Santander", "Casanare")
+central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
+colombia_covid <- colombia_covid[central.colombia.rows, ]
+```
+
+
+## Preprocessing {.smaller}
+
+```{r types, include=FALSE}
+colombia_covid$`Fecha de diagnóstico` <- as.Date(colombia_covid$`Fecha de diagnóstico`, format="%d/%m/%Y")
+## recodifying distinct times
+l_times <- length(unique(colombia_covid$`Fecha de diagnóstico`))
+times <- as.factor(colombia_covid$`Fecha de diagnóstico`)
+levels(times) <- c(1:l_times)
+colombia_covid$Veces <- as.numeric(times)
+# The max of the `ID de caso` for each date is the cumulative number of cases confirmed up to that date
+acumulativo <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`) %>%s
+  summarise(max(`ID de caso`))
+colnames(acumulativo)[2] <- "Acumulativo"
+
+colombia_covid <- colombia_covid %>% mutate("Grupo de edad" = case_when(Edad <= 18 ~ '0-18',
+                                                   Edad >= 19  & Edad <= 30 ~ '19-30',
+                                                   Edad >=  31 & Edad <= 45 ~ '31-45',
+                                                   Edad >= 46 & Edad <= 60 ~ '46-60',
+                                                   Edad >=61 & Edad <= 75 ~ '60-75',
+                                                   Edad >=76 ~ '76+'))
+colombia_covid$`Grupo de edad` <- as.factor(colombia_covid$`Grupo de edad`)
+colombia_covid$`Departamento o Distrito` <- as.factor(colombia_covid$`Departamento o Distrito`)
+colombia_covid$`Ciudad de ubicación` <- as.factor(colombia_covid$`Ciudad de ubicación`)
+colombia_covid$Sexo <- as.factor(colombia_covid$Sexo)
+colombia_covid$Atención <- as.factor(colombia_covid$Atención)
+colombia_covid$Tipo <- as.factor(colombia_covid$Tipo)
+```
+
+```{r fix_countries, include=FALSE}
+sort(unique(colombia_covid$`País de procedencia`))
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Isla Martin - Caribe"] <- "Islas San Martin"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Israel Egipto"] <- "Israel - Egipto"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Jamaica - Isla Caimán - Panamá"] <- "Jamaica - Panamá - Isla Caimán"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Madrid"] <- "España"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Londres"] <- "Inglaterra"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Alemania - Estambul"] <- "Alemania - Turquía"
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Jamaica - Panamá - Islas del caribe - Cartagena"] <- "Jamaica - Panamá - Colombia"
+colombia_covid$`País de procedencia` <- as.factor(colombia_covid$`País de procedencia`)
+```
+
+```{r create_continents, include=FALSE}
+Europa <- c("Alemania", "Bélgica", "Europa",  "Croacia", "España", "España - Croacia", "España - Croacia - Bosnia",  "España - Francia", "España - Italia", "Francia", "Francia - Holanda", "Grecia", "Inglaterra", "Italia", "Italia - Ucrania - España", "Suiza")
+Asia <- c("Arabia", "Emiratos Árabes", "Turquía")
+África <- c("Egipto", "Marruecos")
+Norteamérica <- c("Canadá", "Estados Unidos", "México")
+Centroamérica <- c("Aruba", "Costa Rica", "Cuba", "Guatemala", "Islas San Martin", "Jamaica", "Jamaica - Panamá - Isla Caimán", "Jamaica - Panamá - Islas del caribe - Cartagena", "Panamá", "Panamá - Jamaica", "Puerto Rico", "República Dominicana")
+Sudamerica <- c("Argentina", "Brasil", "Chile", "Ecuador", "Perú", "Venezuela")
+# Alemania - Turquía", "España - India", "España - Turquia", "Italia - España - Turquía", "Turquía - Grecia" -> "Europa - Asia"
+# "España - Egipto" -> "Europa - África"
+# "Israel - Egipto" -> "Asia - África"
+# "Italia - Jamaica - Panamá" -> "Europa - Centroamérica"
+# "Colombia" -> "Colombia"
+
+for (i in 1:nrow(colombia_covid)) {
+  if (colombia_covid$`País de procedencia`[i] %in% Europa){
+    colombia_covid$`Continente de procedencia`[i] <- "Europa"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Asia){
+    colombia_covid$`Continente de procedencia`[i] <- "Asia"}
+  else if (colombia_covid$`País de procedencia`[i] %in% África){
+    colombia_covid$`Continente de procedencia`[i] <- "África"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Norteamérica){
+    colombia_covid$`Continente de procedencia`[i] <- "Norteamérica"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Centroamérica){
+    colombia_covid$`Continente de procedencia`[i] <- "Centroamérica"}
+  else if (colombia_covid$`País de procedencia`[i] %in% Sudamerica){
+    colombia_covid$`Continente de procedencia`[i] <- "Sudamerica"}
+  else if (colombia_covid$`País de procedencia`[i] == "Colombia"){
+    colombia_covid$`Continente de procedencia`[i] <- "Colombia"}
+  else if (colombia_covid$`País de procedencia`[i] == "Alemania - Turquía"){
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"}
+  else if (colombia_covid$`País de procedencia`[i] == "España - India")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "España - Turquia")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "Italia - España - Turquía")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "Turquía - Grecia")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
+  else if (colombia_covid$`País de procedencia`[i] == "España - Egipto")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - África"
+  else if (colombia_covid$`País de procedencia`[i] == "Israel - Egipto")
+    colombia_covid$`Continente de procedencia`[i] <- "Asia - África"
+  else if (colombia_covid$`País de procedencia`[i] == "Italia - Jamaica - Panamá")
+    colombia_covid$`Continente de procedencia`[i] <- "Europa - Centroamérica"
+}
+colombia_covid$`Continente de procedencia` <- as.factor(colombia_covid$`Continente de procedencia`)
+colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "0"] <- NA
+```
+
+```{r display}
+head(colombia_covid)
+```
