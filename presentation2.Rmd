@@ -4,22 +4,25 @@ author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
 date: "3/07/2020"
 output:
   ioslides_presentation:
+    # “default”, “cerulean”, “journal”, “flatly”, “darkly”, “readable”, “spacelab”, “united”, “cosmo”, “lumen”, “paper”, “sandstone”, “simplex”, “yeti”
     highlight: kate
+    theme: "sandstone"
+    colortheme: "sandstone"
     lightbox: true
     widescreen: true
     smaller: true
     logo: Logo_units_blu.png #logo_dssc_alt.png
   rmdformats::readthedown:
+  slidy_presentation:
+    fig.height: 3
+    fig.width: 4
+    highlight: kate
   beamer_presentation:
     highlight: tango
     theme: "metropolis"
     colortheme: "metropolis"
     fonttheme: "structurebold"
     always_allow_html: true
-  slidy_presentation:
-    fig.height: 3
-    fig.width: 4
-    highlight: kate
   html_document:
     highlight: kate
     lightbox: true
@@ -76,6 +79,19 @@ We decided to do **central Colombia**, basically because it is where the capital
 
 We built a model for the number of `confirmed` cases using all the others covariates (plus some we created) and we estimated the predictive accuracy of our selected model.
 
+## Loading the dataset
+
+```{r loading}
+colombia_covid <- as.data.frame(read_csv("data/datasets_567855_1056808_Casos1.csv"))
+colnames(colombia_covid)[5] <- "Atención"
+colnames(colombia_covid)[8] <- "Tipo"
+# slicing the main dataset
+central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boyacá", "Quindío", "Cauca",
+    "Valle del Cauca", "Risaralda", "Caldas", "Boyacá", "Antioquia", "Santander", "Casanare")
+central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
+colombia_covid <- colombia_covid[central.colombia.rows, ]
+```
+
 ## Our cities
 
 We decided to consider as **central Colombia** the following cities:
@@ -92,23 +108,10 @@ We decided to consider as **central Colombia** the following cities:
  - Antioquia,
  - Santander
  - Casanare
-
-## Loading the dataset
-
-```{r loading}
-colombia_covid <- as.data.frame(read_csv("data/datasets_567855_1056808_Casos1.csv"))
-colnames(colombia_covid)[5] <- "Atención"
-colnames(colombia_covid)[8] <- "Tipo"
-# slicing the main dataset
-central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boyacá", "Quindío", "Cauca",
-    "Valle del Cauca", "Risaralda", "Caldas", "Boyacá", "Antioquia", "Santander", "Casanare")
-central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
-colombia_covid <- colombia_covid[central.colombia.rows, ]
-```
-
+ 
 ## Map
 
-The color of the pins is related with the number of cases: if they are less than 10 the color is "green", if they are less than 100 the color is "orange", otherwise it is "red".\
+Here we can see our selected cities. The color of the pins is related with the number of cases: if they are less than $10$ the color is "green", if they are less than $100$ the color is "orange", otherwise it is "red".
 
 ```{r create_gis_df, include=FALSE}
 #lat-long
@@ -222,7 +225,10 @@ central_map
 
 ## Preprocessing {.smaller}
 
-```{r types, include=FALSE}
+```{r types, include=FALSE, echo=FALSE}
+# there were missing rows
+colombia_covid$`ID de caso` <- 1:dim(colombia_covid)[1]
+## day column in "international" format (so that R can fix the sorting properly)
 colombia_covid$`Fecha de diagnóstico` <- as.Date(colombia_covid$`Fecha de diagnóstico`, format="%d/%m/%Y")
 ## recodifying distinct times
 l_times <- length(unique(colombia_covid$`Fecha de diagnóstico`))
@@ -316,3 +322,125 @@ colombia_covid <- colombia_covid %>% replace_with_na(replace = list(`País de pr
 ```{r display}
 head(colombia_covid)
 ```
+
+```{r cumul_dept, include=FALSE}
+#boring and absolutely not efficient population of the number of cumulative cases
+cumulative_dep<-rep(0,83)
+covid_relevant_dp<-cbind(covid_relevant_dp, cumulative_dep)
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Bogotá D.C."),]))) {
+  if(i==1){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Valle del Cauca"),]))) {
+  if(i==3){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Antioquia"),]))) {
+  if(i==2){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Cundinamarca"),]))) {
+  if(i==13){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Risaralda"),]))) {
+  if(i==14){
+    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+  else {
+    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
+    prev<-covid_relevant_dp[i,4]
+  }
+}
+```
+
+```{r dataset_cumulative}
+covid_dp<-colombia_covid %>%
+  group_by(`Fecha de diagnóstico`,`Departamento o Distrito`) %>%
+  count()
+names(covid_dp)<-c("date", "dep", "n")
+#departments with more than 30 cases
+relevant<-c("Bogotá D.C.", "Valle del Cauca", "Antioquia", "Cundinamarca", "Risaralda")
+covid_relevant_dp<-subset(covid_dp, dep %in% relevant)
+covid_relevant_dp
+
+covid_dp <- as.data.frame(covid_dp)
+covid_dp$date <- as.Date(covid_dp$date, "%Y-%m-%d")
+
+covid_dp <- covid_dp %>% mutate(BETWEEN0 = as.numeric(difftime(date, lag(date, 1), units = "days")),
+            BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), elapsed_time = cumsum(as.numeric(BETWEEN))) %>%
+            dplyr::select(-c(BETWEEN0,BETWEEN))
+
+write_csv(covid_dp, "data/central_colombia.csv")
+
+covid_relevant_dp <- as.data.frame(covid_relevant_dp)
+covid_dp$date <- as.Date(covid_dp$date, "%Y-%m-%d")
+
+covid_relevant_dp <- covid_relevant_dp %>% mutate(BETWEEN0 = as.numeric(difftime(date, lag(date, 1),
+                      units = "days")), BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), elapsed_time =
+                      cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
+
+covid_relevant_dp
+
+write_csv(covid_relevant_dp, "data/central_colombia_relevant.csv")
+```
+
+
+## Exploring the dataset
+
+Number of cases confirmed day by day
+
+```{r barplot, echo=FALSE}
+theme_set(theme_classic())
+
+colorCount<-length(unique(colombia_covid$`Departamento o Distrito`)) 
+getPalette<-colorRampPalette(brewer.pal(9, "Spectral"))(colorCount)
+
+daily_confirmed<-ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
+  scale_fill_manual(values = getPalette)
+daily_confirmed + geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.8, stat="count") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6),
+        legend.position = "right") +
+  labs(title = "Daily number of confirmed cases", 
+       subtitle = "subdivided across departments",
+       x = "Date of confirmation",
+       fill = "Department")
+```
+
+
+# The frequentist approach
+
+## Other slide
+
+Something.
+
+# The Bayesian approach
+
+## Other slide
+
+Something.
