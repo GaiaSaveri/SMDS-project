@@ -59,6 +59,7 @@ library(leaflet)
 library(geojsonio)
 library(htmltools)
 library(htmlwidgets)
+library(MASS)
 ```
 
 # Colombia COVID-19
@@ -656,6 +657,18 @@ names(cumulative2)<-c("date", "y", "elapsed_time")
 cumulative2
 ```
 
+## Description of variables
+
+**ID de caso.** ID of the confirmed case. 
+**Fecha de diagnóstico.** Date that the disease was diagnosed. 
+**Ciudad de ubicación.** City where the case was diagnosed
+**Departamento o Distrito.** Department or distric that the city belongs to.
+**Atención.** Situation of the pacient: recovered, at home, at the hospital, at the ICU or deceased
+**Edad.** Age of the confirmed case
+**Sexo.** Sex of the confirmed cade
+**Tipo.** How the person got infected: in Colombia, abroad or unknown. 
+**País de procedencia.** Country of origin in case the person got infected abroad.
+
 ## Country of origin
 
 Cleaning the "`País de procedencia`" variable and creating another variable related to the continents. As `País de procedencia` is too fragmented is good to group them into continents and see if there is a difference in the model. 
@@ -735,7 +748,7 @@ colombia_covid <- colombia_covid %>% replace_with_na(replace = list(`País de pr
 
 Dropping the variables `Ciudad de ubicación`, `Atención**` and `Tipo*`.
 
-Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in dividing the region in departments and not in cities.
+Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in dividing the region into departments and not in cities.
 
 Considering the variable "Atención**" at the moment I think is not relevant to know how many confirmed cases there will be, but we can add later and check. 
 
@@ -748,7 +761,7 @@ covid19 <- dplyr::select(colombia_covid, -c(`Ciudad de ubicación`,`Atención**`
 
 ```
 
-Transforming the age values into age ranges to be able to transform it in a dummy variable
+Transforming the age values into age ranges to be able to transform it into a dummy variable
 
 ```{r Giullia1a, echo=TRUE, warning=FALSE}
 covid19<-covid19 %>% mutate(Edad = case_when(Edad <= 18 ~ "0 a 18",
