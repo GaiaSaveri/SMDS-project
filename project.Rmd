@@ -910,8 +910,8 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
     df <- data.frame("fit" = ilink(fit$fit), "lwr" = lwr, "upr" = upr)
     return(df)
 }
-
-conf.df <- predict.confidence(poisson3, as.data.frame(`Cumulative confirmed`))
+attach(data1)
+conf.df <- predict.confidence(poisson3, as.data.frame(data1$y))
 head(conf.df, 2)
 ```
 
@@ -989,7 +989,6 @@ In this case the AIC reduced in comparison with the model with just the time as 
 
 ```{r Giullia14, echo=TRUE, warning=FALSE}
 #Running negative binomial with just the variable representing the time as predictor
-library(MASS)
 nb1 <- glm.nb(y~elapsed_time)
 summary(nb1)
 ```
@@ -1074,4 +1073,4 @@ http://freerangestats.info/blog/2020/05/09/covid-population-incidence
 
 [interpetation glm](https://www.datascienceblog.net/post/machine-learning/interpreting_generalized_linear_models/)
 
-<!-- knitr::knit("Homework4_2020_GROUP_I.Rmd", tangle = TRUE, output ="Homework1_2020_GROUP_I.R") -->
+<!-- knitr::knit("project.Rmd", tangle = TRUE, output ="project.R") -->

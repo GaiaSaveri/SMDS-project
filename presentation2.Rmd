@@ -59,6 +59,7 @@ knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
 ```
 
 ```{r message=FALSE, include=FALSE}
+library(MASS)
 library(readr)
 library(dplyr)
 library(ggplot2)
