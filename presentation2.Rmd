@@ -58,7 +58,7 @@ local({
     paste0('\n\n----\n\n', hook_plot(x, options))
   })
 })
-knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
+knitr::opts_chunk$set(echo = FALSE, tidy = TRUE)
 ```
 
 ```{r message=FALSE, include=FALSE}
@@ -71,6 +71,10 @@ library(leaflet)
 library(geojsonio)
 library(htmltools)
 library(htmlwidgets)
+
+library(rstan)
+library(bayesplot)
+library(lubridate)
 ```
 
 ## Our project
@@ -230,17 +234,6 @@ central_map
 colombia_covid$`ID de caso` <- 1:dim(colombia_covid)[1]
 ## day column in "international" format (so that R can fix the sorting properly)
 colombia_covid$`Fecha de diagnóstico` <- as.Date(colombia_covid$`Fecha de diagnóstico`, format="%d/%m/%Y")
-## recodifying distinct times
-l_times <- length(unique(colombia_covid$`Fecha de diagnóstico`))
-times <- as.factor(colombia_covid$`Fecha de diagnóstico`)
-levels(times) <- c(1:l_times)
-colombia_covid$Veces <- as.numeric(times)
-# The max of the `ID de caso` for each date is the cumulative number of cases confirmed up to that date
-#acumulativo <- colombia_covid %>%
-#  group_by(`Fecha de diagnóstico`) %>%s
-#  summarise(max(`ID de caso`))
-#colnames(acumulativo)[2] <- "cumulative"
-#colombia_covid$Acumulativo <- colombia_covid$`Fecha de diagnóstico` == acumulativo$`Fecha de diagnóstico`
 colombia_covid <- colombia_covid %>% mutate("Grupo de edad" = case_when(Edad <= 18 ~ '0-18',
                                                    Edad >= 19  & Edad <= 30 ~ '19-30',
                                                    Edad >=  31 & Edad <= 45 ~ '31-45',
@@ -314,20 +307,29 @@ for (i in 1:nrow(colombia_covid)) {
 }
 colombia_covid$`Continente de procedencia` <- as.factor(colombia_covid$`Continente de procedencia`)
 # Transforming the 0 value into a null value
-library(naniar)
-colombia_covid <- colombia_covid %>% replace_with_na(replace = list(`País de procedencia` = 0))
-# colombia_covid[911,]$`País de procedencia` <- NA
+colombia_covid[911,]$`País de procedencia` <- NA
 ```
 
 ```{r display}
 head(colombia_covid)
 ```
 
+```{r relevant_dp}
+covid_dp <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`,`Departamento o Distrito`) %>%
+  count()
+names(covid_dp) <- c("Date", "Department", "New cases/day")
+#departments with more than 30 cases
+relevant <- c("Bogotá D.C.", "Valle del Cauca", "Antioquia", "Cundinamarca", "Risaralda")
+covid_relevant_dp <- as.data.frame(subset(covid_dp, Department %in% relevant))
+```
+
+
 ```{r cumul_dept, include=FALSE}
 #boring and absolutely not efficient population of the number of cumulative cases
-cumulative_dep<-rep(0,83)
-covid_relevant_dp<-cbind(covid_relevant_dp, cumulative_dep)
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Bogotá D.C."),]))) {
+cumulative_dep <- rep(0, 83)
+covid_relevant_dp <- cbind(covid_relevant_dp, cumulative_dep)
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Bogotá D.C."),]))) {
   if(i==1){
     covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
     prev<-covid_relevant_dp[i,4]
@@ -337,7 +339,7 @@ for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Bo
     prev<-covid_relevant_dp[i,4]
   }
 }
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Valle del Cauca"),]))) {
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Valle del Cauca"),]))) {
   if(i==3){
     covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
     prev<-covid_relevant_dp[i,4]
@@ -347,7 +349,7 @@ for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Va
     prev<-covid_relevant_dp[i,4]
   }
 }
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Antioquia"),]))) {
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Antioquia"),]))) {
   if(i==2){
     covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
     prev<-covid_relevant_dp[i,4]
@@ -357,7 +359,7 @@ for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="An
     prev<-covid_relevant_dp[i,4]
   }
 }
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Cundinamarca"),]))) {
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Cundinamarca"),]))) {
   if(i==13){
     covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
     prev<-covid_relevant_dp[i,4]
@@ -367,7 +369,7 @@ for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Cu
     prev<-covid_relevant_dp[i,4]
   }
 }
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Risaralda"),]))) {
+for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Risaralda"),]))) {
   if(i==14){
     covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
     prev<-covid_relevant_dp[i,4]
@@ -380,34 +382,18 @@ for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Ri
 ```
 
 ```{r dataset_cumulative}
-covid_dp<-colombia_covid %>%
-  group_by(`Fecha de diagnóstico`,`Departamento o Distrito`) %>%
-  count()
-names(covid_dp)<-c("date", "dep", "n")
-#departments with more than 30 cases
-relevant<-c("Bogotá D.C.", "Valle del Cauca", "Antioquia", "Cundinamarca", "Risaralda")
-covid_relevant_dp<-subset(covid_dp, dep %in% relevant)
-covid_relevant_dp
-
 covid_dp <- as.data.frame(covid_dp)
-covid_dp$date <- as.Date(covid_dp$date, "%Y-%m-%d")
-
-covid_dp <- covid_dp %>% mutate(BETWEEN0 = as.numeric(difftime(date, lag(date, 1), units = "days")),
+covid_dp <- covid_dp %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
             BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), elapsed_time = cumsum(as.numeric(BETWEEN))) %>%
             dplyr::select(-c(BETWEEN0,BETWEEN))
 
-write_csv(covid_dp, "data/central_colombia.csv")
-
-covid_relevant_dp <- as.data.frame(covid_relevant_dp)
-covid_dp$date <- as.Date(covid_dp$date, "%Y-%m-%d")
-
-covid_relevant_dp <- covid_relevant_dp %>% mutate(BETWEEN0 = as.numeric(difftime(date, lag(date, 1),
+covid_relevant_dp <- covid_relevant_dp %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1),
                       units = "days")), BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), elapsed_time =
                       cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
-
-covid_relevant_dp
-
-write_csv(covid_relevant_dp, "data/central_colombia_relevant.csv")
+covid_relevant_dp <- covid_relevant_dp[order(covid_relevant_dp$Department), ]
+covid_relevant_dp <- covid_relevant_dp[, c(1,5,2,3,4)]
+names(covid_relevant_dp) <- c("Date", "Elapsed time", "Department", "New cases/day", "Cumulative cases/Department")
+head(covid_relevant_dp)
 ```
 
 
@@ -415,7 +401,7 @@ write_csv(covid_relevant_dp, "data/central_colombia_relevant.csv")
 
 Number of cases confirmed day by day
 
-```{r barplot, echo=FALSE}
+```{r barplot, echo=FALSE, warning=FALSE}
 theme_set(theme_classic())
 
 colorCount<-length(unique(colombia_covid$`Departamento o Distrito`)) 
@@ -441,6 +427,62 @@ Something.
 
 # The Bayesian approach
 
-## Other slide
+## Poisson regression
 
-Something.
+As a first attempt, we fit a simple Poisson regression:
+
+$$
+ln\lambda_i = \alpha + \beta\cdot elapsed\_time_i \\
+y_i \sim \mathcal{Poisson}(\lambda_i)
+$$
+with $i = 1,\dots,83$, and $y_i$ represents the number of cases.
+
+```{r stan_poisson_regression, warning=FALSE}
+model.Poisson <- stan_model("stan/poisson_regression.stan")
+#arrange things
+model.data <- list(
+  N = nrow(covid_relevant_dp),
+  cases = covid_relevant_dp$`New cases/day`,
+  time = covid_relevant_dp$`Elapsed time`
+)
+#str(model.Poisson.data)
+
+#run the model 
+fit.model.Poisson<-sampling(model.Poisson, data=model.data)
+
+#inferred parameters
+print(fit.model.Poisson, pars=c("alpha", "beta"))
+```
+
+Looking at `Rhat` we can see that we have reached the convergence.
+
+```{r first_plot, echo=TRUE, warning=FALSE}
+theme_set(bayesplot::theme_default())
+
+mcmc_scatter(as.matrix(fit.model.Poisson, pars=c("alpha", "beta") ), alpha=0.2)
+```
+
+Check the posterior:
+
+```{r poisson_posterior, echo=TRUE, warning=FALSE}
+y_rep <- as.matrix(fit.model.Poisson, pars="y_rep")
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+```
+
+The model is not able to capture low and high numbers of new cases.
+
+The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis: 
+
+```{r first_residual, echo=TRUE, warning=FALSE}
+#in this way we check the standardized residuals
+mean_y_rep<-colMeans(y_rep)
+std_residual<-(model.data$cases - mean_y_rep) / sqrt(mean_y_rep)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at +2 and -2 indicates approximate 95% error bounds). The variance of the standardized residuals is much greater than 1, indicating a large amount of overdispersion. 
+
+Classically the problem of having overdispersed data is solved using the negative binomial model instead of the Poisson one.
+
+## Negative binomial model
+
