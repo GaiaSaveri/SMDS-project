@@ -660,14 +660,23 @@ cumulative2
 ## Description of variables
 
 **ID de caso.** ID of the confirmed case. 
+
 **Fecha de diagnóstico.** Date that the disease was diagnosed. 
-**Ciudad de ubicación.** City where the case was diagnosed
+
+**Ciudad de ubicación.** City where the case was diagnosed.
+
 **Departamento o Distrito.** Department or distric that the city belongs to.
-**Atención.** Situation of the pacient: recovered, at home, at the hospital, at the ICU or deceased
-**Edad.** Age of the confirmed case
-**Sexo.** Sex of the confirmed cade
+
+**Atención.** Situation of the pacient: recovered, at home, at the hospital, at the ICU or deceased.
+
+**Edad.** Age of the confirmed case.
+
+**Sexo.** Sex of the confirmed cade.
+
 **Tipo.** How the person got infected: in Colombia, abroad or unknown. 
+
 **País de procedencia.** Country of origin in case the person got infected abroad.
+
 
 ## Country of origin
 
