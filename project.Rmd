@@ -585,21 +585,21 @@ ggplot(covid_relevant_dp, aes(x=date, y=cumulative_dep, fill=dep)) +
 We can see that (except for the Bogotà department) we have a lot of "missing" columns, these are the days in which no data was recorded for the corresponding department, the cumulative number of cases is the same as the previous day reported in the dataset. Maybe there is a way to fix this!
 
 ```{r}
-covid_dp<-as.data.frame(covid_dp)
-covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
+covid_dp <- as.data.frame(covid_dp)
+covid_dp$date <- as.Date(covid_dp$date, "%Y-%m-%d")
 
-covid_dp<-covid_dp %>%  
-mutate(BETWEEN0=as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
-select(-c(BETWEEN0,BETWEEN))
+covid_dp <- covid_dp %>% mutate(BETWEEN0 = as.numeric(difftime(date, lag(date, 1), units = "days")),
+            BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), elapsed_time = cumsum(as.numeric(BETWEEN))) %>%
+            dplyr::select(-c(BETWEEN0,BETWEEN))
 
 write_csv(covid_dp, "data/central_colombia.csv")
 
-covid_relevant_dp<-as.data.frame(covid_relevant_dp)
-covid_dp$date<-as.Date(covid_dp$date, "%Y-%m-%d")
+covid_relevant_dp <- as.data.frame(covid_relevant_dp)
+covid_dp$date <- as.Date(covid_dp$date, "%Y-%m-%d")
 
-covid_relevant_dp <- covid_relevant_dp %>%  
-mutate(BETWEEN0 = as.numeric(difftime(date,lag(date,1), units = "days")),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
-select(-c(BETWEEN0,BETWEEN))
+covid_relevant_dp <- covid_relevant_dp %>% mutate(BETWEEN0 = as.numeric(difftime(date, lag(date, 1),
+                      units = "days")), BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), elapsed_time =
+                      cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
 
 covid_relevant_dp
 
@@ -650,7 +650,7 @@ The days 7/03/20, 8/03/20, 10/03/20 are missing, probably because no case was de
 ```{r start_analysis, echo=TRUE, warning=FALSE}
 cumulative2<-cumulative %>%  
 mutate(BETWEEN0=as.numeric(difftime(`Fecha de diagnóstico`,lag(`Fecha de diagnóstico`,1))),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
-select(-c(BETWEEN0,BETWEEN))
+dplyr::select(-c(BETWEEN0,BETWEEN))
 #just for praticality
 names(cumulative2)<-c("date", "y", "elapsed_time")
 cumulative2
@@ -658,19 +658,16 @@ cumulative2
 
 ## Country of origin
 
+Cleaning the "`País de procedencia`" variable and creating another variable related to the continents. As `País de procedencia` is too fragmented is good to group them into continents and see if there is a difference in the model. 
+
+We clean the column `País de procedencia` by making sure that there are no cities instead of countries and that the countries are separated with a dash (we'll use it with dummy variables)
+
 ```{r country, echo=TRUE, warning=FALSE}
-#Cleaning the "`País de procedencia`" variable and creating another variable related to the continents. As "`País de procedencia`" is too fragmented is good to group them into continents and see if there is a difference in the model. 
-
-#We clean the column `País de procedencia` by making sure that there are no cities instead of countries and that the countries are separated with a dash (we'll use it with dummy variables)
-
 sort(unique(colombia_covid$`País de procedencia`))
 
 #There is an observation that has a 0 as País de procedencia
 which(colombia_covid$`País de procedencia`=="0")
 colombia_covid[911,] 
-#Transforming it into a null value
-library(naniar)
-covid19 <- colombia_covid %>% replace_with_na(replace = list(`País de procedencia` = 0))
 
 #Standardizing the country names
 colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Isla Martin - Caribe"] <- "Islas San Martin"
@@ -686,7 +683,7 @@ Europa <- c("Alemania", "Bélgica", "Europa",  "Croacia", "España", "España - 
 Asia <- c("Arabia", "Emiratos Árabes", "Turquía")
 África <- c("Egipto", "Marruecos")
 Norteamérica <- c("Canadá", "Estados Unidos", "México")
-Centroamérica <- c("Costa Rica", "Cuba", "Guatemala", "Islas San Martin", "Jamaica", "Jamaica - Panamá - Isla Caimán", "Jamaica - Panamá - Islas del caribe - Cartagena", "Panamá", "Panamá - Jamaica", "Puerto Rico", "República Dominicana", "Aruba")
+Centroamérica <- c("Aruba", "Costa Rica", "Cuba", "Guatemala", "Islas San Martin", "Jamaica", "Jamaica - Panamá - Isla Caimán", "Jamaica - Panamá - Islas del caribe - Cartagena", "Panamá", "Panamá - Jamaica", "Puerto Rico", "República Dominicana")
 Sudamerica <- c("Argentina", "Brasil", "Chile", "Ecuador", "Perú", "Venezuela")
 # Alemania - Turquía", "España - India", "España - Turquia", "Italia - España - Turquía", "Turquía - Grecia" -> "Europa - Asia"
 # "España - Egipto" -> "Europa - África"
@@ -726,27 +723,34 @@ for (i in 1:nrow(colombia_covid)) {
   else if (colombia_covid$`País de procedencia`[i] == "Italia - Jamaica - Panamá")
     colombia_covid$`Continente de procedencia`[i] <- "Europa - Centroamérica"
 }
-
+# Transforming the 0 value into a null value
+library(naniar)
+colombia_covid <- colombia_covid %>% replace_with_na(replace = list(`País de procedencia` = 0))
+# colombia_covid[911,]$`País de procedencia` <- NA
 ```
 
 ## Preparation of the dataset to run the Poisson regression
 
 **Giullia.** So, as we have to group the data by date to be able to run the models, we have to count the occurance of the categorical variables in each day. So that's what I did below and described each step in detail. 
 
-```{r Giullia1, echo=TRUE, warning=FALSE}
-#Dropping the variables "Ciudad de ubicación","Atención**" and "Tipo*".
-#Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in dividing the region in departments and not in cities.
-#Considering the variable "Atención**" at the moment I think is not relevant to know how many confirmed cases there will be, but we can add later and check. 
-#Considering the variable "Tipo*" many observations are "in study", so it is better to use just the variable country of origin (`País de procedencia`), because they consider the ones "in study" as Colombia. 
+Dropping the variables `Ciudad de ubicación`, `Atención**` and `Tipo*`.
 
+Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in dividing the region in departments and not in cities.
+
+Considering the variable "Atención**" at the moment I think is not relevant to know how many confirmed cases there will be, but we can add later and check. 
+
+Considering the variable "Tipo*" many observations are "in study", so it is better to use just the variable country of origin (`País de procedencia`), because they consider the ones "in study" as Colombia. 
+
+
+```{r Giullia1, echo=TRUE, warning=FALSE}
 colnames(colombia_covid)[8] <- "Tipo*"
-covid19 <- select(colombia_covid,-c(`Ciudad de ubicación`,`Atención**`,`Tipo*`))
+covid19 <- dplyr::select(colombia_covid, -c(`Ciudad de ubicación`,`Atención**`,`Tipo*`))
 
 ```
 
-```{r Giullia1a, echo=TRUE, warning=FALSE}
-#Transforming the age values into age ranges to be able to transform it in a dummy variable
+Transforming the age values into age ranges to be able to transform it in a dummy variable
 
+```{r Giullia1a, echo=TRUE, warning=FALSE}
 covid19<-covid19 %>% mutate(Edad = case_when(Edad <= 18 ~ "0 a 18",
                                                             Edad >= 19  & Edad <= 30 ~ "19 a 30",
                                                             Edad >=  31 & Edad <= 45 ~ "31 a 45",
@@ -756,21 +760,21 @@ covid19<-covid19 %>% mutate(Edad = case_when(Edad <= 18 ~ "0 a 18",
 
 ```
 
-```{r Giullia1b, echo=TRUE, warning=FALSE}
-#Transform the categorical variables into dummy variables
+Transform the categorical variables into dummy variables
 
+```{r Giullia1b, echo=TRUE, warning=FALSE}
 library(fastDummies)
 covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito","Edad","Sexo", "País de procedencia", "Continente de procedencia"),remove_first_dummy = TRUE,ignore_na=TRUE,split="-",remove_selected_columns=TRUE)
 
 ```
 
-```{r Giullia1c, echo=TRUE, warning=FALSE}
-#Counting the occurance of the dummy variables by date and deleting the `Fecha de diagnóstico` and `ID de caso` because I will bind with the cumulative2 table made by Gaia.
+Counting the occurance of the dummy variables by date and deleting the `Fecha de diagnóstico` and `ID de caso` because I will bind with the cumulative2 table made by Gaia.
 
+```{r Giullia1c, echo=TRUE, warning=FALSE}
 group_dummy <- covid19_dummy %>%
   group_by(`Fecha de diagnóstico`) %>%
   summarise_all(funs(sum)) %>%
-  select(-c(`Fecha de diagnóstico`,`ID de caso`))
+  dplyr::select(-c(`Fecha de diagnóstico`,`ID de caso`))
 
 ```
 
@@ -778,7 +782,6 @@ group_dummy <- covid19_dummy %>%
 #Biding
 
 data1 <- bind_cols(cumulative2, group_dummy)
-
 ```
 
 
@@ -804,6 +807,8 @@ res.st <- (y-pred.pois)/sqrt(pred.pois)
 plot(pred.pois, res.st)
 abline(h=0,lty=3,col="gray75")
 
+par(mfrow=c(2,2))
+plot(poisson1)
 ```
 
 According to the plot there is presence of overdispersion because the standardized residuals are outside the -1 to 1 range assumed by a Poisson distribution. 
@@ -820,8 +825,15 @@ est.overdispersion
 
 Extremely high!!!
 
+```{r}
+summary(residuals(poisson1))
+paste0(c("Null deviance: ", "Residual deviance: "),
+       round(c(poisson1$null.deviance, deviance(poisson1)), 2))
+```
+
+Let's apply a quasi poisson and see what happens
+
 ```{r Giullia5, echo=TRUE, warning=FALSE}
-#Let's apply a quasi poisson and see what happens
 poisson1quasi <- glm(y~elapsed_time,family=quasipoisson)
 summary(poisson1quasi)
 
@@ -837,8 +849,6 @@ est.overdispersion
 ```
 
 So I applied the quasi poisson and the overdispersion reduced to 1. Anyway, the residuals are still behaving like a distribution. Have to understand why is that.
-
-
 
 ### Running poisson with the variable representing time plus gender
 
@@ -861,9 +871,9 @@ summary(poisson3)
 Results show that 4 out of the 5 age ranges are significant predictors, showing that age does have an effect in predicting the number of confirmed cases.
 Furthermore, it can be seen that the AIC reduced in comparison with the model that has just the variable time as predictor (poisson1).
 
+Plotting the residuals versus fit and calculating the overdispersion
 
 ```{r Giullia8, echo=TRUE, warning=FALSE}
-#plotting the residuals versus fit and calculating the overdispersion 
 pred.pois3 <- poisson3$fitted.values
 res.st3 <- (y-pred.pois3)/sqrt(pred.pois3)
 plot(pred.pois3, res.st3)
@@ -878,6 +888,32 @@ est.overdispersion
 ```
 
 The overdispersion is high and again the residuals continue to behave like a distribution.
+
+```{r}
+predict.confidence <- function(object, newdata, level = 0.95, ...) {
+    if (!is(object, "glm")) {
+        stop("Model should be a glm")
+    }
+    if (!is(newdata, "data.frame")) {
+        stop("Plase input a data frame for newdata")
+    }
+    if (!is.numeric(level) | level < 0 | level > 1) {
+        stop("level should be numeric and between 0 and 1")
+    }
+    ilink <- family(object)$linkinv
+    ci.factor <- qnorm(1 - (1 - level)/2)
+    # calculate CIs:
+    fit <- predict(object, newdata = newdata, level = level, 
+                    type = "link", se.fit = TRUE, ...)
+    lwr <- ilink(fit$fit - ci.factor * fit$se.fit)
+    upr <- ilink(fit$fit + ci.factor * fit$se.fit)
+    df <- data.frame("fit" = ilink(fit$fit), "lwr" = lwr, "upr" = upr)
+    return(df)
+}
+attach(data1)
+conf.df <- predict.confidence(poisson3, as.data.frame(data1$y))
+head(conf.df, 2)
+```
 
 ```{r Giullia9, echo=TRUE, warning=FALSE}
 #Let's apply a quasi poisson and see what happens
@@ -953,7 +989,6 @@ In this case the AIC reduced in comparison with the model with just the time as 
 
 ```{r Giullia14, echo=TRUE, warning=FALSE}
 #Running negative binomial with just the variable representing the time as predictor
-library(MASS)
 nb1 <- glm.nb(y~elapsed_time)
 summary(nb1)
 ```
@@ -1038,4 +1073,4 @@ http://freerangestats.info/blog/2020/05/09/covid-population-incidence
 
 [interpetation glm](https://www.datascienceblog.net/post/machine-learning/interpreting_generalized_linear_models/)
 
-<!-- knitr::knit("Homework4_2020_GROUP_I.Rmd", tangle = TRUE, output ="Homework1_2020_GROUP_I.R") -->
+<!-- knitr::knit("project.Rmd", tangle = TRUE, output ="project.R") -->

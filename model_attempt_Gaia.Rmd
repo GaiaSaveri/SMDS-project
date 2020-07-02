@@ -52,6 +52,7 @@ knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
 
 ```{r message=FALSE}
 library(readr)
+library(loo)
 library(rstan)
 library(dplyr)
 library(ggplot2)
@@ -78,6 +79,7 @@ Please ignore tha fact that the picture is horrible, I'm starting convincing mys
 data<-read_csv("data/central_colombia_relevant.csv")
 data<-data[order(data$dep),]
 data<-data[,c(1,5,2,3,4)]
+data
 ```
 
 ## Poisson regression
@@ -113,6 +115,9 @@ fit.model.Poisson<-sampling(model.Poisson, data=model.data)
 
 #inferred parameters
 print(fit.model.Poisson, pars=c("alpha", "beta"))
+
+loo.model.Poisson<-loo(fit.model.Poisson)$estimates
+loo.model.Poisson
 ```
 
 Looking at `Rhat` we can see that we have reached the convergence.
@@ -219,21 +224,13 @@ ppc_intervals(
   labs(x = "Days", y = "Cases")
 ```
 
-We still have some large number of cases that the model consider extremely unlikely events. 
+We still have some large number of cases that the model consider extremely unlikely events.
 
-## Hierarchical modeling
-
-Consider the following model:
-
-$$
-ln\lambda_{d,i} = \alpha_d + \beta\cdot elapsed\_time_i \\
-\alpha_{d} \sim \mathcal{N}(\mu + \beta_{dep}\cdot dep\_id_d, \sigma) \\
-y_{d,i} \sim \mathcal{Negative Binomial}(\lambda_i, \phi)
-$$
-
-where $d$ stands for department, and $\alpha_d$ is an intercept that veries from department  to department. 
-
-Maybe we could include some more info about departemnts, e.g. the total number of people living there, or the density of inhabitants, the total surface.. 
+```{r log_lik, echo=TRUE, warning=FALSE}
+library(loo)
+loo.model.NB<-loo(fit.model.NB)$estimates
+loo.model.NB
+```
 
 As first thing we should convert the variable `dep` from a categorical to a numerical one:
 
@@ -257,7 +254,6 @@ data[which(data$dep_id==4),]$people<-0.94
 data[which(data$dep_id==5),]$people<-4.4
 
 cc<-read_csv("data/colombia_covid.csv")
-tail(cc)
 central.colombia.dep<-c("Bogotá D.C.", "Cundinamarca",  "Valle del Cauca", "Risaralda", "Antioquia")
 central.colombia.rows<-which(cc$`Departamento o Distrito` %in% central.colombia.dep)
 cc<-cc[central.colombia.rows,]
@@ -284,14 +280,14 @@ data[which(data$dep_id==2),]$age<-unname(unlist(c(bogota_mean_age[2])))
 data[which(data$dep_id==3),]$age<-unname(unlist(c(cundinamarca_mean_age[2])))
 data[which(data$dep_id==4),]$age<-unname(unlist(c(risaralda_mean_age[2])))
 data[which(data$dep_id==5),]$age<-unname(unlist(c(valle_cauca_mean_age[2])))
+
 ```
 
 We can try to include these new variables in the model, for example (varying intercept model, considering people as exposure term):
 
 $$
-ln\lambda_{i,d} = \alpha_d + \beta_{time}\cdot elapsed\_time_i + \beta_{age}age_i + log(people_i) \\
-\alpha_d \sim \mathcal{N}(\mu, \sigma)\\
-y_i \sim \mathcal{Negative Binomial}(\lambda_{i,d}, \phi)
+ln\lambda_i = \alpha + \beta_{time}\cdot elapsed\_time_i + \beta_{age}\cdot age \\
+y_i \sim \mathcal{Negative Binomial}(\lambda_i, \phi)
 $$
 
 where $d$ stands for department. 
@@ -306,11 +302,7 @@ model.data2<-list(
   N = nrow(data),
   cases = data$n,
   time = data$elapsed_time,
-  age = data$age,
-  log_people = log(data$people*10)
-  #D = 5,
-  #dep = data$dep_id,
-  #id = data$dep_id
+  age = data$age
 )
 
 #fit
@@ -319,7 +311,7 @@ fit.model2.NB<-sampling(model2.NB, model.data2)
 #posterior predictive chiecking
 samples_NB2<-rstan::extract(fit.model2.NB)
 y_rep<-samples_NB2$y_rep
-#ppc_dens_overlay(y = model .data2$cases, y_rep[1:200,]) 
+ppc_dens_overlay(y = model.data2$cases, y_rep[1:200,]) 
 ppc_stat_grouped(
   y = model.data2$cases,
   yrep = y_rep,
@@ -333,6 +325,41 @@ ppc_intervals(
   x = data$elapsed_time
 ) + 
   labs(x = "Days", y = "Cases")
+
+loo.model.NB2<-loo(fit.model2.NB)$estimates
+loo.model.NB2
+```
+
+```{r dep_surface, echo=TRUE, warning=FALSE}
+#km^2
+antioquia_surface<-63600
+bogota_surface<-1775
+cundinamarca_surface<-24210
+risaralda_surface<-4140
+valle_cauca_surface<-22195
+
+#population density inhabitants/km^2
+antioquia_density<-88.06
+bogota_density<-4552
+cundinamarca_density<-99.15
+risaralda_density<-59.16
+valle_cauca_density<-183.04
+
+data$surface<-rep(0, nrow(data))
+data$density<-rep(0, nrow(data))
+
+data[which(data$dep_id==1),]$surface<-antioquia_surface
+data[which(data$dep_id==2),]$surface<-bogota_surface
+data[which(data$dep_id==3),]$surface<-cundinamarca_surface
+data[which(data$dep_id==4),]$surface<-risaralda_surface
+data[which(data$dep_id==5),]$surface<-valle_cauca_surface
+
+data[which(data$dep_id==1),]$density<-antioquia_density
+data[which(data$dep_id==2),]$density<-bogota_density
+data[which(data$dep_id==3),]$density<-cundinamarca_density
+data[which(data$dep_id==4),]$density<-risaralda_density
+data[which(data$dep_id==5),]$density<-valle_cauca_density
+
 ```
 
 ## Hierarchical modeling 
@@ -342,66 +369,77 @@ We include an intercept term which should take into account the difference among
 So the model (varying intercept model) that we take into account is now:
 
 $$
-ln\lambda_{i,d} = \alpha_d + \beta\cdot elapsed\_time_i \\
-\alpha_d \sim \mathcal{N}(\mu, \sigma)\\
+ln\lambda_{i,d} = \alpha_d +  + \beta_{time}\cdot elapsed\_time_i + \beta_{age}\cdot age_i\\
+\alpha_d \sim \mathcal{N}(\mu + \beta_{pop}\cdot pop_d + \beta_{sur}\cdot surface_d + \beta_{dens} \cdot density_d, \sigma_{\alpha})\\
 y_i \sim \mathcal{Negative Binomial}(\lambda_{i,d}, \phi)
 $$
 
 where $d$ stands for department. 
 
 ```{r hier_first, echo=TRUE, warning=FALSE}
-data<- data %>%  
-  mutate(dep_idx = factor(dep, levels = unique(dep)),
-          dep_id = as.integer(dep_idx)) %>%
-  select(-dep_idx)
-data<-data[,c(1,2,3,6,4,5)]
-data
-length(unique(data$dep_id))
-#compile
-model2.NB<-stan_model("stan/NB_model2.stan")
+#compile the model 
+model3.NB<-stan_model("stan/NB_model3.stan")
 
-#modify model data to add necessary things
-model2.data<-with(data,
-                  list(D=length(unique(data$dep_id)),
-                       N=nrow(data),
-                       cases = n,
-                       dep = data$dep_id,
-                       time = data$elapsed_time
-                       )
-)
-#fit
-fit.model2.NB<-sampling(model2.NB, model2.data)
-#save sampling
-samples_NB2<-rstan::extract(fit.model.NB)
-y_rep<-samples_NB2$y_rep
-ppc_dens_overlay(y = model2.data$cases, y_rep[1:200,]) 
-```
+dep_data<-data %>%
+  select(
+    dep_id,
+    people,
+    surface,
+    density
+  ) %>%
+  unique() %>%
+  arrange(dep_id) %>%
+  select(-dep_id) %>%
+  as.matrix()
 
-Let's check if there is difference in the accuracy across departments with respect to the previous model:
+#prepare the new data
+data.hier.NB<-
+  with(data,
+       list(N = nrow(data),
+            cases = data$n,
+            time = data$elapsed_time,
+            age = data$age,
+            K=3, 
+            J=5,
+            dep_id = data$dep_id,
+            dep_data = dep_data
+       )
+  )
 
-```{r accuracy_dep, echo=TRUE, warning=FALSE}
+#fit the model 
+fit.hier.NB<-sampling(model3.NB, data.hier.NB)
+
+#extract --> rhat is good for all chains
+sampling.hier.NB<-rstan::extract(fit.hier.NB)
+print(fit.hier.NB, pars=c('phi','beta_t','beta_a','alpha_d','sigma_alpha', 'mu'))
+
+#posterior predictive chiecking
+y_rep<-sampling.hier.NB$y_rep
+ppc_dens_overlay(y = data.hier.NB$cases, y_rep[1:200,]) 
+
+#accuracy across departments
 ppc_stat_grouped(
-  y = model2.data$cases,
+  y = data.hier.NB$cases,
   yrep = y_rep,
   group = data$dep,
   stat = "mean",
-  binwidth = 0.5
+  binwidth = 0.2
 )
-```
 
-Unfortunately the situation has not changed under this point of view :(
+loo.model.NB.hier<-loo(fit.hier.NB)$estimates
+loo.model.NB.hier
+```
 
 Let's check the residuals:
 
 ```{r NB2_residuals, echo=TRUE, warning=FALSE}
-mean_inv_phi<-mean(samples_NB2$inv_phi)
+mean_inv_phi<-mean(sampling.hier.NB$inv_phi)
 mean_y_rep<-colMeans(y_rep)
-std_residual<-(model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
-qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+std_residual<-(data.hier.NB$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual, xlab = "predicted", ylab="standardized residuals") + hline_at(2) + hline_at(-2)
 ```
 
-very few points are outside the 95% confidence interval now!
-
+very few points (only two) are outside the 95% confidence interval now!
 
 ## Reference
 
