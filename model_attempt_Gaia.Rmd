@@ -215,7 +215,6 @@ ppc_stat_grouped(
 Maybe we should take into account the difference across departments, since most prediction are not accurate!
 
 ```{r another_check, echo=TRUE, warning=FALSE}
-data
 ppc_intervals(
   y = data$n, 
   yrep = y_rep,
@@ -426,9 +425,18 @@ ppc_stat_grouped(
   binwidth = 0.2
 )
 
+ppc_intervals(
+  y = data$n, 
+  yrep = y_rep,
+  x = data$elapsed_time
+) + 
+  labs(x = "Days", y = "Cases")
+
 loo.model.NB.hier<-loo(fit.hier.NB)$estimates
 loo.model.NB.hier
 ```
+
+Both the accuracy across departments and the intervals have improved a lot wrt to the previous models!
 
 Let's check the residuals:
 

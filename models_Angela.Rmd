@@ -3,13 +3,19 @@ title: "Colombia COVID-19 - Central region"
 author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
 date: "3/07/2020"
 output:
+  rmdformats::readthedown:
+  html_document:
+    highlight: kate
+    lightbox: true
+    gallery: true
+    toc: yes
+    toc_depth: 3
   ioslides_presentation:
     highlight: kate
     lightbox: true
     widescreen: true
     smaller: true
     logo: Logo_units_blu.png #logo_dssc_alt.png
-  rmdformats::readthedown:
   beamer_presentation:
     highlight: tango
     theme: "metropolis"
@@ -20,12 +26,6 @@ output:
     fig.height: 3
     fig.width: 4
     highlight: kate
-  html_document:
-    highlight: kate
-    lightbox: true
-    gallery: true
-    toc: yes
-    toc_depth: 3
   include: null
   pdf_document:
     highlight: kate
@@ -61,12 +61,19 @@ knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
 ```{r message=FALSE, include=FALSE}
 library(readr)
 library(dplyr)
+library(rstanarm)
+library(arm)
 library(ggplot2)
 library(RColorBrewer)
 library(leaflet)
 library(geojsonio)
 library(htmltools)
 library(htmlwidgets)
+library(bayesplot)
+library(tidyverse)
+library(lme4)
+library(loo)
+library(kableExtra)
 ```
 
 
@@ -88,17 +95,6 @@ colombia_covid <- colombia_covid[central.colombia.rows, ]
 
 ```{r types, include=FALSE}
 colombia_covid$`Fecha de diagnóstico` <- as.Date(colombia_covid$`Fecha de diagnóstico`, format="%d/%m/%Y")
-## recodifying distinct times
-l_times <- length(unique(colombia_covid$`Fecha de diagnóstico`))
-times <- as.factor(colombia_covid$`Fecha de diagnóstico`)
-levels(times) <- c(1:l_times)
-colombia_covid$Veces <- as.numeric(times)
-# The max of the `ID de caso` for each date is the cumulative number of cases confirmed up to that date
-acumulativo <- colombia_covid %>%
-  group_by(`Fecha de diagnóstico`) %>%s
-  summarise(max(`ID de caso`))
-colnames(acumulativo)[2] <- "Acumulativo"
-
 colombia_covid <- colombia_covid %>% mutate("Grupo de edad" = case_when(Edad <= 18 ~ '0-18',
                                                    Edad >= 19  & Edad <= 30 ~ '19-30',
                                                    Edad >=  31 & Edad <= 45 ~ '31-45',
@@ -171,9 +167,162 @@ for (i in 1:nrow(colombia_covid)) {
     colombia_covid$`Continente de procedencia`[i] <- "Europa - Centroamérica"
 }
 colombia_covid$`Continente de procedencia` <- as.factor(colombia_covid$`Continente de procedencia`)
-colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "0"] <- NA
+
+# Transforming the 0 value into a null value
+library(naniar)
+colombia_covid <- colombia_covid %>% replace_with_na(replace = list(`País de procedencia` = 0))
+# colombia_covid[911,]$`País de procedencia` <- NA
 ```
 
 ```{r display}
 head(colombia_covid)
 ```
+
+## Egidi's part
+
+
+```{r}
+
+data <- read_csv("data/central_colombia_relevant.csv")
+
+
+# storing variables
+## number of distinc times
+l_times <- length(unique(data$date))
+times <- 1:l_times
+## number of regions
+n_dep <- length(unique(data$dep))
+n <- dim(data)[1]
+
+## recodifying distinct times
+times <- as.factor(data$date)
+levels(times) <- c(1:l_times)
+times <- as.numeric(times)
+
+data2 <- data.frame(times = times, dep = unlist(list(data$dep)), y = data$n)
+```
+
+## Poisson GLM regression
+
+```{r pois_glm}
+n.iter <- 2000
+
+### 1) modello glm
+
+# only times
+
+mod.1 <- stan_glm(y ~ times, family = poisson, data = data2, iter = n.iter)
+mod.1.cl <- glm(y ~ times, family = poisson, data = data2)
+
+loo(mod.1)$estimates
+loo.glm.1 <- loo(mod.1)$estimates[3,1]
+summary.glm.1 <- summary(mod.1.cl)
+
+#?print.stanreg
+#?prior_summary.stanreg
+
+#y_rep<-as.matrix(mod.1, pars="fitted.values")
+#ppc_dens_overlay(y = data2$n, y_rep[1:200,]) 
+# stats
+y_rep = posterior_predict(mod.1, draws = 200)
+ppc_stat(y = data2$y, yrep = y_rep, stat = "mean")
+ppc_stat(y = data2$y, yrep = y_rep, stat = "sd")
+
+ppc_stat_grouped(
+  y = data2$y,
+  yrep = y_rep,
+  group = data2$dep,
+  stat = "mean",
+  binwidth = 0.2
+)
+```
+
+```{r squared_t}
+# squared times 
+
+mod.2 <- stan_glm(y ~ times + I (times^2), family = 
+                    poisson, data = data2, iter = n.iter)
+mod.2.cl <- glm(y ~ times + I (times^2), family = poisson, data = data2)
+```
+```{r loo}
+loo(mod.2)$estimates
+loo.glm.2 <- loo(mod.2)$estimates[3,1]
+summary.glm.2 <- summary(mod.2.cl)
+
+c(loo.glm.1, loo.glm.2)
+
+y_rep = posterior_predict(mod.2, draws = 200)
+ppc_stat(y = data2$y, yrep = y_rep, stat = "mean")
+ppc_stat(y = data2$y, yrep = y_rep, stat = "sd")
+
+ppc_stat_grouped(
+  y = data2$y,
+  yrep = y_rep,
+  group = data2$dep,
+  stat = "mean",
+  binwidth = 0.2
+)
+```
+
+```{r}
+loo_compare(loo(mod.1), loo(mod.2))
+```
+
+## Poisson hierarchical regression
+
+```{r pois_hier, include=FALSE}
+# + squared times
+
+mod.hier.1 <- stan_glmer(y ~ (1 | dep) + times,
+                         family = poisson, data = data2, iter = n.iter)
+mod.hier.1.cl <- glmer(y ~ (1|dep) + times,
+                       family = poisson, data = data2)
+
+loo.hier.1 <- loo(mod.hier.1)$estimates[3,1]
+d1 <- display(mod.hier.1.cl)
+dic.hier.1 <- as.double(d1$DIC)
+
+# + squared times
+
+mod.hier.2 <- stan_glmer(y ~ (1 | dep) + times + I(times^2),
+                         family = poisson, data = data2, iter = n.iter)
+mod.hier.2.cl <- glmer(y ~ (1|dep) + times + I(times^2),
+                       family = poisson, data = data2)
+
+loo.hier.2 <- loo(mod.hier.2)$estimates[3,1]
+d1 <- display(mod.hier.2.cl)
+dic.hier.2 <- as.double(d1$DIC)
+
+# + cubic times
+
+mod.hier.3 <- stan_glmer(y ~ (1 | dep) + times + I(times^3),
+                         family = poisson, data = data2, iter = n.iter)
+mod.hier.3.cl <- glmer(y ~ (1|dep) + times + I(times^3),
+                       family = poisson, data = data2)
+
+loo.hier.3 <- loo(mod.hier.3)$estimates[3,1]
+d1 <- display(mod.hier.3.cl)
+dic.hier.3 <- as.double(d1$DIC)
+
+```
+
+```{r}
+loo.v <- c(loo.hier.1, loo.hier.2, loo.hier.3)
+dic.v <- c(dic.hier.1, dic.hier.2, dic.hier.3)
+sort.loo.v <- sort.int(loo.v, index.return = TRUE)$x
+sort.dic.v <- sort.int(dic.v, index.return = TRUE)$x
+
+
+par(xaxt="n", mfrow=c(1,2))
+plot(sort.loo.v, type="b", xlab="", ylab="LOOIC")
+par(xaxt="s")
+axis(1, c(1:3), c("hier1", "hier2", "hier3")[sort.int(loo.v,
+                    index.return = TRUE)$ix],
+                    las=2)
+par(xaxt="n")
+plot(sort.dic.v, type="b", xlab="", ylab="DIC")
+par(xaxt="s")
+axis(1, c(1:3), c("hier1", "hier2", "hier3")[sort.int(dic.v,
+                    index.return = TRUE)$ix], las=2)
+```
+

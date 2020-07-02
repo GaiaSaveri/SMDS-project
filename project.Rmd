@@ -51,14 +51,17 @@ knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
 ```
 
 ```{r message=FALSE}
+library(MASS)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(bayesplot)
 library(RColorBrewer)
 library(leaflet)
 library(geojsonio)
 library(htmltools)
 library(htmlwidgets)
+library(rstan)
 ```
 
 # Colombia COVID-19
@@ -327,6 +330,7 @@ The previous plot represents the daily incidence of the desease across all the d
 Let's check the general trend by looking at the cumulative number of confirmed cases (again, all "our" departments are taken into account): 
 
 ```{r, echo=TRUE, waring=FALSE}
+colombia_covid$`ID de caso` <- 1:dim(colombia_covid)[1]
 #the max of the ID de caso for each date is the cumulative number of cases confirmed up to that date
 cumulative <- as.data.frame(colombia_covid %>%
   group_by(`Fecha de diagnóstico`) %>%
@@ -516,7 +520,7 @@ Analyze the curve of cumulative confirmed cases on those "relevant" department:
 ```{r cumul_dept, echo=FALSE}
 #boring and absolutely not efficient population of the number of cumulative cases
 cumulative_dep<-rep(0,83)
-covid_relevant_dp<-cbind(covid_relevant_dp,cumulative_dep)
+covid_relevant_dp<-cbind(covid_relevant_dp, cumulative_dep)
 for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$dep=="Bogotá D.C."),]))) {
   if(i==1){
     covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
@@ -649,12 +653,34 @@ The days 7/03/20, 8/03/20, 10/03/20 are missing, probably because no case was de
 
 ```{r start_analysis, echo=TRUE, warning=FALSE}
 cumulative2<-cumulative %>%  
-mutate(BETWEEN0=as.numeric(difftime(`Fecha de diagnóstico`,lag(`Fecha de diagnóstico`,1))),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0),elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
+mutate(BETWEEN0=as.numeric(difftime(`Fecha de diagnóstico`, lag(`Fecha de diagnóstico`,1))),BETWEEN=ifelse(is.na(BETWEEN0),0,BETWEEN0), elapsed_time=cumsum(as.numeric(BETWEEN)))%>%
 dplyr::select(-c(BETWEEN0,BETWEEN))
 #just for praticality
 names(cumulative2)<-c("date", "y", "elapsed_time")
 cumulative2
 ```
+
+## Description of variables
+
+**ID de caso.** ID of the confirmed case. 
+
+**Fecha de diagnóstico.** Date that the disease was diagnosed. 
+
+**Ciudad de ubicación.** City where the case was diagnosed.
+
+**Departamento o Distrito.** Department or distric that the city belongs to.
+
+**Atención.** Situation of the pacient: recovered, at home, at the hospital, at the ICU or deceased.
+
+**Edad.** Age of the confirmed case.
+
+**Sexo.** Sex of the confirmed cade.
+
+**Tipo.** How the person got infected: in Colombia, abroad or unknown. 
+
+**País de procedencia.** Country of origin in case the person got infected abroad.
+
+
 
 ## Country of origin
 
@@ -729,13 +755,13 @@ colombia_covid <- colombia_covid %>% replace_with_na(replace = list(`País de pr
 # colombia_covid[911,]$`País de procedencia` <- NA
 ```
 
-## Preparation of the dataset to run the Poisson regression
+## Preparation of the dataset to run the models
 
 **Giullia.** So, as we have to group the data by date to be able to run the models, we have to count the occurance of the categorical variables in each day. So that's what I did below and described each step in detail. 
 
 Dropping the variables `Ciudad de ubicación`, `Atención**` and `Tipo*`.
 
-Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in dividing the region in departments and not in cities.
+Considering the variable "Ciudad de ubicación" I decided to keep just the departments variable to focus the analysis in dividing the region into departments and not in cities.
 
 Considering the variable "Atención**" at the moment I think is not relevant to know how many confirmed cases there will be, but we can add later and check. 
 
@@ -831,6 +857,28 @@ paste0(c("Null deviance: ", "Residual deviance: "),
        round(c(poisson1$null.deviance, deviance(poisson1)), 2))
 ```
 
+### Stan model just to compare
+
+```{r stan1}
+model.Poisson<-stan_model("stan/poisson_regression.stan")
+#arrange things
+model.data<-list(
+  N = nrow(data1),
+  cases = data1$y,
+  time = data1$elapsed_time
+)
+#str(model.Poisson.data)
+
+#run the model 
+fit.model.Poisson<-sampling(model.Poisson, data=model.data)
+
+#inferred parameters
+print(fit.model.Poisson, pars=c("alpha", "beta"))
+
+y_rep<-as.matrix(fit.model.Poisson, pars="y_rep")
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+```
+
 Let's apply a quasi poisson and see what happens
 
 ```{r Giullia5, echo=TRUE, warning=FALSE}
@@ -859,6 +907,7 @@ summary(poisson2)
 ```
 
 Results show that the variable gender is not signficant and thus doesn't change the performance of the model. We were already expecting this as in the data visualization step the gender is equaly distributed across the confirmed cases.
+
 
 ### Running poisson with the variable representing time plus the age variables
 
@@ -910,10 +959,41 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
     df <- data.frame("fit" = ilink(fit$fit), "lwr" = lwr, "upr" = upr)
     return(df)
 }
-attach(data1)
+
 conf.df <- predict.confidence(poisson3, as.data.frame(data1$y))
-head(conf.df, 2)
+conf.df
 ```
+
+```{r plot_predict}
+plot(conf.df$fit, col="blue")
+points(conf.df$lwr, col="gray")
+points(conf.df$upr, col="gray")
+```
+
+```{r}
+ggplot(data1, aes(elapsed_time, y))+
+    geom_ribbon(aes(x=elapsed_time, ymin=conf.df$lwr, ymax=conf.df$upr),
+                data=data1,
+                fill = color_scheme_get("blue")[[2]])+
+    geom_line(aes(x= elapsed_time, y= conf.df$fit),
+              data=data1,
+              color = color_scheme_get("blue")[[4]],
+              size =1.1)+
+    geom_point(aes(x = elapsed_time, y = y))+
+    xlab("Days")+
+    ylab("Total cases")+
+    scale_x_discrete(limit = c( 8, 15, 22, 29, 36 ), 
+        labels = c( "2-3", "9-3", "16-3", "23-3", "30-3") )+
+    #facet_wrap("reg", scales ="free")+
+    theme(strip.text.x = element_text(size = 12, 
+          colour = "black"),
+          axis.text.x = element_text(face="bold", 
+          color="#993333", 
+          angle=45, size =9),
+          axis.title.x = element_text(size=22),
+          axis.title.y = element_text(size = 22))
+```
+
 
 ```{r Giullia9, echo=TRUE, warning=FALSE}
 #Let's apply a quasi poisson and see what happens
@@ -945,7 +1025,7 @@ poisson4 <- glm(y~elapsed_time+`Edad_19 a 30`+`Edad_31 a 45`+`Edad_46 a 60`+`Eda
 summary(poisson4)
 ```
 
-The results show that by including the variables representing departments the AIC reduces by half in comparison with the previous model that included just time and age as predictors. In addition, 8 out of 12 of the dummy variables representing the departments are significant. 
+The results show that by including the variables representing departments the AIC reduces significantly in comparison with the previous model that included just time and age as predictors. In addition, 8 out of 12 of the dummy variables representing the departments are significant. 
 
 
 ```{r Giullia11, echo=TRUE, warning=FALSE}
@@ -983,6 +1063,23 @@ summary(poisson6)
 
 In this case the AIC reduced in comparison with the model with just the time as predictor(poisson1), but just 2 out of 6 variables are significant, so we think is not a very relevant predictor to include in the model with the lowest AIC so far (poisson4).
 
+### Applying ANOVA to compare the poisson models
+
+We decided to compare poisson1quasi, poisson3quasi, poisson4, because they are nested and we are more interested in seeing if the model 4 is in fact better than the first model.
+
+```{r Giullia13a, echo=TRUE, warning=FALSE}
+anova(poisson1quasi,poisson3quasi,poisson4, test="Chisq")
+```
+
+The poisson4 model is the best. It has the lower p value.
+
+Two important observations **Angela**. 
+
+- Is it ok that we compare together a poisson with a quasi poisson?
+
+- The problem I said I am having is that you can see that the table is giving me just the p value. Is missing other metrics of the test. Go to the comparison of the negative binomial models and you will see that there it is working properly. Is something related to the Poisson model on our data. If I compare just poisson models or just quasi poisson models it continues to give the same problem. 
+
+
 ## Running Negative Binomial
 
 ### Running negative binomial with just the variable representing the time as predictor
@@ -1000,7 +1097,6 @@ The predictor is significant and we get an AIC significantly lower than the pois
 stdres <- rstandard(nb1)
 plot(nb1$fitted.values, stdres)
 abline(h=0, col='gray')
-
 ```
 
 The residuals are just in the lowerbound exceeding by approximately one unit the -1 to 1 variation range. 
@@ -1043,25 +1139,194 @@ The AIC decreased in comparison with the first model(nb1), but very littlle. In 
 nb4 <- glm.nb(y~elapsed_time+`Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`)
 summary(nb4)
 
-detach(data1)
 ```
 
 The AIC decreased in comparison with the first model(nb1), but very littlle. In addition, just one out of the 6 department dummy variables is significant.
 
+### Running negative binomial with the variable representing time plus the time, age and departments as pedictors
+
+```{r Angela, echo=TRUE, warning=FALSE}
+#Running negative binomial with the variable representing time, age and departments as predictors
+nb5 <- glm.nb(y~elapsed_time+`Edad_19 a 30`+`Edad_31 a 45`+`Edad_46 a 60`+`Edad_60 a 75`+`Edad_76+`+`Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`)
+summary(nb5)
+```
+
+When the variables age and departments are both included in the model, the AIC reduces in comparison to the model with the lowest AIC so far(nb1).
+
+```{r Angela2, echo=TRUE, warning=FALSE}
+#Plotting standardized residuals vs fitted values
+stdres <- rstandard(nb5)
+plot(nb5$fitted.values, stdres)
+abline(h=0, col='gray')
+```
+
+```{r Angela3, echo=TRUE, warning=FALSE}
+# Calculating overdispersion n=25 k=19 n-k=6
+est.overdispersion <- sum(stdres^2)/6
+est.overdispersion
+```
+
+Here the overdispersion is a bit high. **Angela**, do you know if in the negative binomial the assumptions of equidispersion are the same of Poisson? which are:
+
+- Overdispersion has to be close to one .
+
+- The range of the standardized residual has to be between -1 and 1.
+
 ### Applying ANOVA to compare the negative binomial models
+
+We decided to compare nb1, nb2, nb5, because they are nested and we are more interested in seeing if the model 5 is in fact better than the first model.
 
 ```{r Giullia20, echo=TRUE, warning=FALSE}
 #Applying ANOVA to compare the negative binomial models
-anova(nb1,nb2,nb3,nb4)
+anova(nb1,nb2,nb5)
 ```
 
-We already know the first model is the best. But I did for you to see that ANOVA is working in the Negative Binomial Models. I don't know why is not working in Poisson. 
+The fifth model is definetly the best, is the one with the lowest p value.
 
 ## Preliminary conclusions
 
-In the case of the Poisson, the model with the lower AIC (210.3) includes 3 variables as predictor: time, age and departments
+In the case of the Poisson, the model with the lower AIC (203.51) includes 3 variables as predictor: time, age and departments
 
-In the case of the Negative binomial, the model with the lower AIC (273.01) includes just the variable time as predictor.
+In the case of the Negative binomial, the model with the lower AIC (205.51) includes also the same 3 variables of the best Poisson model. 
+
+## Predictive accuracy
+
+Calculating the predictive accuracy of the best model of Poisson and the best model of the Negative Binomial. 
+
+### Predictive accuracy of the Poisson model
+
+Predicting with a 95% confidence interval
+
+```{r Giullia21, echo=TRUE, warning=FALSE}
+conf.df <- predict.confidence(poisson4, as.data.frame(y))
+conf.df
+```
+
+Calculating the proportion of times that the true value of `y` is in the 95% confidence interval of our model. (This is a kind of accuracy I suppose right?)  
+
+```{r Giullia22, echo=TRUE, warning=FALSE}
+n <- 25
+freq_coverage <- sum( y >= conf.df[,2] & y <= conf.df[,3])
+freq_coverage <- freq_coverage/n
+freq_coverage
+```
+
+We have a 92% of coverage!!! I think this is extremely good, even if it has been predicted in the training data. Because this doesn't necessarily happens.
+
+```{r Giullia23, echo=TRUE, warning=FALSE}
+#plotting the observed y (blue dots) versus the confidence interval (gray dots)
+plot(y, col = "blue")
+points(conf.df$lwr, col = "gray")
+points(conf.df$upr, col = "gray")
+```
+
+```{r Giullia24, echo=TRUE, warning=FALSE}
+#plotting the prediction line (straight blue line) with a 95% confidence interval (shaded blue line) together with the observed values (black dots)
+ggplot(data1, aes(elapsed_time, y)) + geom_ribbon(aes(x = elapsed_time, ymin = conf.df$lwr, 
+    ymax = conf.df$upr), data = data1, fill = color_scheme_get("blue")[[2]]) + 
+    geom_line(aes(x = elapsed_time, y = conf.df$fit), data = data1, color = color_scheme_get("blue")[[4]], 
+        size = 1.1) + geom_point(aes(x = elapsed_time, y = y)) + xlab("Days") + 
+    ylab("Total cases") + scale_x_discrete(limit = c(8, 15, 22, 29, 36), labels = c("2-3", 
+    "9-3", "16-3", "23-3", "30-3")) + # facet_wrap('reg', scales ='free')+
+theme(strip.text.x = element_text(size = 12, colour = "black"), axis.text.x = element_text(face = "bold", 
+    color = "#993333", angle = 45, size = 9), axis.title.x = element_text(size = 22), 
+    axis.title.y = element_text(size = 22))
+```
+
+We have almost like a perfect model!!!
+
+But now let's perform a leave-one-out cross validation to see what result we get. (obs: I didn't find the code to predict with a 95% interval, so I am just calculating the overall prediction error)
+
+```{r LOOCV, echo=TRUE, warning=FALSE}
+library(boot)
+cv.glm(data1,poisson4)$delta
+```
+
+I am not being able to understand this error number. Is it too high? I will research tomorrow. I know the one in the left is the standard error and the one in the right is the adjusted error. 
+
+I runned again a leane-one-out cross-validation with the other two Poisson models
+
+```{r Giullia29, echo=TRUE, warning=FALSE}
+cv.glm(data1,poisson3quasi)$delta
+cv.glm(data1,poisson1quasi)$delta
+```
+
+So if you compare poisson4 with these other two models you can see that as you add more variables the test error decreases. So we should choose the model just with time as predictor (poisson1quasi)??? Even if the model with many predictors produces a better AIC and the variables are statistical significant? I don't know what to do.
+
+### Predictive accuracy of the Negative Binomial model
+
+Predicting with a 95% confidence interval
+
+```{r Giullia25, echo=TRUE, warning=FALSE}
+conf.df <- predict.confidence(nb5, as.data.frame(y))
+conf.df
+
+```
+
+Calculating the proportion of times that the true value of `y` is in the 95% confidence interval of our model. (This is a kind of accuracy I suppose right?)  
+
+```{r Giullia26, echo=TRUE, warning=FALSE}
+n <- 25
+freq_coverage <- sum( y >= conf.df[,2] & y <= conf.df[,3])
+freq_coverage <- freq_coverage/n
+freq_coverage
+```
+
+We also obtain a 92% of coverage for the Negative Binomial model.
+
+```{r Giullia27, echo=TRUE, warning=FALSE}
+#plotting the observed y (blue dots) versus the confidence interval (gray dots)
+plot(y, col = "blue")
+points(conf.df$lwr, col = "gray")
+points(conf.df$upr, col = "gray")
+```
+
+```{r Giullia28, echo=TRUE, warning=FALSE}
+#plotting the prediction line (straight blue line) with a 95% confidence interval (shaded blue line) together with the observed values (black dots)
+ggplot(data1, aes(elapsed_time, y)) + geom_ribbon(aes(x = elapsed_time, ymin = conf.df$lwr, 
+    ymax = conf.df$upr), data = data1, fill = color_scheme_get("blue")[[2]]) + 
+    geom_line(aes(x = elapsed_time, y = conf.df$fit), data = data1, color = color_scheme_get("blue")[[4]], 
+        size = 1.1) + geom_point(aes(x = elapsed_time, y = y)) + xlab("Days") + 
+    ylab("Total cases") + scale_x_discrete(limit = c(8, 15, 22, 29, 36), labels = c("2-3", 
+    "9-3", "16-3", "23-3", "30-3")) + # facet_wrap('reg', scales ='free')+
+theme(strip.text.x = element_text(size = 12, colour = "black"), axis.text.x = element_text(face = "bold", 
+    color = "#993333", angle = 45, size = 9), axis.title.x = element_text(size = 22), 
+    axis.title.y = element_text(size = 22))
+```
+
+Also a very precise model.
+
+But now let's perform a leave-one-out cross validation to see what result we get. (obs: I didn't find the code to predict with a 95% interval, so I am just calculating the overall prediction error)
+
+```{r LOOCV1, echo=TRUE, warning=FALSE}
+cv.glm(data1,nb5)$delta
+```
+
+Approximately the same result as the Poisson model. 
+
+I runned again a leane-one-out cross-validation with the other two Negative Binomial models.
+
+```{r Giullia29a, echo=TRUE, warning=FALSE}
+cv.glm(data1,nb2)$delta
+cv.glm(data1,nb1)$delta
+```
+
+Here happens the same thing that happened in Poisson. If you compare nb5 with these other two models you can see that as you add more variables the test error decreases. So again we should choose the model just with time as predictor (nb1)??? Even if the model with many predictors produces a better AIC and the variables are statistical signficant? Again, I don’t know what to do.
+
+## Final conclusions
+
+I thought that with the predictive accuracy we would be able to choose between the poisson and the negative binomial. So this didn't happen. They perform equally, both when we predict with the 95% confidence interval in the training data and in the leave-one-out cross validation. And now there is the problem of the overfitting. So what do we do now?
+
+
+
+```{r Giullia30, echo=TRUE, warning=FALSE}
+```
+
+```{r Giullia31, echo=TRUE, warning=FALSE}
+```
+
+```{r Giullia32, echo=TRUE, warning=FALSE}
+```
 
 ## Interesting links
 
