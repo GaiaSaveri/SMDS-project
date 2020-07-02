@@ -55,6 +55,8 @@ library(MASS)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(ggthemes)
+library(ggrepel)
 library(bayesplot)
 library(RColorBrewer)
 library(leaflet)
@@ -312,23 +314,22 @@ colombia_covid$`Fecha de diagnóstico`<-as.Date(colombia_covid$`Fecha de diagnó
 colorCount<-length(unique(colombia_covid$`Departamento o Distrito`)) 
 getPalette<-colorRampPalette(brewer.pal(9, "Spectral"))(colorCount)
 
-daily_confirmed<-ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
-  scale_fill_manual(values = getPalette)
-daily_confirmed + geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.8, stat="count") + 
+ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
+  scale_fill_manual(values = getPalette) +
+  geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.8, stat="count") + 
   theme(axis.text.x = element_text(angle=65, vjust=0.6),
         legend.position = "right") +
   labs(title = "Daily number of confirmed cases", 
        subtitle = "subdivided across departments",
        x = "Date of confirmation",
        fill = "Department")
-
 ```
 
 The previous plot represents the daily incidence of the desease across all the departments we are taking into account.
 
 Let's check the general trend by looking at the cumulative number of confirmed cases (again, all "our" departments are taken into account): 
 
-```{r, echo=TRUE, waring=FALSE}
+```{r cumulative_plot, echo=TRUE, waring=FALSE}
 colombia_covid$`ID de caso` <- 1:dim(colombia_covid)[1]
 #the max of the ID de caso for each date is the cumulative number of cases confirmed up to that date
 cumulative <- as.data.frame(colombia_covid %>%
@@ -338,9 +339,8 @@ cumulative <- as.data.frame(colombia_covid %>%
 names(cumulative)<-c("Fecha de diagnóstico", "Cumulative confirmed")
 cumulative
 
-cumulative_confiremd<-ggplot(cumulative, aes(x=`Fecha de diagnóstico`, y=`Cumulative confirmed`))
-
-cumulative_confiremd + geom_point(size=3) +
+ggplot(cumulative, aes(x=`Fecha de diagnóstico`, y=`Cumulative confirmed`)) +
+  geom_point(size=3) +
   geom_segment(aes(x=`Fecha de diagnóstico`,
                    xend=`Fecha de diagnóstico`,
                    y=0,
@@ -348,7 +348,6 @@ cumulative_confiremd + geom_point(size=3) +
   labs(title = "Cumulative number of confirmed cases",
        x = "Date of confirmation") +
   theme(axis.text.x = element_text(angle=65, vjust=0.6))
-                   
 ```
 
 Here the growth seems exponential (and this is consistent with the fact that we are studying the early stages of the outbreak).
@@ -357,8 +356,7 @@ In order to confirm it we should fit a log-linear model, and check that it produ
 
 Now let's explore the distribution of cases across genders and age:
 
-```{r gender, echo=TRUE, warning=FALSE}
-library(ggthemes)
+```{r gender_plot, echo=TRUE, warning=FALSE}
 brks <- seq(-250, 250, 50)
 lbls <- as.character(c(seq(-250, 0, 50), seq(50, 250, 50)))
 
@@ -380,7 +378,7 @@ ggplot(data=colombia_covid, aes(x=`Departamento o Distrito`, fill = Sexo)) +
 
 Maybe in order to study the distribution of ages we should divide the ages in groups, for example 0-18, 18-30, 30-45, 45-60, 60-75, 75+.
 
-```{r age_grps, echo=TRUE, warning=FALSE}
+```{r age_grps_plot, echo=TRUE, warning=FALSE}
 #create column age_group (didn't modify the original dataset though)
 age_groups<-colombia_covid %>% mutate(age_group = case_when(Edad <= 18 ~ '0-18',
                                              Edad >= 19  & Edad <= 30 ~ '19-30',
@@ -397,8 +395,6 @@ age_groups_pie <- age_groups %>%
   mutate(per=`n`/sum(`n`)) %>% 
   arrange(desc(age_group))
 age_groups_pie$label <- scales::percent(age_groups_pie$per)
-
-library(ggrepel)
 
 age_pie <- ggplot(age_groups_pie, aes(x = "", y = per, fill = factor(age_group))) + 
   geom_bar(stat="identity", width = 1) +
@@ -424,7 +420,7 @@ Instead, the median age of the population in 2015 was 29.5 years (30.4 in 2018, 
 
 Now we can analyze jointly the distribution of age and sex (sex distribution across group of age):
 
-```{r age-sex, echo=TRUE, warning=FALSE}
+```{r age-sex_plot, echo=TRUE, warning=FALSE}
 #library(ggpol)
 
 keep <- c("Sexo", "age_group")
@@ -443,21 +439,21 @@ ggplot(age_groups_count, aes(x=age_group, y=count, fill=Sexo)) +
   labs(title = "Distribution of sex by age",
        y = "",
        x = "Age group")
-  
 ```
 
 There isn't much difference between the sexes among the different group of ages, I have the impression that the covariates present in the dataset won't help us!! :(
 
 We are now left to explore the `Tipo` variable:
 
-```{r tipo, echo=TRUE, warning=FALSE}
+```{r tipo_plot, echo=TRUE, warning=FALSE}
 theme_set(theme_classic())
 #renamed the attribute since I had sime problem due to the presence of *
 colnames(colombia_covid)[8]<-"tipo"
 
-type<-ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
-  scale_fill_brewer(palette = "Set3")
-type + geom_histogram(aes(fill=tipo), width = 0.8, stat="count") + theme(axis.text.x = element_text(angle=65, vjust=0.6)) +
+ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
+  scale_fill_brewer(palette = "Set3") +
+  geom_histogram(aes(fill=tipo), width = 0.8, stat="count") +
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) +
   labs(title = "Daily number of confirmed cases", 
        subtitle = "subdivided across type",
        x = "Date of confirmation",
@@ -683,7 +679,7 @@ cumulative2
 
 ## Country of origin
 
-Cleaning the "`País de procedencia`" variable and creating another variable related to the continents. As `País de procedencia` is too fragmented is good to group them into continents and see if there is a difference in the model. 
+Cleaning the "`País de procedencia`" variable and creating another variable `Continente de procedencia` related to the continents. As `País de procedencia` is too fragmented is good to group them into continents and see if there is a difference in the model. 
 
 We clean the column `País de procedencia` by making sure that there are no cities instead of countries and that the countries are separated with a dash (we'll use it with dummy variables)
 
