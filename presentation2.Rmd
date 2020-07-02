@@ -66,6 +66,8 @@ library(MASS)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(ggthemes)
+library(ggrepel)
 library(RColorBrewer)
 library(leaflet)
 library(geojsonio)
@@ -177,7 +179,7 @@ gis_data$longitude<-as.numeric(gis_data$longitude)
 gis_data$cases<-as.numeric(gis_data$cases)
 ```
 
-```{r central_colombia, echo=FALSE, inlcude=FALSE}
+```{r central_colombia, inlcude=FALSE}
 dept<-geojsonio::geojson_read("data/Colombia.geo.json", what="sp")
 #slice the gis_data dataset
 central_gis_data<-gis_data[which(gis_data$name %in% central.colombia.dep),]
@@ -222,14 +224,14 @@ central_map <- leaflet(data=central_gis_data) %>% addTiles() %>%
 #saveWidget(central_map, file="figs/central_colombia.html")
 ```
 
-```{r}
+```{r map}
 central_map
 ```
 
 
 ## Preprocessing {.smaller}
 
-```{r types, include=FALSE, echo=FALSE}
+```{r types, include=FALSE}
 # there were missing rows
 colombia_covid$`ID de caso` <- 1:dim(colombia_covid)[1]
 ## day column in "international" format (so that R can fix the sorting properly)
@@ -310,92 +312,52 @@ colombia_covid$`Continente de procedencia` <- as.factor(colombia_covid$`Continen
 colombia_covid[911,]$`País de procedencia` <- NA
 ```
 
+We transformed the `Fecha de diagnóstico` variable into a `Date` variable, we created a variable `Grupo de edad`, we transformed the variables `Grupo de edad`, `Departamento o Distrito`, `Ciudad de ubicación`, `Sexo`, `Atención`, `Tipo` into factors, we cleaned the column `País de procedencia` and created the variable `Continente de procedencia`.
+
 ```{r display}
 head(colombia_covid)
 ```
 
-```{r relevant_dp}
-covid_dp <- colombia_covid %>%
-  group_by(`Fecha de diagnóstico`,`Departamento o Distrito`) %>%
-  count()
-#the max of the ID de caso for each date is the cumulative number of cases confirmed up to that date
-cumulative <- colombia_covid %>%
-  group_by(`Fecha de diagnóstico`, `Departamento o Distrito`) %>%
-  summarise(max(`ID de caso`))
-names(cumulative)[3] <- "Cumulative cases"
-covid_dp <- bind_cols(covid_dp, cumulative %>% ungroup() %>%
-  dplyr::select(-c(`Fecha de diagnóstico`, `Departamento o Distrito`)))
-covid_dp <- as.data.frame(covid_dp)
-covid_dp <- covid_dp %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
+## New datasets
+
+```{r cases}
+cases <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`) %>%
+  count() %>% rename("Date" = `Fecha de diagnóstico`, "New cases/day" = n)
+cases2 <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`) %>%
+  summarise(`Cumulative cases` = max(`ID de caso`))
+cases <- bind_cols(cases, cases2%>%
+  dplyr::select(-c(`Fecha de diagnóstico`)))
+cases <- as.data.frame(cases)
+cases <- cases %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
             BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
               cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
 ```
 
+## New datasets part2
 
-```{r cumul_dept, include=FALSE}
-#departments with more than 30 cases
-relevant <- c("Bogotá D.C.", "Valle del Cauca", "Antioquia", "Cundinamarca", "Risaralda")
-covid_relevant_dp <- as.data.frame(subset(covid_dp, Department %in% relevant))
-#boring and absolutely not efficient population of the number of cumulative cases
-cumulative_dep <- rep(0, 83)
-covid_relevant_dp <- cbind(covid_relevant_dp, cumulative_dep)
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Bogotá D.C."),]))) {
-  if(i==1){
-    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-  else {
-    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-}
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Valle del Cauca"),]))) {
-  if(i==3){
-    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-  else {
-    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-}
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Antioquia"),]))) {
-  if(i==2){
-    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-  else {
-    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-}
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Cundinamarca"),]))) {
-  if(i==13){
-    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-  else {
-    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-}
-for (i in as.numeric(rownames(covid_relevant_dp[which(covid_relevant_dp$Department=="Risaralda"),]))) {
-  if(i==14){
-    covid_relevant_dp[i,4]<-covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-  else {
-    covid_relevant_dp[i,4]<-prev+covid_relevant_dp[i,3]
-    prev<-covid_relevant_dp[i,4]
-  }
-}
+```{r cases_per_dep}
+cases_dep <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`,`Departamento o Distrito`) %>%
+  count() %>% rename("Date" = `Fecha de diagnóstico`, "Department"=`Departamento o Distrito`, "New cases/day" = n)
+cases_dep <- cases_dep %>%
+  group_by(`Department`) %>%
+  mutate(`Cumulative cases/Department` = cumsum(`New cases/day`))
+cases_dep <- as.data.frame(cases_dep)
+cases_dep <- cases_dep %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
+            BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
+            cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
 ```
 
-```{r dataset_cumulative}
-covid_relevant_dp <- covid_relevant_dp[order(covid_relevant_dp$Department), ]
-covid_relevant_dp <- covid_relevant_dp[, c(1,5,2,3,4)]
-names(covid_relevant_dp) <- c("Date", "Elapsed time", "Department", "New cases/day", "Cumulative cases/Department")
-head(covid_relevant_dp)
+
+```{r relevant_dep, include=FALSE}
+#departments with more than 30 cases:
+relevant <- unique(cases_dep[cases_dep$`Cumulative cases/Department`>30,]$Department)
+cases_relev_dep <- as.data.frame(subset(cases_dep, Department %in% relevant))
+cases_relev_dep <- cases_relev_dep[order(cases_relev_dep$Department), ]
+cases_relev_dep <- cases_relev_dep[, c(1,5,2,3,4)]
+head(cases_relev_dep)
 ```
 
 
@@ -409,9 +371,9 @@ theme_set(theme_classic())
 colorCount<-length(unique(colombia_covid$`Departamento o Distrito`)) 
 getPalette<-colorRampPalette(brewer.pal(9, "Spectral"))(colorCount)
 
-daily_confirmed<-ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
-  scale_fill_manual(values = getPalette)
-daily_confirmed + geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.8, stat="count") + 
+ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
+  scale_fill_manual(values = getPalette) +
+  geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.8, stat="count") + 
   theme(axis.text.x = element_text(angle=65, vjust=0.6),
         legend.position = "right") +
   labs(title = "Daily number of confirmed cases", 
@@ -420,16 +382,161 @@ daily_confirmed + geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.
        fill = "Department")
 ```
 
+## Other plots
+
+```{r waffle_chart, echo=FALSE, warning=FALSE}
+theme_set(theme_classic())
+region<-colombia_covid$`Departamento o Distrito`
+nrows<-10
+df <- expand.grid(y = 1:nrows, x = 1:nrows)
+categ_table <- round(table(region) * ((nrows*nrows+1)/(length(region))))
+df$category<-factor(rep(names(categ_table), categ_table))
+waffle_chart <- ggplot(df, aes(x = x, y = y, fill = df$category)) + 
+        geom_tile(color = "black", size = 0.5) +
+        scale_x_continuous(expand = c(0, 0)) +
+        scale_y_continuous(expand = c(0, 0), trans = 'reverse') +
+        scale_fill_brewer(palette = "Set3") +
+        labs(title="Frequency of cases across Departments", subtitle="Waffle Chart") + 
+        theme(#panel.border = element_rect(size = 2),
+        plot.title = element_text(size = rel(1.2)),
+              axis.text = element_blank(),
+              axis.title = element_blank(),
+              axis.ticks = element_blank(),
+              legend.title = element_blank(),
+              legend.position = "right")
+waffle_chart
+```
+
+```{r cumulative_plot, echo=FALSE}
+ggplot(cases, aes(x=Date, y=`Cumulative cases`)) +
+  geom_point(size=3) +
+  geom_segment(aes(x=Date,
+                   xend=Date,
+                   y=0,
+                   yend=`Cumulative cases`)) +
+  labs(title = "Cumulative number of confirmed cases",
+       x = "Date of confirmation") +
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+```
+Here the growth seems exponential (and this is consistent with the fact that we are studying the early stages of the outbreak).
+
+```{r gender_plot, echo=TRUE, warning=FALSE}
+brks <- seq(-250, 250, 50)
+lbls <- as.character(c(seq(-250, 0, 50), seq(50, 250, 50)))
+
+ggplot(data=colombia_covid, aes(x=`Departamento o Distrito`, fill = Sexo)) +  
+                              geom_bar(data = subset(colombia_covid, Sexo == "F")) +
+                              geom_bar(data = subset(colombia_covid, Sexo == "M"), aes(y=..count..*(-1))) + 
+                              scale_y_continuous(breaks = brks,
+                                               labels = lbls) + 
+                              coord_flip() +  
+                              labs(title="Spread of the desease across genders",
+                                   y = "Number of cases",
+                                   x = "Department",
+                                   fill = "Gender") +
+                              theme_tufte() +  
+                              theme(plot.title = element_text(hjust = .5), 
+                                    axis.ticks = element_blank()) +   
+                              scale_fill_brewer(palette = "Dark3")  
+```
+
+```{r age_grps_plot, echo=TRUE, warning=FALSE}
+#compute percentage so that we can label more precisely the pie chart
+age_groups_pie <- colombia_covid %>% 
+  group_by(`Grupo de edad`) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(per=`n`/sum(`n`)) %>% 
+  arrange(desc(`Grupo de edad`))
+age_groups_pie$label <- scales::percent(age_groups_pie$per)
+
+age_pie <- ggplot(age_groups_pie, aes(x = "", y = per, fill = factor(`Grupo de edad`))) + 
+  geom_bar(stat="identity", width = 1) +
+  theme(axis.line = element_blank(), 
+        plot.title = element_text(hjust=0.5)) + 
+  labs(fill="Age groups", 
+       x=NULL, 
+       y=NULL, 
+       title="Distribution of the desease across ages") +
+  coord_polar(theta = "y") +
+  #geom_text(aes(x=1, y = cumsum(per) - per/2, label=label))
+  geom_label_repel(aes(x=1, y=cumsum(per) - per/2, label=label), size=3, show.legend = F, nudge_x = 0) +
+  guides(fill = guide_legend(title = "Group"))
+  
+age_pie 
+```
+
+## Age-Sex plot
+
+```{r age-sex_plot, eval=FALSE, warning=FALSE, include=FALSE}
+keep <- c("Sexo", "Grupo de edad")
+age_groups <- `Grupo de edad`[names(`Grupo de edad`) %in% keep]
+age_groups_count <- aggregate(cbind(pop=Sexo) ~ `Grupo de edad` + Sexo,
+                      data=`Grupo de edad`,
+                      FUN = function(x){NROW(x)})
+age_groups_count$count <- ifelse(age_groups_count$Sexo == "F", age_groups_count$pop * -1, age_groups_count$pop)
+age_groups_count<-as.data.frame(age_groups_count[names(age_groups_count)!="pop"])
+
+ggplot(age_groups_count, aes(x=age_group, y=count, fill=Sexo)) +
+  geom_col() + 
+  #facet_share(~Sexo, dir = "h") +
+  coord_flip(clip="off") +
+  theme_minimal() +
+  labs(title = "Distribution of sex by age",
+       y = "",
+       x = "Age group")
+```
+
+```{r tipo_plot, echo=TRUE, warning=FALSE}
+theme_set(theme_classic())
+
+ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
+  scale_fill_brewer(palette = "Set3") +
+  geom_histogram(aes(fill=Tipo), width = 0.8, stat="count") +
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) +
+  labs(title = "Daily number of confirmed cases", 
+       subtitle = "subdivided across type",
+       x = "Date of confirmation",
+       fill = "Type")
+```
+
+## Tipo
+
+I think that `en estudio` means that it is not clear while the case is imported or not, however it seems like there are more imported cases, we can count them:
+
+```{r tipo2, echo=TRUE, warning=FALSE}
+type_pie <- colombia_covid %>% 
+  group_by(Tipo) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(per=`n`/sum(`n`)) %>% 
+  arrange(desc(Tipo))
+type_pie$label <- scales::percent(type_pie$per)
+type_pie<-type_pie[names(type_pie)!="per"]
+colnames(type_pie)<-c("Tipo", "Total number", "Percentage")
+type_pie
+```
 
 # The frequentist approach
 
-### Running poisson with `Elapsed time` as predictor 
+## Running poisson with `Elapsed time` as predictor 
 
 ```{r Giullia2, warning=FALSE}
 #Running poisson with just the variable representing the time as predictor 
-poisson1 <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=covid_relevant_dp, family=poisson)
+poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=cases, family=poisson)
 summary(poisson1)
 ```
+
+## Angela's attempt
+
+```{r Angela, warning=FALSE}
+#Running poisson with just the variable representing the time as predictor 
+poisson1A <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=cases_relev_dep, family=poisson)
+summary(poisson1A)
+```
+
+## New
+
 
 # The Bayesian approach
 
@@ -441,24 +548,30 @@ $$
 ln\lambda_i = \alpha + \beta\cdot elapsed\_time_i \\
 y_i \sim \mathcal{Poisson}(\lambda_i)
 $$
+
 with $i = 1,\dots,83$, and $y_i$ represents the number of cases.
 
 ```{r stan_poisson_regression, warning=FALSE}
 model.Poisson <- stan_model("stan/poisson_regression.stan")
 #arrange things
 model.data <- list(
-  N = nrow(covid_relevant_dp),
-  cases = covid_relevant_dp$`New cases/day`,
-  time = covid_relevant_dp$`Elapsed time`
+  N = nrow(cases_relev_dep),
+  cases = cases_relev_dep$`New cases/day`,
+  time = cases_relev_dep$`Elapsed time`
 )
 #str(model.Poisson.data)
 
 #run the model 
-fit.model.Poisson<-sampling(model.Poisson, data=model.data)
+fit.model.Poisson <- sampling(model.Poisson, data=model.data)
 
 #inferred parameters
 print(fit.model.Poisson, pars=c("alpha", "beta"))
 ```
+
+```{r}
+fit1 <- stan(file="stan/poisson_regression.stan", data = model.data, chains = 4, iter=2000, refresh=-1)
+```
+
 
 Looking at `Rhat` we can see that we have reached the convergence.
 
@@ -496,9 +609,9 @@ Classically the problem of having overdispersed data is solved using the negativ
 model.Poisson<-stan_model("stan/poisson_regression.stan")
 #arrange things
 model.data<-list(
-  N = nrow(data1),
-  cases = data1$y,
-  time = data1$elapsed_time
+  N = nrow(cases),
+  cases = cases$`Cumulative cases`,
+  time = cases$`Elapsed time`
 )
 #str(model.Poisson.data)
 
