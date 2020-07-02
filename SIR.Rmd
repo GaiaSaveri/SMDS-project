@@ -164,7 +164,7 @@ We can compute the S-I-R quantities we need as follows:
   
   * I := Infected = Confirmed - Recovered - Deaths;
   
-  * R := Recovered or fatal = Recovered + Deaths.
+  * R := Removed (Recovered or fatal)= Recovered + Deaths.
 
 ```{r data_sir, echo=TRUE, warning = FALSE}
 All<-as.vector(rep(N,25))
@@ -201,7 +201,8 @@ Sir.data<-list(n_days = n_days,
                t0 = t0,
                ts = t,
                N = N,
-               cases = cases)
+               cases = cases
+               )
 
 #compile the model 
 Sir.model<-stan_model("stan/SIR.stan")
@@ -213,7 +214,7 @@ fit.model<-sampling(Sir.model, data=Sir.data)
 Let's check the correctness of the inference of the model:
 
 ```{r sir_first_check, echo=TRUE, warning=FALSE}
-pars<-c("beta", "gamma", "R0", "recovery_time")
+pars<-c("beta", "gamma")
 print(fit.model, pars=pars)
 
 stan_dens(fit.model, pars=pars, separate_chains=TRUE)
@@ -239,12 +240,11 @@ params <- lapply(t, function(i){sprintf("y[%s,2]", i)})
 yhat <- as.data.frame(summary(fit.model, 
                                pars = params, probs = c(0.05, 0.5, 0.95))$summary)
 colnames(yhat) <- make.names(colnames(yhat))
-yhat
-SIR.data$elapsed_time[1:19]
-ggplot(yhat[1:18,], mapping = aes(x = SIR.data$elapsed_time[1:18])) +
+yhat[1:18,]
+ggplot(yhat[1:17,], mapping = aes(x = SIR.data$elapsed_time[1:17])) +
   #geom_ribbon(aes(ymin = -yhat$se_mean, ymax = yhat$se_mean), fill = "red", alpha = 0.3) +
-  geom_line(mapping = aes(x = SIR.data$elapsed_time[1:18], y = yhat$mean[1:18])) + 
-  geom_point(aes(y=SIR.data$I[1:18])) +
+  geom_line(mapping = aes(x = SIR.data$elapsed_time[1:17], y = yhat$mean[1:17])) + 
+  geom_point(aes(y=SIR.data$I[1:17])) +
   labs(x="Days after first case", y="Number of infected people")
 ```
 

@@ -58,7 +58,7 @@ local({
     paste0('\n\n----\n\n', hook_plot(x, options))
   })
 })
-knitr::opts_chunk$set(echo = FALSE, tidy = TRUE)
+knitr::opts_chunk$set(echo = FALSE)#, tidy = TRUE)
 ```
 
 ```{r message=FALSE, include=FALSE}
@@ -66,6 +66,7 @@ library(MASS)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(bayesplot)
 library(ggthemes)
 library(ggrepel)
 library(RColorBrewer)
@@ -73,9 +74,7 @@ library(leaflet)
 library(geojsonio)
 library(htmltools)
 library(htmlwidgets)
-
 library(rstan)
-library(bayesplot)
 library(lubridate)
 ```
 
@@ -658,7 +657,58 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## ANOVA to compare the Poisson models
 
 ```{r Angela11, echo=TRUE, warning=FALSE}
-anova(poisson1,poisson3,poisson4, poisson5, test="Chisq")
+#anova(poisson1, poisson3, poisson4, poisson5, test="Chisq")
+anova(poisson1, poisson3, poisson4, test="Chisq")
+```
+
+```{r function, eval=FALSE, include=FALSE}
+predict.confidence <- function(object, newdata, level = 0.95, ...) {
+    if (!is(object, "glm")) {
+        stop("Model should be a glm")
+    }
+    if (!is(newdata, "data.frame")) {
+        stop("Plase input a data frame for newdata")
+    }
+    if (!is.numeric(level) | level < 0 | level > 1) {
+        stop("level should be numeric and between 0 and 1")
+    }
+    ilink <- family(object)$linkinv
+    ci.factor <- qnorm(1 - (1 - level)/2)
+    # calculate CIs:
+    fit <- predict(object, newdata = newdata, level = level, 
+                    type = "link", se.fit = TRUE, ...)
+    lwr <- ilink(fit$fit - ci.factor * fit$se.fit)
+    upr <- ilink(fit$fit + ci.factor * fit$se.fit)
+    df <- data.frame("fit" = ilink(fit$fit), "lwr" = lwr, "upr" = upr)
+    return(df)
+}
+
+conf.df <- predict.confidence(poisson4, as.data.frame(data1$`Cumulative cases`))
+conf.df
+```
+
+```{r plot_poisson, eval=FALSE, include=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`))+
+    geom_ribbon(aes(x=`Elapsed time`, ymin=conf.df$lwr, ymax=conf.df$upr),
+                data=data1,
+                fill = color_scheme_get("blue")[[2]])+
+    geom_line(aes(x = `Elapsed time`, y = conf.df$fit),
+              data=data1,
+              color = color_scheme_get("blue")[[4]],
+              size =1.1)+
+    geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`))+
+    xlab("Days")+
+    ylab("Total cases")+
+    scale_x_discrete(limit = c( 8, 15, 22, 29, 36 ), 
+        labels = c( "2-3", "9-3", "16-3", "23-3", "30-3") )+
+    #facet_wrap("reg", scales ="free")+
+    theme(strip.text.x = element_text(size = 12, 
+          colour = "black"),
+          axis.text.x = element_text(face="bold", 
+          color="#993333", 
+          angle=45, size =9),
+          axis.title.x = element_text(size=22),
+          axis.title.y = element_text(size = 22))
 ```
 
 ## Quasi Poisson with `Elapsed time` as predictor
@@ -679,7 +729,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r quasi_pois, echo=TRUE, warning=FALSE}
 #Let's apply a quasi poisson and see what happens
-poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Edad_19 a 30` + `Edad_31 a 45` + `Edad_46 a 60` + `Edad_60 a 75` + `Edad_76+`, data=data1, family=quasipoisson)
+poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1, family=quasipoisson)
 par(mfrow=c(2,2))
 plot(poisson1quasi)
 pred.poisq2 <- poisson2quasi$fitted.values
@@ -690,7 +740,137 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson2quasi$null.deviance, deviance(poisson2quasi)), 2))
 ```
 
+## Negative Binomial with `Elapsed time` as predictor
 
+```{r nb1, echo=TRUE, warning=FALSE}
+nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1)
+par(mfrow=c(2,2))
+plot(nb1)
+#n=25, k=2, n-k=23
+stdres <- rstandard(nb1)
+print(paste("Estimated overdispersion", sum(stdres^2)/23))
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(nb1$null.deviance, deviance(nb1)), 2))
+```
+
+## Negative Binomial with `Elapsed time` plus `Age` as predictors
+
+```{r nb2, echo=TRUE, warning=FALSE}
+nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1)
+par(mfrow=c(2,2))
+plot(nb2)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(nb2$null.deviance, deviance(nb2)), 2))
+```
+
+## Negative Binomial with `Elapsed time` plus `Department` as predictors
+
+```{r nb3, echo=TRUE, warning=FALSE}
+nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1)
+par(mfrow=c(2,2))
+plot(nb3)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(nb3$null.deviance, deviance(nb3)), 2))
+```
+
+## Negative Binomial with `Elapsed time` plus `Continent of origin` as predictors
+
+```{r nb4, echo=TRUE, warning=FALSE}
+nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1)
+par(mfrow=c(2,2))
+plot(nb4)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(nb4$null.deviance, deviance(nb4)), 2))
+```
+
+## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
+
+```{r nb5, echo=TRUE, warning=FALSE}
+nb5 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1)
+par(mfrow=c(2,2))
+plot(nb5)
+# Calculating overdispersion n=25 k=19 n-k=6
+stdres <- rstandard(nb5)
+print(paste("Estimated overdispersion", sum(stdres^2)/6))
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(nb5$null.deviance, deviance(nb5)), 2))
+```
+
+### Applying ANOVA to compare the negative binomial models
+
+We decided to compare `nb1`, `nb2`, `nb5`, because they are nested and we are more interested in seeing if the fifth model is in fact better than the first model.
+
+```{r anova_nb, echo=TRUE, warning=FALSE}
+#Applying ANOVA to compare the negative binomial models
+anova(nb1, nb2, nb5)
+```
+
+### Predictive accuracy of the Poisson model
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois, eval=FALSE, warning=FALSE, include=FALSE}
+conf.df_pois <- predict.confidence(poisson4, `Cumulative cases`)
+n <- 25
+freq_coverage_pois <- sum( `Cumulative cases` >= conf.df_pois[,2] & `Cumulative cases` <= conf.df_pois[,3])
+freq_coverage_pois <- freq_coverage_pois/n
+```
+
+```{r precc_acc_pois_plot, eval=FALSE, warning=FALSE, include=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr, 
+    ymax = conf.df_pois$upr),
+    data = data1,
+    fill = color_scheme_get("blue")[[2]]) + 
+    geom_line(aes(x = `Elapsed time`, y = conf.df_pois$fit),
+              data = data1,
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+    xlab("Days") + 
+    ylab("Total cases") +
+  scale_x_discrete(limit = c(8, 15, 22, 29, 36),
+  labels = c("2-3", "9-3", "16-3", "23-3", "30-3")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        axis.title.x = element_text(size = 22), 
+        axis.title.y = element_text(size = 22))
+```
+
+## Predictive accuracy of the Negative Binomial model
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_nb, eval=FALSE, warning=FALSE, include=FALSE}
+conf.df_nb <- predict.confidence(nb5, as.data.frame(`Cumulative cases`))
+freq_coverage_nb <- sum( `Cumulative cases` >= conf.df_nb[,2] & `Cumulative cases` <= conf.df_nb[,3])
+freq_coverage_nb <- freq_coverage_nb/n
+```
+
+```{r precc_acc_nb_plot, eval=FALSE, warning=FALSE, include=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr, 
+    ymax = conf.df_nb$upr),
+    data = data1,
+    fill = color_scheme_get("blue")[[2]]) + 
+    geom_line(aes(x = `Elapsed time`, y = conf.df_nb$fit),
+              data = data1,
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+    xlab("Days") + 
+    ylab("Total cases") +
+  scale_x_discrete(limit = c(8, 15, 22, 29, 36),
+  labels = c("2-3", "9-3", "16-3", "23-3", "30-3")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        axis.title.x = element_text(size = 22), 
+        axis.title.y = element_text(size = 22))
+```
 
 # The Bayesian approach
 
@@ -699,7 +879,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 As a first attempt, we fit a simple Poisson regression:
 
 $$
-ln\lambda_i = \alpha + \beta\cdot elapsed\_time_i \\
+ln(\lambda_i) = \alpha + \beta\cdot elapsed\_time_i \\
 y_i \sim \mathcal{Poisson}(\lambda_i)
 $$
 
@@ -709,9 +889,9 @@ with $i = 1,\dots,83$, and $y_i$ represents the number of cases.
 model.Poisson <- stan_model("stan/poisson_regression.stan")
 #arrange things
 model.data <- list(
-  N = nrow(cases_relev_dep),
-  cases = cases_relev_dep$`New cases/day`,
-  time = cases_relev_dep$`Elapsed time`
+  N = nrow(cases_dep),
+  cases = cases_dep$`New cases/day`,
+  time = cases_dep$`Elapsed time`
 )
 #str(model.Poisson.data)
 
@@ -722,8 +902,8 @@ fit.model.Poisson <- sampling(model.Poisson, data=model.data)
 print(fit.model.Poisson, pars=c("alpha", "beta"))
 ```
 
-```{r}
-fit1 <- stan(file="stan/poisson_regression.stan", data = model.data, chains = 4, iter=2000, refresh=-1)
+```{r eval=FALSE, include=FALSE}
+#fit1 <- stan(file="stan/poisson_regression.stan", data = model.data, chains = 4, iter=2000, refresh=-1)
 ```
 
 

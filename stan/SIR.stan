@@ -48,11 +48,11 @@ transformed parameters{
 model {
   //priors
   //beta ~ normal(2, 1);--> no good 
-  beta ~ lognormal(log(0.4), 0.5); 
+  //beta ~ lognormal(log(0.4), 0.5); 
   //beta ~ uniform(0.60, 0.80);
   //gamma ~ uniform(0.35, 0.50);
   //gamma ~ normal(0.4, 0.5); --> no_good
-  gamma ~ normal(0.4, 0.2);
+  //gamma ~ normal(0.4, 0.2);
   //phi_inv ~ exponential(5);
   phi_inv ~ cauchy(0., 5);
   
