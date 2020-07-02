@@ -847,9 +847,35 @@ Extremely high!!!
 
 ```{r}
 summary(residuals(poisson1))
+poisson1$aic
 paste0(c("Null deviance: ", "Residual deviance: "),
        round(c(poisson1$null.deviance, deviance(poisson1)), 2))
 ```
+
+```{r}
+ggplot(data1, aes(elapsed_time, y))+
+#    geom_ribbon(aes(x=elapsed_time, ymin=conf.df$lwr, ymax=conf.df$upr),
+#                data=data1,
+#                fill = color_scheme_get("blue")[[2]])+
+    geom_line(aes(x= elapsed_time, y= poisson1$fitted.values),
+              data=data1,
+              color = color_scheme_get("blue")[[4]],
+              size =1.1)+
+    geom_point(aes(x = elapsed_time, y = y))+
+    xlab("Days")+
+    ylab("Total cases")+
+    scale_x_discrete(limit = c( 8, 15, 22, 29, 36 ), 
+        labels = c( "2-3", "9-3", "16-3", "23-3", "30-3") )+
+    #facet_wrap("reg", scales ="free")+
+    theme(strip.text.x = element_text(size = 12, 
+          colour = "black"),
+          axis.text.x = element_text(face="bold", 
+          color="#993333", 
+          angle=45, size =9),
+          axis.title.x = element_text(size=22),
+          axis.title.y = element_text(size = 22))
+```
+
 
 ### Stan model just to compare
 
@@ -904,8 +930,8 @@ Results show that the variable gender is not signficant and thus doesn't change 
 
 ```{r Giullia6b, echo=TRUE, warning=FALSE}
 #Running poisson with the variable representing time plus gender
-poisson2b <- glm(`Fecha de diagnóstico` ~ elapsed_time + Sexo, data=colombia_covid, family=poisson)
-summary(poisson2b)
+#poisson2b <- glm(`Fecha de diagnóstico` ~ `C` + Sexo_M, data=colombia_covid, family=poisson)
+#summary(poisson2b)
 ```
 
 
@@ -1071,6 +1097,10 @@ We decided to compare poisson1quasi, poisson3quasi, poisson4, because they are n
 anova(poisson1quasi,poisson3quasi,poisson4, test="Chisq")
 ```
 
+```{r Angela11, echo=TRUE, warning=FALSE}
+anova(poisson1,poisson3,poisson4, poisson5, test="Chisq")
+```
+
 The poisson4 model is the best. It has the lower p value.
 
 Two important observations **Angela**. 
@@ -1111,6 +1141,26 @@ est.overdispersion
 ```
 
 The overdispersion is bit higher than 1, but I think it is still an acceptable number. Gioia said than when it gets closer to 2 that you can accept the overdispersion assumption.
+
+```{r stan2}
+model.NB<-stan_model("stan/negative_binomial.stan")
+#arrange things
+model.data<-list(
+  N = nrow(data1),
+  cases = data1$y,
+  time = data1$elapsed_time
+)
+#str(model.Poisson.data)
+
+#run the model 
+fit.model.NB <- sampling(model.NB, data=model.data)
+
+#inferred parameters
+print(fit.model.NB, pars=c("alpha", "beta"))
+
+y_rep<-as.matrix(fit.model.NB, pars="y_rep")
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+```
 
 ### Running negative binomial with the variable representing time plus the age variables as predictors
 
