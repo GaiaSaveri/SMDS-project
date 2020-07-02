@@ -896,7 +896,7 @@ fit.model.Poisson<-sampling(model.Poisson, data=model.data)
 print(fit.model.Poisson, pars=c("alpha", "beta"))
 
 y_rep<-as.matrix(fit.model.Poisson, pars="y_rep")
-ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+#ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
 ```
 
 Let's apply a quasi poisson and see what happens
