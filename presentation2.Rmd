@@ -115,6 +115,26 @@ We decided to consider as **central Colombia** the following cities:
  - Santander
  - Casanare
  
+## Description of variables
+
+**ID de caso**: ID of the confirmed case. 
+
+**Fecha de diagnóstico**: Date in which the disease was diagnosed. 
+
+**Ciudad de ubicación**: City where the case was diagnosed.
+
+**Departamento o Distrito**: Department or distric where the city belongs to.
+
+**Atención**: Situation of the pacient: recovered, at home, at the hospital, at the ICU or deceased.
+
+**Edad**: Age of the confirmed case.
+
+**Sexo**: Sex of the confirmed cade.
+
+**Tipo**: How the person got infected: in Colombia, abroad or unknown. 
+
+**País de procedencia**: Country of origin if the person got infected abroad.
+ 
 ## Map
 
 Here we can see our selected cities. The color of the pins is related with the number of cases: if they are less than $10$ the color is "green", if they are less than $100$ the color is "orange", otherwise it is "red".
@@ -242,10 +262,10 @@ colombia_covid <- colombia_covid %>% mutate("Grupo de edad" = case_when(Edad <= 
                                                    Edad >= 46 & Edad <= 60 ~ '46-60',
                                                    Edad >=61 & Edad <= 75 ~ '60-75',
                                                    Edad >=76 ~ '76+'))
-colombia_covid$`Grupo de edad` <- as.factor(colombia_covid$`Grupo de edad`)
-colombia_covid$`Departamento o Distrito` <- as.factor(colombia_covid$`Departamento o Distrito`)
+#colombia_covid$`Grupo de edad` <- as.factor(colombia_covid$`Grupo de edad`)
+#colombia_covid$`Departamento o Distrito` <- as.factor(colombia_covid$`Departamento o Distrito`)
 colombia_covid$`Ciudad de ubicación` <- as.factor(colombia_covid$`Ciudad de ubicación`)
-colombia_covid$Sexo <- as.factor(colombia_covid$Sexo)
+#colombia_covid$Sexo <- as.factor(colombia_covid$Sexo)
 colombia_covid$Atención <- as.factor(colombia_covid$Atención)
 colombia_covid$Tipo <- as.factor(colombia_covid$Tipo)
 ```
@@ -312,7 +332,17 @@ colombia_covid$`Continente de procedencia` <- as.factor(colombia_covid$`Continen
 colombia_covid[911,]$`País de procedencia` <- NA
 ```
 
-We transformed the `Fecha de diagnóstico` variable into a `Date` variable, we created a variable `Grupo de edad`, we transformed the variables `Grupo de edad`, `Departamento o Distrito`, `Ciudad de ubicación`, `Sexo`, `Atención`, `Tipo` into factors, we cleaned the column `País de procedencia` and created the variable `Continente de procedencia`.
+We had to clean the dataset:
+
+- We transformed the `Fecha de diagnóstico` variable into a `Date` variable,
+
+- we fixed the variable `Id de caso` (some rows were missing so the numbers weren't consecutive),
+
+- we created a variable `Grupo de edad`,
+
+- we transformed the variables `Grupo de edad`, `Departamento o Distrito`, `Ciudad de ubicación`, `Sexo`, `Atención`, `Tipo` into factors,
+
+- we cleaned the column `País de procedencia` and created the variable `Continente de procedencia`.
 
 ```{r display}
 head(colombia_covid)
@@ -519,12 +549,19 @@ type_pie
 
 # The frequentist approach
 
-## Running poisson with `Elapsed time` as predictor 
+## Poisson with `Elapsed time` as predictor
 
-```{r Giullia2, warning=FALSE}
+```{r pois_time, warning=FALSE}
 #Running poisson with just the variable representing the time as predictor 
 poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=cases, family=poisson)
-summary(poisson1)
+par(mfrow=c(2,2))
+plot(poisson1)
+pred.pois <- poisson1$fitted.values
+res.st <- (y-pred.pois)/sqrt(pred.pois)
+print(paste("Estimated overdispersion", sum(res.st^2)/23))
+paste("AIC:", poisson1$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(poisson1$null.deviance, deviance(poisson1)), 2))
 ```
 
 ## Angela's attempt
@@ -537,6 +574,69 @@ summary(poisson1A)
 
 ## New
 
+```{r Angela, warning=FALSE}
+poisson1A <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
+par(mfrow=c(2,2))
+plot(poisson1A)
+#print(paste("Estimated overdispersion", sum(res.st^2)/23))
+paste("AIC:", poisson1A$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(poisson1A$null.deviance, deviance(poisson1A)), 2))
+```
+
+### Poisson with time plus gender
+
+```{r}
+covid19 <- dplyr::select(colombia_covid, -c(`Ciudad de ubicación`,`Atención`,`Tipo`))
+library(fastDummies)
+covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito", "Grupo de edad", "Sexo", "País de procedencia", "Continente de procedencia"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
+group_dummy <- covid19_dummy %>%
+  group_by(`Fecha de diagnóstico`) %>%
+  summarise_all(funs(sum)) %>%
+  dplyr::select(-c(`Fecha de diagnóstico`,`ID de caso`))
+data1 <- bind_cols(cases, group_dummy)
+```
+
+```{r}
+data2 <- covid19 %>%
+  group_by(`Fecha de diagnóstico`) %>%
+  summarise_all(funs(sum)) %>%
+  dplyr::select(-c(`Fecha de diagnóstico`,`ID de caso`))
+```
+
+
+
+```{r Giullia6, echo=TRUE, warning=FALSE}
+#poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1, family=poisson)
+poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1, family=poisson)
+par(mfrow=c(2,2))
+plot(poisson2)
+paste("AIC:", poisson2$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(poisson2$null.deviance, deviance(poisson2)), 2))
+```
+
+### Running poisson with the variable representing time plus the age variables
+
+```{r Giullia7, echo=TRUE, warning=FALSE}
+#Running poisson with the variable representing time plus the age variables
+poisson3 <- glm(y~elapsed_time+`Edad_19 a 30`+`Edad_31 a 45`+`Edad_46 a 60`+`Edad_60 a 75`+`Edad_76+`,family=poisson)
+summary(poisson3)
+```
+
+## Quasi poisson with `Elapsed time` as predictor
+
+```{r quasi_pois_time, echo=TRUE, warning=FALSE}
+poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=cases, family=quasipoisson)
+par(mfrow=c(2,2))
+plot(poisson1quasi)
+pred.poisq <- poisson1quasi$fitted.values
+res.stq <- (y-pred.poisq)/sqrt(summary(poisson1quasi)$dispersion*pred.poisq)
+print(paste("Estimated overdispersion", sum(res.stq^2)/23))
+paste("AIC:", poisson1quasi$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(poisson1quasi$null.deviance, deviance(poisson1quasi)), 2))
+```
 
 # The Bayesian approach
 
