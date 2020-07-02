@@ -1242,7 +1242,16 @@ library(boot)
 cv.glm(data1,poisson4)$delta
 ```
 
-I am not being able to understand this error number. Is good or bad? I will research tomorrow. I know the one in the left is the standard error and the one in the right is the adjusted error. 
+I am not being able to understand this error number. Is it too high? I will research tomorrow. I know the one in the left is the standard error and the one in the right is the adjusted error. 
+
+I runned again a leane-one-out cross-validation with the other two Poisson models
+
+```{r Giullia29, echo=TRUE, warning=FALSE}
+cv.glm(data1,poisson3quasi)$delta
+cv.glm(data1,poisson1quasi)$delta
+```
+
+So if you compare poisson4 with these other two models you can see that as you add more variables the test error decreases. So we should choose the model just with time as predictor (poisson1quasi)??? Even if the model with many predictors produces a better AIC and the variables are statistical significant? I don't know what to do.
 
 ### Predictive accuracy of the Negative Binomial model
 
@@ -1295,12 +1304,20 @@ cv.glm(data1,nb5)$delta
 
 Approximately the same result as the Poisson model. 
 
+I runned again a leane-one-out cross-validation with the other two Negative Binomial models.
+
+```{r Giullia29a, echo=TRUE, warning=FALSE}
+cv.glm(data1,nb2)$delta
+cv.glm(data1,nb1)$delta
+```
+
+Here happens the same thing that happened in Poisson. If you compare nb5 with these other two models you can see that as you add more variables the test error decreases. So again we should choose the model just with time as predictor (nb1)??? Even if the model with many predictors produces a better AIC and the variables are statistical signficant? Again, I don’t know what to do.
+
 ## Final conclusions
 
-So, I thought that with the predictive accuracy we would be able to choose between the poisson and the negative binomial. So this didn't happen. They perform equally, both when we predict with the 95% confidence interval in the training data and in the leave-one-out cross validation. So what do we do to choose one over the other? what arguments to use?
+I thought that with the predictive accuracy we would be able to choose between the poisson and the negative binomial. So this didn't happen. They perform equally, both when we predict with the 95% confidence interval in the training data and in the leave-one-out cross validation. And now there is the problem of the overfitting. So what do we do now?
 
-```{r Giullia29, echo=TRUE, warning=FALSE}
-```
+
 
 ```{r Giullia30, echo=TRUE, warning=FALSE}
 ```
