@@ -84,19 +84,6 @@ We decided to do **central Colombia**, basically because it is where the capital
 
 We built a model for the number of `confirmed` cases using all the others covariates (plus some we created) and we estimated the predictive accuracy of our selected model.
 
-## Loading the dataset
-
-```{r loading}
-colombia_covid <- as.data.frame(read_csv("data/datasets_567855_1056808_Casos1.csv"))
-colnames(colombia_covid)[5] <- "Atención"
-colnames(colombia_covid)[8] <- "Tipo"
-# slicing the main dataset
-central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boyacá", "Quindío", "Cauca",
-    "Valle del Cauca", "Risaralda", "Caldas", "Boyacá", "Antioquia", "Santander", "Casanare")
-central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
-colombia_covid <- colombia_covid[central.colombia.rows, ]
-```
-
 ## Our cities
 
 We decided to consider as **central Colombia** the following cities:
@@ -113,6 +100,19 @@ We decided to consider as **central Colombia** the following cities:
  - Antioquia,
  - Santander
  - Casanare
+
+## Loading the dataset
+
+```{r loading, echo=TRUE}
+colombia_covid <- as.data.frame(read_csv("data/datasets_567855_1056808_Casos1.csv"))
+colnames(colombia_covid)[5] <- "Atención"
+colnames(colombia_covid)[8] <- "Tipo"
+# slicing the main dataset
+central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boyacá", "Quindío", "Cauca",
+    "Valle del Cauca", "Risaralda", "Caldas", "Boyacá", "Antioquia", "Santander", "Casanare")
+central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
+colombia_covid <- colombia_covid[central.colombia.rows, ]
+```
  
 ## Description of variables
 
@@ -497,16 +497,16 @@ age_pie
 
 ## Age-Sex plot
 
-```{r age-sex_plot, eval=FALSE, warning=FALSE, include=FALSE}
+```{r age-sex_plot, warning=FALSE, include=FALSE}
 keep <- c("Sexo", "Grupo de edad")
-age_groups <- `Grupo de edad`[names(`Grupo de edad`) %in% keep]
+age_groups<-colombia_covid$`Grupo de edad`[names(colombia_covid$`Grupo de edad`)%in%keep]
 age_groups_count <- aggregate(cbind(pop=Sexo) ~ `Grupo de edad` + Sexo,
-                      data=`Grupo de edad`,
+                      data=colombia_covid,
                       FUN = function(x){NROW(x)})
 age_groups_count$count <- ifelse(age_groups_count$Sexo == "F", age_groups_count$pop * -1, age_groups_count$pop)
 age_groups_count<-as.data.frame(age_groups_count[names(age_groups_count)!="pop"])
 
-ggplot(age_groups_count, aes(x=age_group, y=count, fill=Sexo)) +
+ggplot(age_groups_count, aes(x=`Grupo de edad`, y=count, fill=Sexo)) +
   geom_col() + 
   #facet_share(~Sexo, dir = "h") +
   coord_flip(clip="off") +
@@ -515,6 +515,8 @@ ggplot(age_groups_count, aes(x=age_group, y=count, fill=Sexo)) +
        y = "",
        x = "Age group")
 ```
+
+## Tipo plot
 
 ```{r tipo_plot, echo=TRUE, warning=FALSE}
 theme_set(theme_classic())
@@ -885,80 +887,30 @@ $$
 
 with $i = 1,\dots,83$, and $y_i$ represents the number of cases.
 
-```{r stan_poisson_regression, warning=FALSE}
-model.Poisson <- stan_model("stan/poisson_regression.stan")
-#arrange things
-model.data <- list(
-  N = nrow(cases_dep),
-  cases = cases_dep$`New cases/day`,
-  time = cases_dep$`Elapsed time`
-)
-#str(model.Poisson.data)
-
-#run the model 
-fit.model.Poisson <- sampling(model.Poisson, data=model.data)
-
-#inferred parameters
-print(fit.model.Poisson, pars=c("alpha", "beta"))
-```
-
-```{r eval=FALSE, include=FALSE}
-#fit1 <- stan(file="stan/poisson_regression.stan", data = model.data, chains = 4, iter=2000, refresh=-1)
-```
 
 
-Looking at `Rhat` we can see that we have reached the convergence.
-
-```{r first_plot, echo=TRUE, warning=FALSE}
-theme_set(bayesplot::theme_default())
-
-mcmc_scatter(as.matrix(fit.model.Poisson, pars=c("alpha", "beta") ), alpha=0.2)
-```
-
-Check the posterior:
-
-```{r poisson_posterior, echo=TRUE, warning=FALSE}
-y_rep <- as.matrix(fit.model.Poisson, pars="y_rep")
-ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
-```
-
-The model is not able to capture low and high numbers of new cases.
-
-The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis: 
-
-```{r first_residual, echo=TRUE, warning=FALSE}
-#in this way we check the standardized residuals
-mean_y_rep<-colMeans(y_rep)
-std_residual<-(model.data$cases - mean_y_rep) / sqrt(mean_y_rep)
-qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
-```
-
-The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at +2 and -2 indicates approximate 95% error bounds). The variance of the standardized residuals is much greater than 1, indicating a large amount of overdispersion. 
-
-Classically the problem of having overdispersed data is solved using the negative binomial model instead of the Poisson one.
-
-## Angela stan
-
-```{r stan_pois_2}
-model.Poisson<-stan_model("stan/poisson_regression.stan")
-#arrange things
-model.data<-list(
-  N = nrow(cases),
-  cases = cases$`Cumulative cases`,
-  time = cases$`Elapsed time`
-)
-#str(model.Poisson.data)
-
-#run the model 
-fit.model.Poisson<-sampling(model.Poisson, data=model.data)
-
-#inferred parameters
-print(fit.model.Poisson, pars=c("alpha", "beta"))
-
-y_rep<-as.matrix(fit.model.Poisson, pars="y_rep")
-ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
-```
 
 
 ## Negative binomial model
 
+
+
+## LOOIC
+
+The Leave-One-Out cross validation is a method for estimating pointwise out-of-sample prediction accuracy from a fitted Bayesian model using the log-likelihood evaluated at the posterior simulation of the parameters values. 
+
+Plot the `looic` to compare models:
+
+```{r bayesian_model_comparison, echo=TRUE, warning=FALSE, eval=FALSE}
+loo.all.deps<-c(loo.model.Poisson.complete[3], loo.NB.complete[3], loo.model.NB2.complete[3], loo.model.NB.hier.complete[3])
+
+sort.loo.all.deps<- sort.int(loo.all.deps, index.return = TRUE)$x
+
+par(xaxt="n")
+plot(sort.loo.all.deps, type="b", xlab="", ylab="LOOIC", main="All departments")
+par(xaxt="s")
+axis(1, c(1:4), c("Poisson", "NB-sl", "NB-ml", 
+                  "hier")[sort.int(loo.all.deps,
+                    index.return = TRUE)$ix],
+                    las=2)
+```
