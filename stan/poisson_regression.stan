@@ -27,10 +27,11 @@ model {
 } 
 generated quantities {
   // sample predicted values from the model for posterior predictive checks
-  int y_rep[N];
-
+  int<lower=0> y_rep[N];
+  vector[N] log_lik;
   for (n in 1:N) {
     real eta_n = alpha + beta * time[n];
     y_rep[n] = poisson_log_safe_rng(eta_n);
+    log_lik[n] = poisson_log_lpmf(cases[n]|eta_n);
   }
 }
