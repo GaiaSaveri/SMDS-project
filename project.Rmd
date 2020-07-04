@@ -678,13 +678,24 @@ cumulative2
 
 ## Country of origin
 
-Cleaning the "`País de procedencia`" variable and creating another variable `Continente de procedencia` related to the continents. As `País de procedencia` is too fragmented is good to group them into continents and see if there is a difference in the model. 
+Let's have a look now at the country of origin variable.
+
+```{r country, echo=TRUE, warning=FALSE}
+country <- colombia_covid %>%
+  group_by(`País de procedencia`)%>%
+  count()
+country
+```
+
+There are 56 categories in this variable. Is too fragmented to use it in an analysis. Therefore, we decided to assign the values to continents to be able to include this variable in our analysis. We divded it into the folowing categories: Africa, Asia, Europe, North America, Central America, South America and Colombia. We divided America into 3 parts because many cases are coming from America and America is big. Colombia we kept separated because we have to distinguish internal cases from external. 
+
+### Steps to clean data and assign values to continents
+
+Cleaning the "`País de procedencia`" variable and creating another variable related to the continents. As `País de procedencia` is too fragmented is good to group them into continents and see if there is a difference in the model. 
 
 We clean the column `País de procedencia` by making sure that there are no cities instead of countries and that the countries are separated with a dash (we'll use it with dummy variables)
 
-```{r country, echo=TRUE, warning=FALSE}
-sort(unique(colombia_covid$`País de procedencia`))
-
+```{r country1, echo=TRUE, warning=FALSE}
 #There is an observation that has a 0 as País de procedencia
 which(colombia_covid$`País de procedencia`=="0")
 colombia_covid[911,] 
@@ -748,6 +759,37 @@ library(naniar)
 colombia_covid <- colombia_covid %>% replace_with_na(replace = list(`País de procedencia` = 0))
 # colombia_covid[911,]$`País de procedencia` <- NA
 ```
+
+Now let's plot a pie chart to be able to see the distribution of cases across the continents. 
+```{r country2, echo=TRUE, warning=FALSE}
+unique(colombia_covid$`Continente de procedencia`)
+#Some observations came from more than one continent. So these observations we will assign them as "more than one continent"
+#change the `Continente de procedencia` columns  (didn't modify the original dataset though)
+continent_of_origin <- colombia_covid
+continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - Asia"] <- "More than one continent"
+continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - África"] <- "More than one continent"
+continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - Centroamérica"] <- "More than one continent"
+continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Asia - África"] <- "More than one continent"
+unique(continent_of_origin)
+
+# compute percentage so that we can label more precisely the pie chart
+continents_pie <- continent_of_origin %>% group_by(`Continente de procedencia`) %>% count() %>% ungroup() %>% 
+  mutate(per = n/sum(n)) %>% arrange(desc(`Continente de procedencia`))
+continents_pie$label <- scales::percent(continents_pie$per)
+
+cont_pie <- ggplot(continents_pie, aes(x = "", y = per, fill = factor(`Continente de procedencia`))) + 
+  geom_bar(stat = "identity", width = 1) + theme(axis.line = element_blank(), 
+                                                 plot.title = element_text(hjust = 0.5)) + labs(fill = "Continents", x = NULL, 
+                                                                                                y = NULL, title = "Distribution of the desease across infection location") + coord_polar(theta = "y") + 
+  # geom_text(aes(x=1, y = cumsum(per) - per/2, label=label))
+  geom_label_repel(aes(x = 1, y = cumsum(per) - per/2, label = label), size = 3, 
+                   show.legend = F, nudge_x = 0) + guides(fill = guide_legend(title = "Group"))
+
+cont_pie
+
+```
+
+The majority of the cases in the country are people that got infected inside Colombia. Then, people that contracted the disease abroad came mainly from Europe, followed by North America and Central America. 
 
 ## Preparation of the dataset to run the models
 
