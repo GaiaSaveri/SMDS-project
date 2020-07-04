@@ -1,7 +1,7 @@
 ---
 title: "Colombia COVID-19 - Central region"
 author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
-date: "3/07/2020"
+date: "28/07/2020"
 output:
   ioslides_presentation:
     # “default”, “cerulean”, “journal”, “flatly”, “darkly”, “readable”, “spacelab”, “united”, “cosmo”, “lumen”, “paper”, “sandstone”, “simplex”, “yeti”
@@ -84,22 +84,7 @@ We decided to do **central Colombia**, basically because it is where the capital
 
 We built a model for the number of `confirmed` cases using all the others covariates (plus some we created) and we estimated the predictive accuracy of our selected model.
 
-## Our cities
-
-We decided to consider as **central Colombia** the following cities:
-
- - Bogotà DC,
- - Boyacá,
- - Tolima,
- - Cundinamarca,
- - Meta,
- - Quindío,
- - Valle del Cauca,
- - Risaralda, Celdas,
- - Boyacá,
- - Antioquia,
- - Santander
- - Casanare
+We decided to consider as **central Colombia** the following departments/districts: Bogotà DC, Boyacá, Tolima, Cundinamarca, Meta, Quindío, Valle del Cauca, Risaralda, Celdas, Boyacá, Antioquia, Santander, Casanare.
 
 ## Loading the dataset
 
@@ -122,13 +107,13 @@ colombia_covid <- colombia_covid[central.colombia.rows, ]
 
 **Ciudad de ubicación**: City where the case was diagnosed.
 
-**Departamento o Distrito**: Department or distric where the city belongs to.
+**Departamento o Distrito**: Department or district where the city belongs to.
 
-**Atención**: Situation of the pacient: recovered, at home, at the hospital, at the ICU or deceased.
+**Atención**: Situation of the patient: recovered, at home, at the hospital, at the ICU or deceased.
 
 **Edad**: Age of the confirmed case.
 
-**Sexo**: Sex of the confirmed cade.
+**Sexo**: Sex of the confirmed case.
 
 **Tipo**: How the person got infected: in Colombia, abroad or unknown. 
 
@@ -333,21 +318,21 @@ colombia_covid[911,]$`País de procedencia` <- NA
 
 We had to clean the dataset:
 
-- We transformed the `Fecha de diagnóstico` variable into a `Date` variable,
+- We transformed the `Fecha de diagnóstico` variable into a `Date` type variable,
 
 - we fixed the variable `Id de caso` (some rows were missing so the numbers weren't consecutive),
 
 - we created a variable `Grupo de edad`,
 
-- we transformed the variables `Grupo de edad`, `Departamento o Distrito`, `Ciudad de ubicación`, `Sexo`, `Atención`, `Tipo` into factors,
+- we cleaned the column `País de procedencia` (replaced cities with the country) and created the variable `Continente de procedencia` (as the first is too fragmented we thought to consider the continents).
 
-- we cleaned the column `País de procedencia` and created the variable `Continente de procedencia`.
+<!-- - we transformed the variables `Grupo de edad`, `Departamento o Distrito`, `Ciudad de ubicación`, `Sexo`, `Atención`, `Tipo` into factors, -->
 
 ```{r display}
-head(colombia_covid)
+head(colombia_covid, 3)
 ```
 
-## New datasets
+## New dataset I
 
 ```{r cases}
 cases <- colombia_covid %>%
@@ -362,9 +347,15 @@ cases <- as.data.frame(cases)
 cases <- cases %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
             BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
               cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
+cases <- cases[, c(1,4,2,3)]
 ```
 
-## New datasets part2
+```{r cases_head, echo=FALSE}
+head(cases, 10)
+```
+
+
+## New dataset II
 
 ```{r cases_per_dep}
 cases_dep <- colombia_covid %>%
@@ -377,7 +368,14 @@ cases_dep <- as.data.frame(cases_dep)
 cases_dep <- cases_dep %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
             BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
             cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
+cases_dep <- cases_dep[, c(1,5,2,3,4)]
 ```
+
+```{r}
+head(cases_dep, 10)
+#cases_dep[c(1, 2, 16, 17, 18, 40, 41, 42, 54, 55), ]
+```
+
 
 
 ```{r relevant_dep, include=FALSE}
@@ -386,15 +384,19 @@ relevant <- unique(cases_dep[cases_dep$`Cumulative cases/Department`>30,]$Depart
 cases_relev_dep <- as.data.frame(subset(cases_dep, Department %in% relevant))
 cases_relev_dep <- cases_relev_dep[order(cases_relev_dep$Department), ]
 cases_relev_dep <- cases_relev_dep[, c(1,5,2,3,4)]
-head(cases_relev_dep)
+row.names(cases_relev_dep) <- seq(1:nrow(cases_relev_dep))
 ```
 
+```{r cases_dep_head, echo=FALSE}
+#head(cases_relev_dep)
+cases_relev_dep[c(1, 2, 16, 17, 18, 40, 41, 42, 54, 55), ]
+```
 
-## Exploring the dataset
+## Exploring the dataset {.smaller}
 
-Number of cases confirmed day by day
+<!-- Number of cases confirmed day by day -->
 
-```{r barplot, echo=FALSE, warning=FALSE}
+```{r barplot, echo=FALSE, warning=FALSE, fig.pos='htb!'}
 theme_set(theme_classic())
 
 colorCount<-length(unique(colombia_covid$`Departamento o Distrito`)) 
@@ -548,15 +550,49 @@ colnames(type_pie)<-c("Tipo", "Total number", "Percentage")
 type_pie
 ```
 
+## Continent
+
+Now let's plot a pie chart to be able to see the distribution of cases across the continents. 
+
+```{r country2, warning=FALSE, include=FALSE}
+unique(colombia_covid$`Continente de procedencia`)
+#Some observations came from more than one continent. So these observations we will assign them as "more than one continent"
+#change the `Continente de procedencia` columns  (didn't modify the original dataset though)
+continent_of_origin <- colombia_covid
+continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - Asia"] <- "More than one continent"
+continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - África"] <- "More than one continent"
+continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - Centroamérica"] <- "More than one continent"
+continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Asia - África"] <- "More than one continent"
+unique(continent_of_origin)
+
+# compute percentage so that we can label more precisely the pie chart
+continents_pie <- continent_of_origin %>% group_by(`Continente de procedencia`) %>% count() %>% ungroup() %>% 
+  mutate(per = n/sum(n)) %>% arrange(desc(`Continente de procedencia`))
+continents_pie$label <- scales::percent(continents_pie$per)
+
+cont_pie <- ggplot(continents_pie, aes(x = "", y = per, fill = factor(`Continente de procedencia`))) + 
+  geom_bar(stat = "identity", width = 1) + theme(axis.line = element_blank(), 
+                                                 plot.title = element_text(hjust = 0.5)) + labs(fill = "Continents", x = NULL, 
+                                                                                                y = NULL, title = "Distribution of the desease across infection location") + coord_polar(theta = "y") + 
+  # geom_text(aes(x=1, y = cumsum(per) - per/2, label=label))
+  geom_label_repel(aes(x = 1, y = cumsum(per) - per/2, label = label), size = 3, 
+                   show.legend = F, nudge_x = 0) + guides(fill = guide_legend(title = "Group"))
+```
+
+```{r country_plot}
+cont_pie
+```
+
+The majority of the cases in the country are people that got infected inside Colombia. Then, people that contracted the disease abroad came mainly from Europe, followed by North America and Central America. 
+
+
 # The frequentist approach
 
 ## Poisson with `Elapsed time` as predictor
 
-```{r pois_time, warning=FALSE}
+```{r pois_time, echo=TRUE, warning=FALSE}
 #Running poisson with just the variable representing the time as predictor 
 poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=cases, family=poisson)
-par(mfrow=c(2,2))
-plot(poisson1)
 pred.pois <- poisson1$fitted.values
 res.st <- (cases$`Cumulative cases` - pred.pois)/sqrt(pred.pois)
 #n=25 
@@ -566,11 +602,13 @@ print(paste("Estimated overdispersion", sum(res.st^2)/23))
 paste("AIC:", poisson1$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1$null.deviance, deviance(poisson1)), 2))
+par(mfrow=c(2,2))
+plot(poisson1)
 ```
 
 ## Angela's attempt
 
-```{r Angela, warning=FALSE}
+```{r Angela, echo=TRUE, warning=FALSE}
 #Running poisson with just the variable representing the time as predictor 
 poisson1A <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=cases_relev_dep, family=poisson)
 summary(poisson1A)
@@ -578,19 +616,19 @@ summary(poisson1A)
 
 ## New
 
-```{r things, warning=FALSE}
+```{r things, echo=TRUE, warning=FALSE}
 poisson1A <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
-par(mfrow=c(2,2))
-plot(poisson1A)
 #print(paste("Estimated overdispersion", sum(res.st^2)/23))
 paste("AIC:", poisson1A$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1A$null.deviance, deviance(poisson1A)), 2))
+par(mfrow=c(2,2))
+plot(poisson1A)
 ```
 
 ### Poisson with time plus gender
 
-```{r}
+```{r dataset_Giullia, include=FALSE}
 covid19 <- dplyr::select(colombia_covid, -c(`Ciudad de ubicación`,`Atención`,`Tipo`))
 library(fastDummies)
 covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito", "Grupo de edad", "Sexo", "País de procedencia", "Continente de procedencia"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
@@ -601,21 +639,19 @@ group_dummy <- covid19_dummy %>%
 data1 <- bind_cols(cases, group_dummy)
 ```
 
-```{r Giullia6, echo=TRUE, warning=FALSE}
+```{r pois2, echo=TRUE, warning=FALSE}
 poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1, family=poisson)
-par(mfrow=c(2,2))
-plot(poisson2)
 paste("AIC:", poisson2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson2$null.deviance, deviance(poisson2)), 2))
+par(mfrow=c(2,2))
+plot(poisson2)
 ```
 
 ### Poisson with `Elapsed time` plus `Group de edad`
 
-```{r Giullia7, echo=TRUE, warning=FALSE}
+```{r pois3, echo=TRUE, warning=FALSE}
 poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1, family=poisson)
-par(mfrow=c(2,2))
-plot(poisson3)
 pred.pois3 <- poisson3$fitted.values
 res.st3 <- (data1$`Cumulative cases` - pred.pois3)/sqrt(pred.pois3)
 #n=25 
@@ -625,12 +661,13 @@ print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st3^2)/18)
 paste("AIC:", poisson3$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson3$null.deviance, deviance(poisson3)), 2))
+par(mfrow=c(2,2))
+plot(poisson3)
 ```
 
 ## Poisson with `Elapsed time`, `Age` and 'Departments` as predictors
 
-```{r Giullia10, echo=TRUE, warning=FALSE}
-#Running poisson with the variable representing time, age and departments as predictors
+```{r pois4, echo=TRUE, warning=FALSE}
 poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima` + `Departamento o Distrito_Valle del Cauca`, data=data1, family=poisson)
 par(mfrow=c(2,2))
 plot(poisson4)
@@ -647,7 +684,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Poisson with `Elapsed time`, `Age`, `Departments` and `Continent of origin` as predictors
 
-```{r Giullia12, echo=TRUE, warning=FALSE}
+```{r pois5, echo=TRUE, warning=FALSE}
 #poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`+`Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica` + `Continente de procedencia_Sudamerica`, data=data1, family=poisson)
 #par(mfrow=c(2,2))
 #plot(poisson5)
