@@ -877,7 +877,9 @@ santander_mean_age<-cc[which(cc$`Departamento o Distrito`=="Santander"),] %>%
 tolima_mean_age<-cc[which(cc$`Departamento o Distrito`=="Tolima"),] %>% 
   group_by(`Fecha de diagnóstico`) %>% 
   summarise_at(vars(Edad), funs(mean(.,na.rm=TRUE)))
+```
 
+```{r}
 cases_dep[which(cases_dep$dep_id==1),]$Age<-unname(unlist(c(antioquia_mean_age[2])))
 cases_dep[which(cases_dep$dep_id==2),]$Age<-unname(unlist(c(bogota_mean_age[2])))
 cases_dep[which(cases_dep$dep_id==3),]$Age<-unname(unlist(c(boyaca_mean_age[2])))

@@ -3,6 +3,14 @@ title: "Colombia COVID-19 - Central region"
 author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
 date: "28/07/2020"
 output:
+  rmdformats::readthedown:
+  html_document:
+    highlight: kate
+    lightbox: true
+    gallery: true
+    toc: yes
+    toc_depth: 3
+  include: null
   ioslides_presentation:
     # “default”, “cerulean”, “journal”, “flatly”, “darkly”, “readable”, “spacelab”, “united”, “cosmo”, “lumen”, “paper”, “sandstone”, “simplex”, “yeti”
     highlight: kate
@@ -12,7 +20,6 @@ output:
     widescreen: true
     smaller: true
     logo: Logo_units_blu.png #logo_dssc_alt.png
-  rmdformats::readthedown:
   slidy_presentation:
     fig.height: 3
     fig.width: 4
@@ -23,13 +30,6 @@ output:
     colortheme: "metropolis"
     fonttheme: "structurebold"
     always_allow_html: true
-  html_document:
-    highlight: kate
-    lightbox: true
-    gallery: true
-    toc: yes
-    toc_depth: 3
-  include: null
   pdf_document:
     highlight: kate
     keep_tex: yes
@@ -359,7 +359,7 @@ head(cases, 10)
 
 ```{r cases_per_dep}
 cases_dep <- colombia_covid %>%
-  group_by(`Fecha de diagnóstico`,`Departamento o Distrito`) %>%
+  group_by(`Fecha de diagnóstico`, `Departamento o Distrito`) %>%
   count() %>% rename("Date" = `Fecha de diagnóstico`, "Department"=`Departamento o Distrito`, "New cases/day" = n)
 cases_dep <- cases_dep %>%
   group_by(`Department`) %>%
@@ -368,22 +368,115 @@ cases_dep <- as.data.frame(cases_dep)
 cases_dep <- cases_dep %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
             BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
             cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
-cases_dep <- cases_dep[, c(1,5,2,3,4)]
+```
+
+
+```{r fix_dataset, warning=FALSE, include=FALSE}
+cases_dep <- cases_dep[order(cases_dep$Department) ,]
+cases_dep <- cases_dep %>%
+  dplyr::mutate(dep_idx = factor(Department, levels=unique(Department)),
+         `Department ID` = as.integer(dep_idx)) %>%
+  dplyr::select(-dep_idx)
+cases_dep <- cases_dep[, c(1, 5, 2, 6, 3, 4)]
+
+mean_age <- colombia_covid %>%
+  group_by(`Departamento o Distrito`, `Fecha de diagnóstico`) %>% 
+  summarise_at(vars(Edad), funs(`Mean age` = mean(., na.rm=TRUE)))
+
+cases_dep <- cbind(cases_dep, `Mean age` = mean_age$`Mean age`)
+```
+
+```{r complete_hierarchical_data_fix, echo=TRUE, warning=FALSE}
+#million inhabitants per department
+cases_dep$people<-rep(0, nrow(cases_dep))
+
+cases_dep[which(cases_dep$`Department ID` == 1),]$people<-6.4
+cases_dep[which(cases_dep$`Department ID` == 2),]$people<-7.4
+cases_dep[which(cases_dep$`Department ID` == 3),]$people<-1.2
+cases_dep[which(cases_dep$`Department ID` == 4),]$people<-0.99
+cases_dep[which(cases_dep$`Department ID` == 5),]$people<-0.4
+cases_dep[which(cases_dep$`Department ID` == 6),]$people<-1.4
+cases_dep[which(cases_dep$`Department ID` == 7),]$people<-2.9
+cases_dep[which(cases_dep$`Department ID` == 8),]$people<-1.04
+cases_dep[which(cases_dep$`Department ID` == 9),]$people<-0.53
+cases_dep[which(cases_dep$`Department ID` == 10),]$people<-0.94
+cases_dep[which(cases_dep$`Department ID` == 11),]$people<-2.18
+cases_dep[which(cases_dep$`Department ID` == 12),]$people<-1.33
+cases_dep[which(cases_dep$`Department ID` == 13),]$people<-4.4
+
+#km^2
+antioquia_surface<-63600
+bogota_surface<-1775
+boyaca_surface<-23189
+caldas_surface<-7888
+casanare_surface<-44640
+cauca_surface<-29308
+cundinamarca_surface<-24210
+meta_surface<-85635
+quindio_surface<-1845
+risaralda_surface<-4140
+santander_surface<-30537
+tolima_surface<-23562
+valle_cauca_surface<-22195
+
+#population density inhabitants/km^2
+antioquia_density<-88.06
+bogota_density<-4552
+boyaca_density<-93
+caldas_density<-130
+casanare_density<-9.4
+cauca_density<-50
+cundinamarca_density<-99.15
+meta_density<-density<-12
+quindio_density<-290
+risaralda_density<-59.16
+santander_density<-72
+tolima_density<-56
+valle_cauca_density<-183.04
+
+cases_dep$surface<-rep(0, nrow(cases_dep))
+cases_dep$density<-rep(0, nrow(cases_dep))
+
+cases_dep[which(cases_dep$`Department ID` ==1),]$surface<-antioquia_surface
+cases_dep[which(cases_dep$`Department ID` ==2),]$surface<-bogota_surface
+cases_dep[which(cases_dep$`Department ID` ==3),]$surface<-boyaca_surface
+cases_dep[which(cases_dep$`Department ID` ==4),]$surface<-caldas_surface
+cases_dep[which(cases_dep$`Department ID` ==5),]$surface<-casanare_surface
+cases_dep[which(cases_dep$`Department ID` ==6),]$surface<-cauca_surface
+cases_dep[which(cases_dep$`Department ID` ==7),]$surface<-cundinamarca_surface
+cases_dep[which(cases_dep$`Department ID` ==8),]$surface<-meta_surface
+cases_dep[which(cases_dep$`Department ID` ==9),]$surface<-quindio_surface
+cases_dep[which(cases_dep$`Department ID` ==10),]$surface<-risaralda_surface
+cases_dep[which(cases_dep$`Department ID` ==11),]$surface<-santander_surface
+cases_dep[which(cases_dep$`Department ID` ==12),]$surface<-tolima_surface
+cases_dep[which(cases_dep$`Department ID` ==13),]$surface<-valle_cauca_surface
+
+cases_dep[which(cases_dep$`Department ID` == 1),]$density<-antioquia_density
+cases_dep[which(cases_dep$`Department ID` ==2),]$density<-bogota_density
+cases_dep[which(cases_dep$`Department ID` ==3),]$density<-boyaca_density
+cases_dep[which(cases_dep$`Department ID` ==4),]$density<-caldas_density
+cases_dep[which(cases_dep$`Department ID` ==5),]$density<-casanare_density
+cases_dep[which(cases_dep$`Department ID` ==6),]$density<-cauca_density
+cases_dep[which(cases_dep$`Department ID` ==7),]$density<-cundinamarca_density
+cases_dep[which(cases_dep$`Department ID` ==8),]$density<-meta_density
+cases_dep[which(cases_dep$`Department ID` ==9),]$density<-quindio_density
+cases_dep[which(cases_dep$`Department ID` ==10),]$density<-risaralda_density
+cases_dep[which(cases_dep$`Department ID` ==11),]$density<-santander_density
+cases_dep[which(cases_dep$`Department ID` ==12),]$density<-tolima_density
+cases_dep[which(cases_dep$`Department ID` ==13),]$density<-valle_cauca_density
 ```
 
 ```{r}
 head(cases_dep, 10)
+#head(cases_dep[order(cases_dep$Date), ], 10)
 #cases_dep[c(1, 2, 16, 17, 18, 40, 41, 42, 54, 55), ]
 ```
-
-
 
 ```{r relevant_dep, include=FALSE}
 #departments with more than 30 cases:
 relevant <- unique(cases_dep[cases_dep$`Cumulative cases/Department`>30,]$Department)
 cases_relev_dep <- as.data.frame(subset(cases_dep, Department %in% relevant))
 cases_relev_dep <- cases_relev_dep[order(cases_relev_dep$Department), ]
-cases_relev_dep <- cases_relev_dep[, c(1,5,2,3,4)]
 row.names(cases_relev_dep) <- seq(1:nrow(cases_relev_dep))
 ```
 
@@ -911,6 +1004,8 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.y = element_text(size = 22))
 ```
 
+
+
 # The Bayesian approach
 
 ## Poisson regression
@@ -919,16 +1014,302 @@ As a first attempt, we fit a simple Poisson regression:
 
 $$
 ln(\lambda_i) = \alpha + \beta\cdot elapsed\_time_i \\
-y_i \sim \mathcal{Poisson}(\lambda_i)
+y_i \sim \mathcal{Poisson}(\lambda_i) \\
+\alpha \sim \mathcal{N}(0,1) \\
+\beta \sim \mathcal{N}(0.25,1)
 $$
 
-with $i = 1,\dots,83$, and $y_i$ represents the number of cases.
+with $i = 1,\dots,134$, being $134$ the number of rows of our dataset, and $y_i$ represents the number of cases.
+
+For what concerns the `stan` program, we used the function `poisson_log_rng` to describe the distribution of $y_i$, namely the number of cases each day and the function `poisson_log_lpmf` to specify the likelihood.
+
+```{r stan_poisson_regression, warning=FALSE, include=FALSE, eval=FALSE}
+model.data <- list(
+  N = nrow(cases_dep),
+  cases = cases_dep$`Cumulative cases/Department`,
+  time = cases_dep$`Elapsed time`
+)
+
+fit1 <- stan("stan/poisson_regression.stan", data=model.data, chains = 4, iter = 2000)
+```
+
+## Posterior predictive check
+
+```{r poisson_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
+y_rep <- as.matrix(fit1, pars="y_rep")
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+```
+
+<img src="stan_figs/poisson_posterior-1.png" alt="poisson_posterior-1" style="zoom:40%;" class="center"/>
+
+The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis.
+
+## Residual check
+
+```{r first_residual, echo=TRUE, warning=FALSE, eval=FALSE}
+#in this way we check the standardized residuals
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/first_residual-1.png" alt="first_residual-1" style="zoom:38%;" class="center"/>
+
+The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at $+2$ and $-2$ indicates approximate $95\%$ error bounds). 
+
+The plot of the standardized residuals indicates a large amount of overdispersion. 
+
+Classically the problem of having overdispersed data is solved using the negative binomial model instead of the Poisson's one.
+
+```{r Poisson_looic, echo=FALSE, warning=FALSE, eval=FALSE}
+loo.model.Poisson <- loo(fit1)$estimates
+```
 
 
+## Negative Binomial model {.smaller}
 
+We try to improve the previous model using the Negative Binomial model:
 
+$$
+ln(\lambda_i) = \alpha + \beta\cdot elapsed\_time_i \\
+y_i \sim \mathcal{Negative Binomial}(\lambda_i, \phi)  \\
+\alpha \sim \mathcal{N}(0,1) \\
+\beta \sim \mathcal{N}(0.25,1)
+$$
 
-## Negative binomial model
+Where the parameter $\phi$ is called *precision* and it is such that:
+
+$$
+E[y_i] = \lambda_i \\  Var[y_i] = \lambda_i + \frac{\lambda_i^2}{\phi}
+$$
+
+again $i=1,\dots,134$. As $\phi \rightarrow \infty$ the negative binomial approaches the Poisson distribution.
+
+The `stan` function that we use here are `neg_binomial_2_log_rng` to specify the distribution of $y_i$ and the function `neg_binomial_2_log_lpmf` for the likelihood.
+
+```{r NB1, echo=FALSE, warning=FALSE, eval=FALSE}
+#compile
+model.NB <- stan_model("stan/negative_binomial.stan")
+#fit
+fit2 <- sampling(model.NB, data=model.data)
+```
+
+## Posterior predictive check
+
+```{r NB_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
+samples_NB <- rstan::extract(fit2)
+y_rep <- samples_NB$y_rep
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+```
+
+<img src="stan_figs/NB_posterior-1.png" alt="NB_posterior-1" style="zoom:40%;" class="center"/>
+
+## Residual check
+
+```{r looic_NB, eval=FALSE, warning=FALSE, include=FALSE}
+loo.model.NB <- loo(fit2)$estimates
+```
+
+```{r residuals_NB, echo=TRUE, warning=FALSE, eval=FALSE}
+mean_inv_phi <- mean(samples_NB$inv_phi)
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/NB_residuals.png" alt="NB_residuals.png" style="zoom:60%;" class="center"/>
+
+The situation is better now, but still we have too many residuals outside the $95\%$ interval.
+
+## Accuracy across departments
+
+```{r NB_deps, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = model.data$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "mean",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/NB_deps.png" alt="NB_deps" style="zoom:60%;" class="center"/>
+
+We should take into account the differences across departments. 
+
+## Multilevel Negative Binomial regression
+
+We try to fit the following model, which also includes `Age` as covariat:
+
+$$
+ln(\lambda_i) = \alpha + \beta_{time}\cdot elapsed\_time_i + \beta_{age}\cdot age \\
+y_i \sim \mathcal{Negative Binomial}(\lambda_i, \phi) \\
+\alpha \sim \mathcal{N}(0,1) \\
+\beta_{time} \sim \mathcal{N}(0.5,1) \\
+\beta_{age} \sim \mathcal{N}(0,1)
+$$
+
+```{r NB2_fit, echo=FALSE, warning=FALSE, eval=FALSE}
+#compile
+model2.NB<-stan_model("stan/NB_model2.stan")
+#arrange data
+model.data2<-list(
+  N = nrow(cases_dep),
+  cases = cases_dep$`Cumulative cases/Department`,
+  time = cases_dep$`Elapsed time`,
+  age = cases_dep$`Mean age`
+)
+#fit
+fit3<-sampling(model2.NB, model.data2)
+```
+
+## Posterior predictive check
+
+```{r NB2_posterior_check, echo=TRUE, warning=FALSE, eval=FALSE}
+samples_NB2 <- rstan::extract(fit3)
+y_rep <- samples_NB2$y_rep
+ppc_dens_overlay(y = model.data2$cases, y_rep[1:200,]) 
+```
+
+<img src="stan_figs/NB2_posterior.png" alt="NB2_posterior" style="zoom:80%;" class="center"/>
+
+```{r looic_NB2, echo=FALSE, warning=FALSE, eval=FALSE}
+loo.model.NB2 <- loo(fit3)$estimates
+```
+
+## Residual check
+
+```{r residuals_NB2, echo=TRUE, warning=FALSE, eval=FALSE}
+mean_inv_phi <- mean(samples_NB2$inv_phi)
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (model.data2$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/NB2_res.png" alt="NB2_res" style="zoom:70%;" class="center"/>
+
+## Accuracy across departments
+
+```{r deps_NB2, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = model.data2$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "mean",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/NB2_dep.png" alt="NB2_dep" style="zoom:60%;" class="center"/>
+
+## Hierarchical model {.smaller}
+
+In order to improve the fit, we fit a model with department-specific intercept term.
+
+So the varying intercept model that we take into account is now:
+
+$$
+ln(\lambda_{i,d}) = \alpha_d +  + \beta_{time}\cdot elapsed\_time_i + \beta_{age}\cdot age_i\\
+\alpha_d \sim \mathcal{N}(\mu + \beta_{pop}\cdot pop_d + \beta_{sur}\cdot surface_d + \beta_{dens} \cdot density_d, \sigma_{\alpha})\\
+y_i \sim \mathcal{Negative Binomial}(\lambda_{i,d}, \phi)
+$$
+  
+The priors used for the above model are the following:
+
+$$
+\beta_{time} \sim \mathcal{N}(0.5,1) \\
+\beta_{age} \sim \mathcal{N}(0,1) \\
+\psi \sim \mathcal{N}(0,1)
+$$
+
+being $\psi = [\beta_{pop}, \beta_{sur}, \beta_{dens}]$.
+
+## New dataset
+
+We added the following covariats into the dataset:
+
+  * `people`: millions of inhabitants for each region;
+  
+  * `surface`: $km^3$, extent of each region;
+  
+  * `density`: $\frac{people}{km^2}$, density of the population in each region.
+  
+```{r hierarchical_complete_data, eval=FALSE, warning=FALSE, include=FALSE}
+#compile the model 
+model3.NB<-stan_model("stan/NB_model3.stan")
+
+people<-cases_dep %>% select(people) %>% unique()
+people<-as.vector(people[1])
+density<-cases_dep %>% select(density) %>% unique()
+density<-as.vector(density[1])
+surface<-cases_dep %>% select(surface) %>% unique()
+surface<-as.vector(surface[1])
+
+dep_data.complete<-cbind(people, surface,density)
+dep_data.complete<-dep_data.complete %>% as.matrix()
+
+#prepare the new data
+data.hier.NB.complete<-
+  with(cases_dep,
+       list(N = nrow(cases_dep),
+            cases = cases_dep$`Cumulative cases/Department`,
+            time = cases_dep$`Elapsed time`,
+            age = cases_dep$`Mean age`,
+            K=3, 
+            J=13,
+            dep_id = cases_dep$`Department ID`,
+            dep_data = dep_data.complete
+       )
+  )
+
+#fit the model 
+fit.4 <- sampling(model3.NB, data.hier.NB.complete)
+```
+  
+## Posterior predictive check
+
+```{r hier_posterior_check, echo=TRUE, warning=FALSE, eval=FALSE}
+samples_hier <- rstan::extract(fit.4)
+y_rep <- samples_hier$y_rep
+ppc_dens_overlay(y = data.hier.NB.complete$cases, y_rep[1:200,]) 
+```
+
+<img src="stan_figs/hier_posterior.png" alt="hier_posterior" style="zoom:70%;" class="center"/>
+
+## Residual check
+
+```{r residuals_hier, echo=TRUE, warning=FALSE, eval=FALSE}
+mean_inv_phi <- mean(samples_hier$inv_phi)
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (data.hier.NB.complete$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/hier_residual.png" alt="hier_residual" style="zoom:60%;" class="center"/>
+
+Very few points are now outside the $95\%$ confidence interval.
+
+## Accuracy across departments
+
+```{r deps_hier, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = data.hier.NB.complete$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "mean",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/hier_deps.png" alt="hier_deps" style="zoom:60%;" class="center"/>
+
+We can clearly see that the accuracy across the departments has significantly increased with respect to the previous models.
+
+```{r eval=FALSE, include=FALSE}
+#looic has decreased significantly
+loo.model.NB.hier<-loo(fit.4)$estimates 
+loo.model.NB.hier
+```
 
 
 
@@ -939,15 +1320,17 @@ The Leave-One-Out cross validation is a method for estimating pointwise out-of-s
 Plot the `looic` to compare models:
 
 ```{r bayesian_model_comparison, echo=TRUE, warning=FALSE, eval=FALSE}
-loo.all.deps<-c(loo.model.Poisson.complete[3], loo.NB.complete[3], loo.model.NB2.complete[3], loo.model.NB.hier.complete[3])
+loo.all.deps<-c(loo.model.Poisson[3], loo.model.NB[3], loo.model.NB2[3], loo.model.NB.hier[3])
 
 sort.loo.all.deps<- sort.int(loo.all.deps, index.return = TRUE)$x
 
 par(xaxt="n")
-plot(sort.loo.all.deps, type="b", xlab="", ylab="LOOIC", main="All departments")
+plot(sort.loo.all.deps, type="b", xlab="", ylab="LOOIC", main="Model comparison")
 par(xaxt="s")
 axis(1, c(1:4), c("Poisson", "NB-sl", "NB-ml", 
                   "hier")[sort.int(loo.all.deps,
                     index.return = TRUE)$ix],
                     las=2)
 ```
+
+<img src="stan_figs/looic.png" alt="looic" style="zoom:60%;" class="center"/>
