@@ -617,7 +617,7 @@ res.st <- (cases$`Cumulative cases`[1:22] - pred.pois)/sqrt(pred.pois)
 #n-k=23
 print(paste("Estimated overdispersion", sum(res.st^2)/23))
 poisson1.pred <- predict(poisson1, newdata = cases[23:25, ])
-paste("MSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
 #print(sprintf("MSE: %0.2f", sum(poisson1$residuals^2)/poisson1$df.residual))
 #print(sprintf("MSE: %0.2f", anova(poisson1)['Residuals', 'Mean Sq']))
@@ -666,7 +666,7 @@ res.st <- (cases$`Cumulative cases`[1:22] - pred.pois)/sqrt(pred.pois)
 #n-k=23
 print(paste("Estimated overdispersion", sum(res.st^2)/23))
 poisson1.pred <- predict(poisson1, newdata = cases[23:25, ])
-paste("MSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
 #print(sprintf("MSE: %0.2f", sum(poisson1$residuals^2)/poisson1$df.residual))
 #print(sprintf("MSE: %0.2f", anova(poisson1)['Residuals', 'Mean Sq']))
@@ -693,7 +693,7 @@ data1 <- bind_cols(cases, group_dummy)
 ```{r pois2, echo=TRUE, warning=FALSE}
 poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1[1:22, ], family=poisson)
 poisson2.pred <- predict(poisson2, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson2$residuals^2))
 paste("AIC:", poisson2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -713,7 +713,7 @@ res.st3 <- (data1$`Cumulative cases` - pred.pois3)/sqrt(pred.pois3)
 #n-k=18
 print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st3^2)/18))
 poisson3.pred <- predict(poisson3, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((poisson3.pred - data1$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((poisson3.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson3$residuals^2))
 paste("AIC:", poisson3$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -735,7 +735,7 @@ res.st4 <- (data1$`Cumulative cases` - pred.pois4)/sqrt(pred.pois4)
 #n-k=6
 print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4^2)/6))
 poisson4.pred <- predict(poisson4, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
 paste("AIC:", poisson4$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -755,7 +755,7 @@ res.st4bis <- (data1$`Cumulative cases` - pred.pois4bis)/sqrt(pred.pois4bis)
 #n-k=6
 print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4bis^2)/6))
 poisson4bis.pred <- predict(poisson4bis, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((poisson4bis.pred - data1$`New cases/day`[23:25])^2)))
+paste("RMSE:", sqrt(mean((poisson4bis.pred - data1$`New cases/day`[23:25])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
 paste("AIC:", poisson4bis$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -773,7 +773,7 @@ res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
 plot(pred.pois5, res.st5)
 abline(h=0, lty=3, col="gray75")
 poisson5.pred <- predict(poisson5, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((poisson5.pred - data1$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((poisson5.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson5$residuals^2))
 paste("AIC:", poisson5$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -785,7 +785,7 @@ poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia
 par(mfrow=c(2,2))
 plot(poisson6)
 poisson6.pred <- predict(poisson6, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((poisson6.pred - data1$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((poisson6.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson6$residuals^2))
 paste("AIC:", poisson6$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -953,7 +953,7 @@ plot(nb1)
 stdres <- rstandard(nb1)
 print(paste("Estimated overdispersion", sum(stdres^2)/23))
 nb1.pred <- predict(nb1, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((nb1.pred - data1$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((nb1.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(nb1$residuals^2))
 paste("AIC:", nb1$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -967,7 +967,7 @@ nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Gru
 par(mfrow=c(2,2))
 plot(nb2)
 nb2.pred <- predict(nb2, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[23:25])^2)))
+paste("RMSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(nb2$residuals^2))
 paste("AIC:", nb2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -977,10 +977,12 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time` plus `Department` as predictors
 
 ```{r nb3, echo=TRUE, warning=FALSE}
-nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1)
+nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1[1:22, ])
 par(mfrow=c(2,2))
 plot(nb3)
-paste("MSE:", mean(nb3$residuals^2))
+nb3.pred <- predict(nb3, newdata = data1[23:25, ])
+paste("RMSE:", sqrt(mean((nb3.pred - data1$`Cumulative cases`[23:25])^2)))
+#paste("MSE:", mean(nb3$residuals^2))
 paste("AIC:", nb3$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb3$null.deviance, deviance(nb3)), 2))
@@ -989,10 +991,12 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time` plus `Continent of origin` as predictors
 
 ```{r nb4, echo=TRUE, warning=FALSE}
-nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1)
+nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1[1:22, ])
 par(mfrow=c(2,2))
 plot(nb4)
-paste("MSE:", mean(nb4$residuals^2))
+nb4.pred <- predict(nb4, newdata = data1[23:25, ])
+paste("RMSE:", sqrt(mean((nb4.pred - data1$`Cumulative cases`[23:25])^2)))
+#paste("MSE:", mean(nb4$residuals^2))
 paste("AIC:", nb4$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb4$null.deviance, deviance(nb4)), 2))
@@ -1001,13 +1005,15 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
 ```{r nb5, echo=TRUE, warning=FALSE}
-nb5 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1)
+nb5 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1[1:22, ])
 par(mfrow=c(2,2))
 plot(nb5)
 # Calculating overdispersion n=25 k=19 n-k=6
 stdres <- rstandard(nb5)
 print(paste("Estimated overdispersion", sum(stdres^2)/6))
-paste("MSE:", mean(nb5$residuals^2))
+nb5.pred <- predict(nb5, newdata = data1[23:25, ])
+paste("RMSE:", sqrt(mean((nb5.pred - data1$`Cumulative cases`[23:25])^2)))
+#paste("MSE:", mean(nb5$residuals^2))
 paste("AIC:", nb5$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb5$null.deviance, deviance(nb5)), 2))
@@ -1042,15 +1048,15 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[1:22], ymax = conf.df_nb$upr[1:22]),
               data = data1[1:22, ],
               fill = color_scheme_get("blue")[[2]]) + 
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[22:25], ymax = conf.df_nb$upr[22:25]),
-              data = data1[22:25, ],
-              fill = color_scheme_get("red")[[2]]) +
+  #geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[22:25], ymax = conf.df_nb$upr[22:25]),
+  #            data = data1[22:25, ],
+  #            fill = color_scheme_get("red")[[2]]) +
   geom_line(aes(x = `Elapsed time`, y = conf.df_nb$fit[1:22]),
               data = data1[1:22, ],
               color = color_scheme_get("blue")[[4]], 
               size = 1.1) +
-  geom_line(aes(x= `Elapsed time`, y = conf.df_nb$fit[22:25]),
-              data = data1[22:25, ],
+  geom_line(aes(x= `Elapsed time`, y = nb5.pred),
+              data = data1[23:25, ],
               color = color_scheme_get("red")[[4]],
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
