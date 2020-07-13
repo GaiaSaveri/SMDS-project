@@ -386,86 +386,6 @@ mean_age <- colombia_covid %>%
 cases_dep <- cbind(cases_dep, `Mean age` = mean_age$`Mean age`)
 ```
 
-```{r complete_hierarchical_data_fix, echo=TRUE, warning=FALSE}
-#million inhabitants per department
-cases_dep$people<-rep(0, nrow(cases_dep))
-
-cases_dep[which(cases_dep$`Department ID` == 1),]$people<-6.4
-cases_dep[which(cases_dep$`Department ID` == 2),]$people<-7.4
-cases_dep[which(cases_dep$`Department ID` == 3),]$people<-1.2
-cases_dep[which(cases_dep$`Department ID` == 4),]$people<-0.99
-cases_dep[which(cases_dep$`Department ID` == 5),]$people<-0.4
-cases_dep[which(cases_dep$`Department ID` == 6),]$people<-1.4
-cases_dep[which(cases_dep$`Department ID` == 7),]$people<-2.9
-cases_dep[which(cases_dep$`Department ID` == 8),]$people<-1.04
-cases_dep[which(cases_dep$`Department ID` == 9),]$people<-0.53
-cases_dep[which(cases_dep$`Department ID` == 10),]$people<-0.94
-cases_dep[which(cases_dep$`Department ID` == 11),]$people<-2.18
-cases_dep[which(cases_dep$`Department ID` == 12),]$people<-1.33
-cases_dep[which(cases_dep$`Department ID` == 13),]$people<-4.4
-
-#km^2
-antioquia_surface<-63600
-bogota_surface<-1775
-boyaca_surface<-23189
-caldas_surface<-7888
-casanare_surface<-44640
-cauca_surface<-29308
-cundinamarca_surface<-24210
-meta_surface<-85635
-quindio_surface<-1845
-risaralda_surface<-4140
-santander_surface<-30537
-tolima_surface<-23562
-valle_cauca_surface<-22195
-
-#population density inhabitants/km^2
-antioquia_density<-88.06
-bogota_density<-4552
-boyaca_density<-93
-caldas_density<-130
-casanare_density<-9.4
-cauca_density<-50
-cundinamarca_density<-99.15
-meta_density<-density<-12
-quindio_density<-290
-risaralda_density<-59.16
-santander_density<-72
-tolima_density<-56
-valle_cauca_density<-183.04
-
-cases_dep$surface<-rep(0, nrow(cases_dep))
-cases_dep$density<-rep(0, nrow(cases_dep))
-
-cases_dep[which(cases_dep$`Department ID` ==1),]$surface<-antioquia_surface
-cases_dep[which(cases_dep$`Department ID` ==2),]$surface<-bogota_surface
-cases_dep[which(cases_dep$`Department ID` ==3),]$surface<-boyaca_surface
-cases_dep[which(cases_dep$`Department ID` ==4),]$surface<-caldas_surface
-cases_dep[which(cases_dep$`Department ID` ==5),]$surface<-casanare_surface
-cases_dep[which(cases_dep$`Department ID` ==6),]$surface<-cauca_surface
-cases_dep[which(cases_dep$`Department ID` ==7),]$surface<-cundinamarca_surface
-cases_dep[which(cases_dep$`Department ID` ==8),]$surface<-meta_surface
-cases_dep[which(cases_dep$`Department ID` ==9),]$surface<-quindio_surface
-cases_dep[which(cases_dep$`Department ID` ==10),]$surface<-risaralda_surface
-cases_dep[which(cases_dep$`Department ID` ==11),]$surface<-santander_surface
-cases_dep[which(cases_dep$`Department ID` ==12),]$surface<-tolima_surface
-cases_dep[which(cases_dep$`Department ID` ==13),]$surface<-valle_cauca_surface
-
-cases_dep[which(cases_dep$`Department ID` == 1),]$density<-antioquia_density
-cases_dep[which(cases_dep$`Department ID` ==2),]$density<-bogota_density
-cases_dep[which(cases_dep$`Department ID` ==3),]$density<-boyaca_density
-cases_dep[which(cases_dep$`Department ID` ==4),]$density<-caldas_density
-cases_dep[which(cases_dep$`Department ID` ==5),]$density<-casanare_density
-cases_dep[which(cases_dep$`Department ID` ==6),]$density<-cauca_density
-cases_dep[which(cases_dep$`Department ID` ==7),]$density<-cundinamarca_density
-cases_dep[which(cases_dep$`Department ID` ==8),]$density<-meta_density
-cases_dep[which(cases_dep$`Department ID` ==9),]$density<-quindio_density
-cases_dep[which(cases_dep$`Department ID` ==10),]$density<-risaralda_density
-cases_dep[which(cases_dep$`Department ID` ==11),]$density<-santander_density
-cases_dep[which(cases_dep$`Department ID` ==12),]$density<-tolima_density
-cases_dep[which(cases_dep$`Department ID` ==13),]$density<-valle_cauca_density
-```
-
 ```{r}
 head(cases_dep, 10)
 #head(cases_dep[order(cases_dep$Date), ], 10)
@@ -778,12 +698,16 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Poisson with `Elapsed time`, `Age`, `Departments` and `Continent of origin` as predictors
 
 ```{r pois5, echo=TRUE, warning=FALSE}
-#poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`+`Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica` + `Continente de procedencia_Sudamerica`, data=data1, family=poisson)
+poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`+`Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica` + `Continente de procedencia_Sudamerica`, data=data1, family=poisson)
 #par(mfrow=c(2,2))
 #plot(poisson5)
-#paste("AIC:", poisson5$aic)
-#paste(c("Null deviance: ", "Residual deviance:"),
-#       round(c(poisson5$null.deviance, deviance(poisson5)), 2))
+pred.pois5 <- poisson5$fitted.values
+res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
+plot(pred.pois5, res.st5)
+abline(h=0, lty=3, col="gray75")
+paste("AIC:", poisson5$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(poisson5$null.deviance, deviance(poisson5)), 2))
 ```
 
 ## ANOVA to compare the Poisson models
@@ -793,7 +717,11 @@ paste(c("Null deviance: ", "Residual deviance:"),
 anova(poisson1, poisson3, poisson4, test="Chisq")
 ```
 
-```{r function, eval=FALSE, include=FALSE}
+### Predictive accuracy of the Poisson model
+
+Predicting with a $95\%$ confidence interval
+
+```{r function, include=FALSE}
 predict.confidence <- function(object, newdata, level = 0.95, ...) {
     if (!is(object, "glm")) {
         stop("Model should be a glm")
@@ -814,33 +742,44 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
     df <- data.frame("fit" = ilink(fit$fit), "lwr" = lwr, "upr" = upr)
     return(df)
 }
-
-conf.df <- predict.confidence(poisson4, as.data.frame(data1$`Cumulative cases`))
-conf.df
 ```
 
-```{r plot_poisson, eval=FALSE, include=FALSE}
-ggplot(data1, aes(`Elapsed time`, `Cumulative cases`))+
-    geom_ribbon(aes(x=`Elapsed time`, ymin=conf.df$lwr, ymax=conf.df$upr),
-                data=data1,
-                fill = color_scheme_get("blue")[[2]])+
-    geom_line(aes(x = `Elapsed time`, y = conf.df$fit),
-              data=data1,
-              color = color_scheme_get("blue")[[4]],
-              size =1.1)+
-    geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`))+
-    xlab("Days")+
-    ylab("Total cases")+
-    scale_x_discrete(limit = c( 8, 15, 22, 29, 36 ), 
-        labels = c( "2-3", "9-3", "16-3", "23-3", "30-3") )+
-    #facet_wrap("reg", scales ="free")+
-    theme(strip.text.x = element_text(size = 12, 
-          colour = "black"),
-          axis.text.x = element_text(face="bold", 
-          color="#993333", 
-          angle=45, size =9),
-          axis.title.x = element_text(size=22),
-          axis.title.y = element_text(size = 22))
+```{r pre_acc_pois, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_pois <- predict.confidence(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)))
+#conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+print(conf.df_pois)
+n <- 25
+freq_coverage_pois <- sum(`Cumulative cases` >= conf.df_pois[, 2] & `Cumulative cases` <= conf.df_pois[, 3])
+freq_coverage_pois <- freq_coverage_pois/n
+detach(data1)
+```
+
+```{r precc_acc_pois_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[1:22], ymax = conf.df_pois$upr[1:22]),
+              data = data1[1:22, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[22:25], ymax = conf.df_pois$upr[22:25]),
+              data = data1[22:25, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois$fit[1:22]),
+              data = data1[1:22, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = conf.df_pois$fit[22:25]),
+              data = data1[22:25, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(1, 8, 16, 25), labels = c("3-06", "3-16", "3-24", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        axis.title.x = element_text(size = 22), 
+        axis.title.y = element_text(size = 22))
 ```
 
 ## Quasi Poisson with `Elapsed time` as predictor
@@ -935,40 +874,6 @@ We decided to compare `nb1`, `nb2`, `nb5`, because they are nested and we are mo
 ```{r anova_nb, echo=TRUE, warning=FALSE}
 #Applying ANOVA to compare the negative binomial models
 anova(nb1, nb2, nb5)
-```
-
-### Predictive accuracy of the Poisson model
-
-Predicting with a $95\%$ confidence interval
-
-```{r pre_acc_pois, eval=FALSE, warning=FALSE, include=FALSE}
-conf.df_pois <- predict.confidence(poisson4, `Cumulative cases`)
-n <- 25
-freq_coverage_pois <- sum( `Cumulative cases` >= conf.df_pois[,2] & `Cumulative cases` <= conf.df_pois[,3])
-freq_coverage_pois <- freq_coverage_pois/n
-```
-
-```{r precc_acc_pois_plot, eval=FALSE, warning=FALSE, include=FALSE}
-ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr, 
-    ymax = conf.df_pois$upr),
-    data = data1,
-    fill = color_scheme_get("blue")[[2]]) + 
-    geom_line(aes(x = `Elapsed time`, y = conf.df_pois$fit),
-              data = data1,
-              color = color_scheme_get("blue")[[4]], 
-              size = 1.1) +
-  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
-    xlab("Days") + 
-    ylab("Total cases") +
-  scale_x_discrete(limit = c(8, 15, 22, 29, 36),
-  labels = c("2-3", "9-3", "16-3", "23-3", "30-3")) +
-  # facet_wrap('reg', scales ='free') +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        axis.title.x = element_text(size = 22), 
-        axis.title.y = element_text(size = 22))
 ```
 
 ## Predictive accuracy of the Negative Binomial model
@@ -1228,25 +1133,77 @@ being $\psi = [\beta_{pop}, \beta_{sur}, \beta_{dens}]$.
 
 We added the following covariats into the dataset:
 
-  * `people`: millions of inhabitants for each region;
+  * `People`: millions of inhabitants for each region;
   
-  * `surface`: $km^3$, extent of each region;
+  * `Surface`: $km^3$, extent of each region;
   
-  * `density`: $\frac{people}{km^2}$, density of the population in each region.
+  * `Density`: $\frac{people}{km^2}$, density of the population in each region.
+  
+```{r complete_hierarchical_data_fix, echo=TRUE, warning=FALSE}
+# Million inhabitants per department
+cases_dep$People <- rep(0, nrow(cases_dep))
+cases_dep[which(cases_dep$`Department ID` == 1),]$People  <- 6.4
+cases_dep[which(cases_dep$`Department ID` == 2),]$People  <- 7.4
+cases_dep[which(cases_dep$`Department ID` == 3),]$People  <- 1.2
+cases_dep[which(cases_dep$`Department ID` == 4),]$People  <- 0.99
+cases_dep[which(cases_dep$`Department ID` == 5),]$People  <- 0.4
+cases_dep[which(cases_dep$`Department ID` == 6),]$People  <- 1.4
+cases_dep[which(cases_dep$`Department ID` == 7),]$People  <- 2.9
+cases_dep[which(cases_dep$`Department ID` == 8),]$People  <- 1.04
+cases_dep[which(cases_dep$`Department ID` == 9),]$People  <- 0.53
+cases_dep[which(cases_dep$`Department ID` == 10),]$People <- 0.94
+cases_dep[which(cases_dep$`Department ID` == 11),]$People <- 2.18
+cases_dep[which(cases_dep$`Department ID` == 12),]$People <- 1.33
+cases_dep[which(cases_dep$`Department ID` == 13),]$People <- 4.4
+
+# km^2
+cases_dep$Surface <- rep(0, nrow(cases_dep))
+cases_dep[which(cases_dep$`Department ID` ==1),]$Surface  <- 63600
+cases_dep[which(cases_dep$`Department ID` ==2),]$Surface  <- 1775
+cases_dep[which(cases_dep$`Department ID` ==3),]$Surface  <- 23189
+cases_dep[which(cases_dep$`Department ID` ==4),]$Surface  <- 7888
+cases_dep[which(cases_dep$`Department ID` ==5),]$Surface  <- 44640
+cases_dep[which(cases_dep$`Department ID` ==6),]$Surface  <- 29308
+cases_dep[which(cases_dep$`Department ID` ==7),]$Surface  <- 24210
+cases_dep[which(cases_dep$`Department ID` ==8),]$Surface  <- 85635
+cases_dep[which(cases_dep$`Department ID` ==9),]$Surface  <- 1845
+cases_dep[which(cases_dep$`Department ID` ==10),]$Surface <- 4140
+cases_dep[which(cases_dep$`Department ID` ==11),]$Surface <- 30537
+cases_dep[which(cases_dep$`Department ID` ==12),]$Surface <- 23562
+cases_dep[which(cases_dep$`Department ID` ==13),]$Surface <- 22195
+
+# Population density inhabitants/km^2
+cases_dep$Density <- rep(0, nrow(cases_dep))
+cases_dep[which(cases_dep$`Department ID` == 1),]$Density <- 88.06
+cases_dep[which(cases_dep$`Department ID` ==2),]$Density  <- 4552
+cases_dep[which(cases_dep$`Department ID` ==3),]$Density  <- 93
+cases_dep[which(cases_dep$`Department ID` ==4),]$Density  <- 130
+cases_dep[which(cases_dep$`Department ID` ==5),]$Density  <- 9.4
+cases_dep[which(cases_dep$`Department ID` ==6),]$Density  <- 50
+cases_dep[which(cases_dep$`Department ID` ==7),]$Density  <- 99.15
+cases_dep[which(cases_dep$`Department ID` ==8),]$Density  <- 12
+cases_dep[which(cases_dep$`Department ID` ==9),]$Density  <- 290
+cases_dep[which(cases_dep$`Department ID` ==10),]$Density <- 59.16
+cases_dep[which(cases_dep$`Department ID` ==11),]$Density <- 72
+cases_dep[which(cases_dep$`Department ID` ==12),]$Density <- 56
+cases_dep[which(cases_dep$`Department ID` ==13),]$Density <- 183.04
+```
+
+The model is:
   
 ```{r hierarchical_complete_data, eval=FALSE, warning=FALSE, include=FALSE}
 #compile the model 
-model3.NB<-stan_model("stan/NB_model3.stan")
+model3.NB <- nstan_model("stan/NB_model3.stan")
 
-people<-cases_dep %>% select(people) %>% unique()
-people<-as.vector(people[1])
-density<-cases_dep %>% select(density) %>% unique()
-density<-as.vector(density[1])
-surface<-cases_dep %>% select(surface) %>% unique()
-surface<-as.vector(surface[1])
+People <- cases_dep %>% select(People) %>% unique()
+People <- as.vector(People[1])
+Density <- cases_dep %>% select(Density) %>% unique()
+Density <- as.vector(Density[1])
+Surface <- cases_dep %>% select(Surface) %>% unique()
+Surface <- as.vector(Surface[1])
 
-dep_data.complete<-cbind(people, surface,density)
-dep_data.complete<-dep_data.complete %>% as.matrix()
+dep_data.complete <- cbind(People, Surface, Density)
+dep_data.complete <- dep_data.complete %>% as.matrix()
 
 #prepare the new data
 data.hier.NB.complete<-
