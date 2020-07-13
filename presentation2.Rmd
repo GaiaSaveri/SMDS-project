@@ -90,6 +90,7 @@ We decided to consider as **central Colombia** the following departments/distric
 
 ```{r loading, echo=TRUE}
 colombia_covid <- as.data.frame(read_csv("data/datasets_567855_1056808_Casos1.csv"))
+colombia_covid_colnames <- c("ID de caso", "Fecha de diagnóstico", "Ciudad de ubicación", "Departamento o Distrito", "Atención", "Edad" , "Sexo", "Tipo", "País de procedencia")
 colnames(colombia_covid)[5] <- "Atención"
 colnames(colombia_covid)[8] <- "Tipo"
 # slicing the main dataset
@@ -98,6 +99,22 @@ central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boy
 central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
 colombia_covid <- colombia_covid[central.colombia.rows, ]
 ```
+
+## Expanding the dataset
+
+```{r exp_dataset}
+colombia_covid2 <- as.data.frame(read_csv("data/covid19co.csv"))
+cols <- colnames(colombia_covid2)[c(1, 4, 5, 6, 7, 8, 9, 11, 14)]
+colombia_covid2 <- colombia_covid2[cols]
+colombia_covid2 <- colombia_covid2[, c(1, 9, 2, 3, 4, 5, 6, 7, 8)]
+colnames(colombia_covid2) <- c("ID de caso", "Fecha de diagnóstico", "Ciudad de ubicación", "Departamento o Distrito", "Atención", "Edad" , "Sexo", "Tipo", "País de procedencia")
+central.colombia.rows2 <- which(colombia_covid2$`Departamento o Distrito` %in% central.colombia.dep)
+colombia_covid2 <- colombia_covid2[central.colombia.rows2, ]
+colombia_covid2$`Fecha de diagnóstico` <- as.Date(colombia_covid2$`Fecha de diagnóstico`, format="%d/%m/%Y")
+
+View(colombia_covid[, 1:9] == colombia_covid2[1:993, ])
+```
+
  
 ## Description of variables
 
@@ -616,7 +633,7 @@ res.st <- (cases$`Cumulative cases`[1:22] - pred.pois)/sqrt(pred.pois)
 #k=2
 #n-k=23
 print(paste("Estimated overdispersion", sum(res.st^2)/23))
-poisson1.pred <- predict(poisson1, newdata = cases[23:25, ])
+poisson1.pred <- predict(poisson1, newdata = cases[23:25, ], type="response")
 paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
 #print(sprintf("MSE: %0.2f", sum(poisson1$residuals^2)/poisson1$df.residual))
@@ -633,9 +650,6 @@ plot(poisson1)
 ```{r pois_time/dep, echo=TRUE, warning=FALSE}
 poisson1A <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=cases_relev_dep, family=poisson)
 summary(poisson1A)
-```
-
-```{r}
 paste("MSE:", mean(poisson1A$residuals^2))
 paste("AIC:", poisson1A$aic)
 ```
@@ -665,7 +679,7 @@ res.st <- (cases$`Cumulative cases`[1:22] - pred.pois)/sqrt(pred.pois)
 #k=2
 #n-k=23
 print(paste("Estimated overdispersion", sum(res.st^2)/23))
-poisson1.pred <- predict(poisson1, newdata = cases[23:25, ])
+poisson1.pred <- predict(poisson1, newdata = cases[23:25, ], type="response")
 paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
 #print(sprintf("MSE: %0.2f", sum(poisson1$residuals^2)/poisson1$df.residual))
@@ -692,7 +706,7 @@ data1 <- bind_cols(cases, group_dummy)
 
 ```{r pois2, echo=TRUE, warning=FALSE}
 poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1[1:22, ], family=poisson)
-poisson2.pred <- predict(poisson2, newdata = data1[23:25, ])
+poisson2.pred <- predict(poisson2, newdata = data1[23:25, ], type="response")
 paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson2$residuals^2))
 paste("AIC:", poisson2$aic)
@@ -712,7 +726,7 @@ res.st3 <- (data1$`Cumulative cases` - pred.pois3)/sqrt(pred.pois3)
 #k=7
 #n-k=18
 print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st3^2)/18))
-poisson3.pred <- predict(poisson3, newdata = data1[23:25, ])
+poisson3.pred <- predict(poisson3, newdata = data1[23:25, ], type="response")
 paste("RMSE:", sqrt(mean((poisson3.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson3$residuals^2))
 paste("AIC:", poisson3$aic)
@@ -734,7 +748,7 @@ res.st4 <- (data1$`Cumulative cases` - pred.pois4)/sqrt(pred.pois4)
 #k=19
 #n-k=6
 print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4^2)/6))
-poisson4.pred <- predict(poisson4, newdata = data1[23:25, ])
+poisson4.pred <- predict(poisson4, newdata = data1[23:25, ], type="response")
 paste("RMSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
 paste("AIC:", poisson4$aic)
@@ -754,7 +768,7 @@ res.st4bis <- (data1$`Cumulative cases` - pred.pois4bis)/sqrt(pred.pois4bis)
 #k=19
 #n-k=6
 print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4bis^2)/6))
-poisson4bis.pred <- predict(poisson4bis, newdata = data1[23:25, ])
+poisson4bis.pred <- predict(poisson4bis, newdata = data1[23:25, ], type="response")
 paste("RMSE:", sqrt(mean((poisson4bis.pred - data1$`New cases/day`[23:25])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
 paste("AIC:", poisson4bis$aic)
@@ -772,7 +786,7 @@ pred.pois5 <- poisson5$fitted.values
 res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
 plot(pred.pois5, res.st5)
 abline(h=0, lty=3, col="gray75")
-poisson5.pred <- predict(poisson5, newdata = data1[23:25, ])
+poisson5.pred <- predict(poisson5, newdata = data1[23:25, ], type="response")
 paste("RMSE:", sqrt(mean((poisson5.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson5$residuals^2))
 paste("AIC:", poisson5$aic)
@@ -784,7 +798,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia` + `Continente de procedencia_Centroamérica` + `Continente de procedencia_Colombia` + `Continente de procedencia_Europa` + `Continente de procedencia_Norteamérica` + `Continente de procedencia_Sudamerica`, data = data1, family=poisson)
 par(mfrow=c(2,2))
 plot(poisson6)
-poisson6.pred <- predict(poisson6, newdata = data1[23:25, ])
+poisson6.pred <- predict(poisson6, newdata = data1[23:25, ], type="response")
 paste("RMSE:", sqrt(mean((poisson6.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson6$residuals^2))
 paste("AIC:", poisson6$aic)
@@ -830,8 +844,8 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
 
 ```{r pre_acc_pois, warning=FALSE, include=FALSE}
 attach(data1)
-conf.df_pois <- predict.confidence(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)))
-#conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = "confidence")
+conf.df_pois <- predict.confidence(poisson4, newdata = data1[23:25])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 print(conf.df_pois)
 n <- 25
 freq_coverage_pois <- sum(`Cumulative cases` >= conf.df_pois[, 2] & `Cumulative cases` <= conf.df_pois[, 3])
@@ -844,7 +858,7 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[1:22], ymax = conf.df_pois$upr[1:22]),
               data = data1[1:22, ],
               fill = color_scheme_get("blue")[[2]]) + 
-  #geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[22:25], ymax = conf.df_pois$upr[22:25]),
+  #geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[23:25], ymax = conf.df_pois$upr[23:25]),
   #            data = data1[22:25, ],
   #            fill = color_scheme_get("red")[[2]]) +
   geom_line(aes(x = `Elapsed time`, y = conf.df_pois$fit[1:22]),
@@ -952,7 +966,7 @@ plot(nb1)
 #n=25, k=2, n-k=23
 stdres <- rstandard(nb1)
 print(paste("Estimated overdispersion", sum(stdres^2)/23))
-nb1.pred <- predict(nb1, newdata = data1[23:25, ])
+nb1.pred <- predict(nb1, newdata = data1[23:25, ], type = "response")
 paste("RMSE:", sqrt(mean((nb1.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(nb1$residuals^2))
 paste("AIC:", nb1$aic)
@@ -966,7 +980,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:22, ])
 par(mfrow=c(2,2))
 plot(nb2)
-nb2.pred <- predict(nb2, newdata = data1[23:25, ])
+nb2.pred <- predict(nb2, newdata = data1[23:25, ], type = "response")
 paste("RMSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(nb2$residuals^2))
 paste("AIC:", nb2$aic)
@@ -980,7 +994,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1[1:22, ])
 par(mfrow=c(2,2))
 plot(nb3)
-nb3.pred <- predict(nb3, newdata = data1[23:25, ])
+nb3.pred <- predict(nb3, newdata = data1[23:25, ], type = "response")
 paste("RMSE:", sqrt(mean((nb3.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(nb3$residuals^2))
 paste("AIC:", nb3$aic)
@@ -994,7 +1008,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1[1:22, ])
 par(mfrow=c(2,2))
 plot(nb4)
-nb4.pred <- predict(nb4, newdata = data1[23:25, ])
+nb4.pred <- predict(nb4, newdata = data1[23:25, ], type = "response")
 paste("RMSE:", sqrt(mean((nb4.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(nb4$residuals^2))
 paste("AIC:", nb4$aic)
@@ -1011,7 +1025,7 @@ plot(nb5)
 # Calculating overdispersion n=25 k=19 n-k=6
 stdres <- rstandard(nb5)
 print(paste("Estimated overdispersion", sum(stdres^2)/6))
-nb5.pred <- predict(nb5, newdata = data1[23:25, ])
+nb5.pred <- predict(nb5, newdata = data1[23:25, ], type = "response")
 paste("RMSE:", sqrt(mean((nb5.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(nb5$residuals^2))
 paste("AIC:", nb5$aic)
