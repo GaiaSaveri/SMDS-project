@@ -609,7 +609,6 @@ We splitted the data so to leave out the last three points for prediction, becau
 ## Poisson with `Elapsed time` as predictor
 
 ```{r pois_time, echo=TRUE, warning=FALSE}
-#Running poisson with just the variable representing the time as predictor 
 poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=cases[1:22, ], family=poisson)
 pred.pois <- poisson1$fitted.values
 res.st <- (cases$`Cumulative cases`[1:22] - pred.pois)/sqrt(pred.pois)
@@ -632,7 +631,6 @@ plot(poisson1)
 ## Using `cases_relev_dep`
 
 ```{r pois_time/dep, echo=TRUE, warning=FALSE}
-#Running poisson with just the variable representing the time as predictor 
 poisson1A <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=cases_relev_dep, family=poisson)
 summary(poisson1A)
 ```
@@ -660,7 +658,6 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
 
 ```{r pois_time2, echo=TRUE, warning=FALSE}
-#Running poisson with just the variable representing the time as predictor 
 poisson1 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:22, ], family=poisson)
 pred.pois <- poisson1$fitted.values
 res.st <- (cases$`Cumulative cases`[1:22] - pred.pois)/sqrt(pred.pois)
@@ -745,7 +742,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson4$null.deviance, deviance(poisson4)), 2))
 ```
 
-## Poisson with `Elapsed time`, `Age` and 'Departments` as predictors for `New cases/day`
+## Poisson with `Elapsed time`, `Age` and `Departments` as predictors for `New cases/day`
 
 ```{r pois4day, echo=TRUE, warning=FALSE}
 poisson4bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima` + `Departamento o Distrito_Valle del Cauca`, data=data1[1:22, ], family=poisson)
@@ -776,7 +773,7 @@ res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
 plot(pred.pois5, res.st5)
 abline(h=0, lty=3, col="gray75")
 poisson5.pred <- predict(poisson5, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((poisson5.pred - cases$`Cumulative cases`[23:25])^2)))
+paste("MSE:", sqrt(mean((poisson5.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson5$residuals^2))
 paste("AIC:", poisson5$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -788,7 +785,7 @@ poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia
 par(mfrow=c(2,2))
 plot(poisson6)
 poisson6.pred <- predict(poisson6, newdata = data1[23:25, ])
-paste("MSE:", sqrt(mean((poisson6.pred - cases$`Cumulative cases`[23:25])^2)))
+paste("MSE:", sqrt(mean((poisson6.pred - data1$`Cumulative cases`[23:25])^2)))
 #paste("MSE:", mean(poisson6$residuals^2))
 paste("AIC:", poisson6$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -834,7 +831,7 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
 ```{r pre_acc_pois, warning=FALSE, include=FALSE}
 attach(data1)
 conf.df_pois <- predict.confidence(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)))
-#conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+#conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = "confidence")
 print(conf.df_pois)
 n <- 25
 freq_coverage_pois <- sum(`Cumulative cases` >= conf.df_pois[, 2] & `Cumulative cases` <= conf.df_pois[, 3])
@@ -949,13 +946,15 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time` as predictor
 
 ```{r nb1, echo=TRUE, warning=FALSE}
-nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1)
+nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:22, ])
 par(mfrow=c(2,2))
 plot(nb1)
 #n=25, k=2, n-k=23
 stdres <- rstandard(nb1)
 print(paste("Estimated overdispersion", sum(stdres^2)/23))
-paste("MSE:", mean(nb1$residuals^2))
+nb1.pred <- predict(nb1, newdata = data1[23:25, ])
+paste("MSE:", sqrt(mean((nb1.pred - data1$`Cumulative cases`[23:25])^2)))
+#paste("MSE:", mean(nb1$residuals^2))
 paste("AIC:", nb1$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb1$null.deviance, deviance(nb1)), 2))
@@ -964,10 +963,12 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time` plus `Age` as predictors
 
 ```{r nb2, echo=TRUE, warning=FALSE}
-nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1)
+nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:22, ])
 par(mfrow=c(2,2))
 plot(nb2)
-paste("MSE:", mean(nb2$residuals^2))
+nb2.pred <- predict(nb2, newdata = data1[23:25, ])
+paste("MSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[23:25])^2)))
+#paste("MSE:", mean(nb2$residuals^2))
 paste("AIC:", nb2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb2$null.deviance, deviance(nb2)), 2))
