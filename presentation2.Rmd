@@ -780,7 +780,8 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
   ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1038,7 +1039,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[1:120], ymax = conf.df_nb2$upr[1:120]),
               data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[120:126], ymax = conf.df_nb$upr[120:126]),
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[120:126], ymax = conf.df_nb2$upr[120:126]),
               data = data1[120:126, ],
               fill = color_scheme_get("red")[[2]]) +
   geom_line(aes(x = `Elapsed time`, y = conf.df_nb2$fit[1:120]),
