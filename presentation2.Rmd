@@ -88,41 +88,20 @@ We decided to consider as **central Colombia** the following departments/distric
 
 ## Loading the dataset
 
+This dataset is missing completely the department `Valle del Cauca`!
+
 ```{r loading, echo=TRUE}
-colombia_covid <- as.data.frame(read_csv("data/datasets_567855_1056808_Casos1.csv"))
-colombia_covid_colnames <- c("ID de caso", "Fecha de diagnóstico", "Ciudad de ubicación", "Departamento o Distrito", "Atención", "Edad" , "Sexo", "Tipo", "País de procedencia")
-colnames(colombia_covid)[5] <- "Atención"
-colnames(colombia_covid)[8] <- "Tipo"
-# slicing the main dataset
+colombia_covid <- as.data.frame(read_csv("data/covid19co.csv"))
+cols <- colnames(colombia_covid)[c(1, 4, 5, 6, 7, 8, 9, 11, 14)]
+colombia_covid <- colombia_covid[cols]
+colombia_covid <- colombia_covid[, c(1, 9, 2, 3, 4, 5, 6, 7, 8)]
+colnames(colombia_covid) <- c("ID de caso", "Fecha de diagnóstico", "Ciudad de ubicación", "Departamento o Distrito", "Atención", "Edad" , "Sexo", "Tipo", "País de procedencia")
+#colombia_covid$`Departamento o Distrito`[which(colombia_covid$`Departamento o Distrito` == "Valle Del Cauca")] <- "Valle del Cauca"
 central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boyacá", "Quindío", "Cauca",
     "Valle del Cauca", "Risaralda", "Caldas", "Boyacá", "Antioquia", "Santander", "Casanare")
 central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
 colombia_covid <- colombia_covid[central.colombia.rows, ]
-```
-
-## Expanding the dataset
-
-```{r exp_dataset}
-colombia_covid2 <- as.data.frame(read_csv("data/covid19co.csv"))
-cols <- colnames(colombia_covid2)[c(1, 4, 5, 6, 7, 8, 9, 11, 14)]
-colombia_covid2 <- colombia_covid2[cols]
-colombia_covid2 <- colombia_covid2[, c(1, 9, 2, 3, 4, 5, 6, 7, 8)]
-colnames(colombia_covid2) <- c("ID de caso", "Fecha de diagnóstico", "Ciudad de ubicación", "Departamento o Distrito", "Atención", "Edad" , "Sexo", "Tipo", "País de procedencia")
-colombia_covid2$`Departamento o Distrito`[which(colombia_covid2$`Departamento o Distrito` == "Valle Del Cauca")] <- "Valle del Cauca"
-central.colombia.rows2 <- which(colombia_covid2$`Departamento o Distrito` %in% central.colombia.dep)
-colombia_covid2 <- colombia_covid2[central.colombia.rows2, ]
-colombia_covid2 <- colombia_covid2[-which(colombia_covid2$`Fecha de diagnóstico`== "-"), ]
-colombia_covid2$`Fecha de diagnóstico` <- as.Date(colombia_covid2$`Fecha de diagnóstico`, format="%d/%m/%Y")
-colombia_covid2 <- colombia_covid2[order(colombia_covid2$`Fecha de diagnóstico`), ]
-colombia_covid2$`ID de caso` <- 1:dim(colombia_covid2)[1]
-colombia_covid2 <- colombia_covid2 %>% mutate("Grupo de edad" = case_when(Edad <= 18 ~ '0_18',
-                                                   Edad >= 19  & Edad <= 30 ~ '19_30',
-                                                   Edad >=  31 & Edad <= 45 ~ '31_45',
-                                                   Edad >= 46 & Edad <= 60 ~ '46_60',
-                                                   Edad >=61 & Edad <= 75 ~ '60_75',
-                                                   Edad >=76 ~ '76+'))
-
-#View(colombia_covid[, 1:10] == colombia_covid2[1:993, ])
+colombia_covid <- colombia_covid[-which(colombia_covid$`Fecha de diagnóstico`== "-"), ]
 ```
 
  
@@ -263,10 +242,11 @@ central_map
 ## Preprocessing {.smaller}
 
 ```{r types, include=FALSE}
-# there were missing rows
-colombia_covid$`ID de caso` <- 1:dim(colombia_covid)[1]
 ## day column in "international" format (so that R can fix the sorting properly)
 colombia_covid$`Fecha de diagnóstico` <- as.Date(colombia_covid$`Fecha de diagnóstico`, format="%d/%m/%Y")
+colombia_covid <- colombia_covid[order(colombia_covid$`Fecha de diagnóstico`), ]
+# there were missing rows since we cancelled some departments
+colombia_covid$`ID de caso` <- 1:dim(colombia_covid)[1]
 colombia_covid <- colombia_covid %>% mutate("Grupo de edad" = case_when(Edad <= 18 ~ '0_18',
                                                    Edad >= 19  & Edad <= 30 ~ '19_30',
                                                    Edad >=  31 & Edad <= 45 ~ '31_45',
@@ -279,68 +259,6 @@ colombia_covid <- colombia_covid %>% mutate("Grupo de edad" = case_when(Edad <= 
 #colombia_covid$Sexo <- as.factor(colombia_covid$Sexo)
 #colombia_covid$Atención <- as.factor(colombia_covid$Atención)
 #colombia_covid$Tipo <- as.factor(colombia_covid$Tipo)
-```
-
-```{r fix_countries, include=FALSE}
-sort(unique(colombia_covid$`País de procedencia`))
-colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Isla Martin - Caribe"] <- "Islas San Martin"
-colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Israel Egipto"] <- "Israel - Egipto"
-colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Jamaica - Isla Caimán - Panamá"] <- "Jamaica - Panamá - Isla Caimán"
-colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Madrid"] <- "España"
-colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Londres"] <- "Inglaterra"
-colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Alemania - Estambul"] <- "Alemania - Turquía"
-colombia_covid$`País de procedencia`[colombia_covid$`País de procedencia` == "Jamaica - Panamá - Islas del caribe - Cartagena"] <- "Jamaica - Panamá - Colombia"
-#colombia_covid$`País de procedencia` <- as.factor(colombia_covid$`País de procedencia`)
-```
-
-```{r create_continents, include=FALSE}
-Europa <- c("Alemania", "Bélgica", "Europa",  "Croacia", "España", "España - Croacia", "España - Croacia - Bosnia",  "España - Francia", "España - Italia", "Francia", "Francia - Holanda", "Grecia", "Inglaterra", "Italia", "Italia - Ucrania - España", "Suiza")
-Asia <- c("Arabia", "Emiratos Árabes", "Turquía")
-África <- c("Egipto", "Marruecos")
-Norteamérica <- c("Canadá", "Estados Unidos", "México")
-Centroamérica <- c("Aruba", "Costa Rica", "Cuba", "Guatemala", "Islas San Martin", "Jamaica", "Jamaica - Panamá - Isla Caimán", "Jamaica - Panamá - Islas del caribe - Cartagena", "Panamá", "Panamá - Jamaica", "Puerto Rico", "República Dominicana")
-Sudamerica <- c("Argentina", "Brasil", "Chile", "Ecuador", "Perú", "Venezuela")
-# Alemania - Turquía", "España - India", "España - Turquia", "Italia - España - Turquía", "Turquía - Grecia" -> "Europa - Asia"
-# "España - Egipto" -> "Europa - África"
-# "Israel - Egipto" -> "Asia - África"
-# "Italia - Jamaica - Panamá" -> "Europa - Centroamérica"
-# "Colombia" -> "Colombia"
-
-for (i in 1:nrow(colombia_covid)) {
-  if (colombia_covid$`País de procedencia`[i] %in% Europa){
-    colombia_covid$`Continente de procedencia`[i] <- "Europa"}
-  else if (colombia_covid$`País de procedencia`[i] %in% Asia){
-    colombia_covid$`Continente de procedencia`[i] <- "Asia"}
-  else if (colombia_covid$`País de procedencia`[i] %in% África){
-    colombia_covid$`Continente de procedencia`[i] <- "África"}
-  else if (colombia_covid$`País de procedencia`[i] %in% Norteamérica){
-    colombia_covid$`Continente de procedencia`[i] <- "Norteamérica"}
-  else if (colombia_covid$`País de procedencia`[i] %in% Centroamérica){
-    colombia_covid$`Continente de procedencia`[i] <- "Centroamérica"}
-  else if (colombia_covid$`País de procedencia`[i] %in% Sudamerica){
-    colombia_covid$`Continente de procedencia`[i] <- "Sudamerica"}
-  else if (colombia_covid$`País de procedencia`[i] == "Colombia"){
-    colombia_covid$`Continente de procedencia`[i] <- "Colombia"}
-  else if (colombia_covid$`País de procedencia`[i] == "Alemania - Turquía"){
-    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"}
-  else if (colombia_covid$`País de procedencia`[i] == "España - India")
-    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
-  else if (colombia_covid$`País de procedencia`[i] == "España - Turquia")
-    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
-  else if (colombia_covid$`País de procedencia`[i] == "Italia - España - Turquía")
-    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
-  else if (colombia_covid$`País de procedencia`[i] == "Turquía - Grecia")
-    colombia_covid$`Continente de procedencia`[i] <- "Europa - Asia"
-  else if (colombia_covid$`País de procedencia`[i] == "España - Egipto")
-    colombia_covid$`Continente de procedencia`[i] <- "Europa - África"
-  else if (colombia_covid$`País de procedencia`[i] == "Israel - Egipto")
-    colombia_covid$`Continente de procedencia`[i] <- "Asia - África"
-  else if (colombia_covid$`País de procedencia`[i] == "Italia - Jamaica - Panamá")
-    colombia_covid$`Continente de procedencia`[i] <- "Europa - Centroamérica"
-}
-#colombia_covid$`Continente de procedencia` <- as.factor(colombia_covid$`Continente de procedencia`)
-# Transforming the 0 value into a null value
-colombia_covid[911,]$`País de procedencia` <- NA
 ```
 
 We had to clean the dataset:
@@ -379,22 +297,6 @@ cases <- cases[, c(1,4,2,3)]
 
 ```{r cases_head, echo=FALSE}
 head(cases, 10)
-```
-
-```{r cases2}
-cases_2 <- colombia_covid2 %>%
-  group_by(`Fecha de diagnóstico`) %>%
-  count() %>% rename("Date" = `Fecha de diagnóstico`, "New cases/day" = n)
-cases2_2 <- colombia_covid2 %>%
-  group_by(`Fecha de diagnóstico`) %>%
-  summarise(`Cumulative cases` = max(`ID de caso`))
-cases_2 <- bind_cols(cases_2, cases2_2%>%
-  dplyr::select(-c(`Fecha de diagnóstico`)))
-cases_2 <- as.data.frame(cases_2)
-cases_2 <- cases_2 %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
-            BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
-              cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
-cases_2 <- cases_2[, c(1,4,2,3)]
 ```
 
 ## New dataset II
@@ -442,12 +344,18 @@ cases_relev_dep <- cases_relev_dep[order(cases_relev_dep$Department), ]
 row.names(cases_relev_dep) <- seq(1:nrow(cases_relev_dep))
 ```
 
-```{r cases_dep_head, echo=FALSE}
+```{r cases_dep_head, eval=FALSE, include=FALSE}
 #head(cases_relev_dep)
 cases_relev_dep[c(1, 2, 16, 17, 18, 40, 41, 42, 54, 55), ]
 ```
 
 ## Exploring the dataset {.smaller}
+
+Scattered infos about pandemic in Colombia (https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Colombia): 
+
+  * the quarantine started on the 20th of March, since our data are from 6th of March to 2nd of April, it is very likeliy that quarantine effects are not witnessed in our data.
+  
+  * on March the 26th there was a damage in the machine that prepared the samples for processing and subsequent diagnosis of COVID-19, which affected the speed at which results were being produced. This could explain the very low number of confirmed cases.
 
 <!-- Number of cases confirmed day by day -->
 
@@ -467,6 +375,8 @@ ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
        x = "Date of confirmation",
        fill = "Department")
 ```
+
+The previous plot represents the daily incidence of the desease across all the departments we are taking into account.
 
 ## Other plots
 
@@ -493,6 +403,8 @@ waffle_chart <- ggplot(df, aes(x = x, y = y, fill = df$category)) +
 waffle_chart
 ```
 
+The major number of cases are in the capital Bogotà.
+
 ```{r cumulative_plot, echo=FALSE}
 ggplot(cases, aes(x=Date, y=`Cumulative cases`)) +
   geom_point(size=3) +
@@ -504,6 +416,7 @@ ggplot(cases, aes(x=Date, y=`Cumulative cases`)) +
        x = "Date of confirmation") +
   theme(axis.text.x = element_text(angle=65, vjust=0.6))
 ```
+
 Here the growth seems exponential (and this is consistent with the fact that we are studying the early stages of the outbreak).
 
 ```{r gender_plot, echo=TRUE, warning=FALSE}
@@ -525,6 +438,8 @@ ggplot(data=colombia_covid, aes(x=`Departamento o Distrito`, fill = Sexo)) +
                                     axis.ticks = element_blank()) +   
                               scale_fill_brewer(palette = "Dark3")  
 ```
+
+The desease (number of cases) is more or less equally distributed across genders.
 
 ```{r age_grps_plot, echo=TRUE, warning=FALSE}
 #compute percentage so that we can label more precisely the pie chart
@@ -552,9 +467,13 @@ age_pie <- ggplot(age_groups_pie, aes(x = "", y = per, fill = factor(`Grupo de e
 age_pie 
 ```
 
+People from 31 to 45 years old are the most affected by the disease and people over 76 years old are the least affected.
+Colombia is a very young country. In 2018 the median age of the population was 30.4 years old and the largest age group is made of people from 25 to 54 years old, which comprises 41.98% of the population.
+(https://www.indexmundi.com/colombia/demographics_profile.html)
+
 ## Age-Sex plot
 
-```{r age-sex_plot, warning=FALSE, include=FALSE}
+```{r age-sex_plot, echo=FALSE, warning=FALSE}
 keep <- c("Sexo", "Grupo de edad")
 age_groups<-colombia_covid$`Grupo de edad`[names(colombia_covid$`Grupo de edad`)%in%keep]
 age_groups_count <- aggregate(cbind(pop=Sexo) ~ `Grupo de edad` + Sexo,
@@ -572,6 +491,8 @@ ggplot(age_groups_count, aes(x=`Grupo de edad`, y=count, fill=Sexo)) +
        y = "",
        x = "Age group")
 ```
+
+There isn’t much difference between the sexes among the different group of ages.
 
 ## Tipo plot
 
@@ -605,38 +526,38 @@ colnames(type_pie)<-c("Tipo", "Total number", "Percentage")
 type_pie
 ```
 
-## Continent
+<!-- ## Continent
 
-Now let's plot a pie chart to be able to see the distribution of cases across the continents. 
+Now let's plot a pie chart to be able to see the distribution of cases across the continents.  -->
 
-```{r country2, warning=FALSE, include=FALSE}
-unique(colombia_covid$`Continente de procedencia`)
-#Some observations came from more than one continent. So these observations we will assign them as "more than one continent"
-#change the `Continente de procedencia` columns  (didn't modify the original dataset though)
-continent_of_origin <- colombia_covid
-continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - Asia"] <- "More than one continent"
-continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - África"] <- "More than one continent"
-continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - Centroamérica"] <- "More than one continent"
-continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Asia - África"] <- "More than one continent"
-unique(continent_of_origin)
+<!-- ```{r country2, warning=FALSE, include=FALSE} -->
+<!-- unique(colombia_covid$`Continente de procedencia`) -->
+<!-- #Some observations came from more than one continent. So these observations we will assign them as "more than one continent" -->
+<!-- #change the `Continente de procedencia` columns  (didn't modify the original dataset though) -->
+<!-- continent_of_origin <- colombia_covid -->
+<!-- continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - Asia"] <- "More than one continent" -->
+<!-- continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - África"] <- "More than one continent" -->
+<!-- continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Europa - Centroamérica"] <- "More than one continent" -->
+<!-- continent_of_origin$`Continente de procedencia`[continent_of_origin$`Continente de procedencia`=="Asia - África"] <- "More than one continent" -->
+<!-- unique(continent_of_origin) -->
 
-# compute percentage so that we can label more precisely the pie chart
-continents_pie <- continent_of_origin %>% group_by(`Continente de procedencia`) %>% count() %>% ungroup() %>% 
-  mutate(per = n/sum(n)) %>% arrange(desc(`Continente de procedencia`))
-continents_pie$label <- scales::percent(continents_pie$per)
+<!-- # compute percentage so that we can label more precisely the pie chart -->
+<!-- continents_pie <- continent_of_origin %>% group_by(`Continente de procedencia`) %>% count() %>% ungroup() %>%  -->
+<!--   mutate(per = n/sum(n)) %>% arrange(desc(`Continente de procedencia`)) -->
+<!-- continents_pie$label <- scales::percent(continents_pie$per) -->
 
-cont_pie <- ggplot(continents_pie, aes(x = "", y = per, fill = factor(`Continente de procedencia`))) + 
-  geom_bar(stat = "identity", width = 1) + theme(axis.line = element_blank(), 
-                                                 plot.title = element_text(hjust = 0.5)) + labs(fill = "Continents", x = NULL, 
-                                                                                                y = NULL, title = "Distribution of the desease across infection location") + coord_polar(theta = "y") + 
-  # geom_text(aes(x=1, y = cumsum(per) - per/2, label=label))
-  geom_label_repel(aes(x = 1, y = cumsum(per) - per/2, label = label), size = 3, 
-                   show.legend = F, nudge_x = 0) + guides(fill = guide_legend(title = "Group"))
-```
+<!-- cont_pie <- ggplot(continents_pie, aes(x = "", y = per, fill = factor(`Continente de procedencia`))) +  -->
+<!--   geom_bar(stat = "identity", width = 1) + theme(axis.line = element_blank(),  -->
+<!--                                                  plot.title = element_text(hjust = 0.5)) + labs(fill = "Continents", x = NULL,  -->
+<!--                                                                                                 y = NULL, title = "Distribution of the desease across infection location") + coord_polar(theta = "y") +  -->
+<!--   # geom_text(aes(x=1, y = cumsum(per) - per/2, label=label)) -->
+<!--   geom_label_repel(aes(x = 1, y = cumsum(per) - per/2, label = label), size = 3,  -->
+<!--                    show.legend = F, nudge_x = 0) + guides(fill = guide_legend(title = "Group")) -->
+<!-- ``` -->
 
-```{r country_plot}
-cont_pie
-```
+<!-- ```{r country_plot} -->
+<!-- cont_pie -->
+<!-- ``` -->
 
 The majority of the cases in the country are people that got infected inside Colombia. Then, people that contracted the disease abroad came mainly from Europe, followed by North America and Central America. 
 
@@ -650,7 +571,7 @@ We splitted the data so to leave out the last three points for prediction, becau
 ```{r dataset_Giullia, include=FALSE}
 covid19 <- dplyr::select(colombia_covid, -c(`Ciudad de ubicación`,`Atención`,`Tipo`))
 library(fastDummies)
-covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito", "Grupo de edad", "Sexo", "País de procedencia", "Continente de procedencia"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
+covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito", "Grupo de edad", "Sexo", "País de procedencia"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
 group_dummy <- covid19_dummy %>%
   group_by(`Fecha de diagnóstico`) %>%
   summarise_all(funs(sum)) %>%
@@ -658,29 +579,18 @@ group_dummy <- covid19_dummy %>%
 data1 <- bind_cols(cases, group_dummy)
 ```
 
-```{r dataset_Giullia2, include=FALSE}
-covid19_2 <- dplyr::select(colombia_covid2, -c(`Ciudad de ubicación`,`Atención`,`Tipo`))
-library(fastDummies)
-covid19_dummy2 <- dummy_cols(covid19_2, select_columns = c("Departamento o Distrito", "Grupo de edad", "Sexo", "País de procedencia"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
-group_dummy2 <- covid19_dummy2 %>%
-  group_by(`Fecha de diagnóstico`) %>%
-  summarise_all(funs(sum)) %>%
-  dplyr::select(-c(`Fecha de diagnóstico`,`ID de caso`))
-data2 <- bind_cols(cases_2, group_dummy2)
-```
-
 ## Poisson with `Elapsed time` as predictor
 
 ```{r pois_time, echo=TRUE, warning=FALSE}
-poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=cases[1:22, ], family=poisson)
+poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=poisson)
 pred.pois <- poisson1$fitted.values
-res.st <- (cases$`Cumulative cases`[1:22] - pred.pois)/sqrt(pred.pois)
-#n=25 
+res.st <- (data1$`Cumulative cases`[1:120] - pred.pois)/sqrt(pred.pois)
+#n=120
 #k=2
-#n-k=23
-print(paste("Estimated overdispersion", sum(res.st^2)/23))
-poisson1.pred <- predict(poisson1, newdata = cases[23:25, ], type="response")
-paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[23:25])^2)))
+#n-k=118
+print(paste("Estimated overdispersion", sum(res.st^2)/118))
+poisson1.pred <- predict(poisson1, newdata = data1[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson1.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
 #print(sprintf("MSE: %0.2f", sum(poisson1$residuals^2)/poisson1$df.residual))
 #print(sprintf("MSE: %0.2f", anova(poisson1)['Residuals', 'Mean Sq']))
@@ -718,15 +628,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
 
 ```{r pois_time2, echo=TRUE, warning=FALSE}
-poisson1 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:22, ], family=poisson)
+poisson1 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
 pred.pois <- poisson1$fitted.values
-res.st <- (cases$`Cumulative cases`[1:22] - pred.pois)/sqrt(pred.pois)
-#n=25 
-#k=2
-#n-k=23
-print(paste("Estimated overdispersion", sum(res.st^2)/23))
-poisson1.pred <- predict(poisson1, newdata = cases[23:25, ], type="response")
-paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[23:25])^2)))
+res.st <- (cases$`Cumulative cases`[1:120] - pred.pois)/sqrt(pred.pois)
+#n=120, k=2, n-k=118
+print(paste("Estimated overdispersion", sum(res.st^2)/118))
+poisson1.pred <- predict(poisson1, newdata = cases[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
 #print(sprintf("MSE: %0.2f", sum(poisson1$residuals^2)/poisson1$df.residual))
 #print(sprintf("MSE: %0.2f", anova(poisson1)['Residuals', 'Mean Sq']))
@@ -740,9 +648,9 @@ plot(poisson1)
 ### Poisson with `Elapsed time` plus `Sexo`
 
 ```{r pois2, echo=TRUE, warning=FALSE}
-poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1[1:22, ], family=poisson)
-poisson2.pred <- predict(poisson2, newdata = data1[23:25, ], type="response")
-paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[23:25])^2)))
+poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1[1:120, ], family=poisson)
+poisson2.pred <- predict(poisson2, newdata = data1[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson2$residuals^2))
 paste("AIC:", poisson2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -754,15 +662,13 @@ plot(poisson2)
 ### Poisson with `Elapsed time` plus `Group de edad`
 
 ```{r pois3, echo=TRUE, warning=FALSE}
-poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:22, ], family=poisson)
+poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=poisson)
 pred.pois3 <- poisson3$fitted.values
 res.st3 <- (data1$`Cumulative cases` - pred.pois3)/sqrt(pred.pois3)
-#n=25 
-#k=7
-#n-k=18
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st3^2)/18))
-poisson3.pred <- predict(poisson3, newdata = data1[23:25, ], type="response")
-paste("RMSE:", sqrt(mean((poisson3.pred - data1$`Cumulative cases`[23:25])^2)))
+#n=120, k=7, n-k=113
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st3^2)/113))
+poisson3.pred <- predict(poisson3, newdata = data1[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson3.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson3$residuals^2))
 paste("AIC:", poisson3$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -774,101 +680,45 @@ plot(poisson3)
 ## Poisson with `Elapsed time`, `Age` and `Departments` as predictors
 
 ```{r pois4, echo=TRUE, warning=FALSE}
-poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima` + `Departamento o Distrito_Valle del Cauca`, data=data1[1:22, ], family=poisson)
+poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+# MISSING `Departamento o Distrito_Valle del Cauca` !!!!!!!!!!!!!!!!!!!!!!!!
 par(mfrow=c(2,2))
 plot(poisson4)
 pred.pois4 <- poisson4$fitted.values
 res.st4 <- (data1$`Cumulative cases` - pred.pois4)/sqrt(pred.pois4)
-#n=25 
-#k=19
-#n-k=6
+#n=25, k=19, n-k=6
 print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4^2)/6))
-poisson4.pred <- predict(poisson4, newdata = data1[23:25, ], type="response")
-paste("RMSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[23:25])^2)))
+poisson4.pred <- predict(poisson4, newdata = data1[120:126, ], type="response")
+paste("Real: ", data1$`Cumulative cases`[120:126], "Predict: ", poisson4.pred)
+paste("RMSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
 paste("AIC:", poisson4$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson4$null.deviance, deviance(poisson4)), 2))
 ```
 
-## Poisson with `Elapsed time`, `Age` and `Departments` as predictors for new dataset
-
-```{r pois4_2, echo=TRUE, warning=FALSE}
-poisson4_2 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data2[1:120, ], family=poisson)
-# MISSING `Departamento o Distrito_Valle del Cauca` !!!!!!!!!!!!!!!!!!!!!!!!
-par(mfrow=c(2,2))
-plot(poisson4_2)
-pred.pois4_2 <- poisson4_2$fitted.values
-res.st4_2 <- (data2$`Cumulative cases` - pred.pois4_2)/sqrt(pred.pois4_2)
-#n=25 
-#k=19
-#n-k=6
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4_2^2)/6))
-poisson4.pred_2 <- predict(poisson4_2, newdata = data2[120:126, ], type="response")
-paste("Real: ", data2$`Cumulative cases`[120:126], "Predict: ", poisson4.pred_2)
-paste("RMSE:", sqrt(mean((poisson4.pred_2 - data2$`Cumulative cases`[120:126])^2)))
-#paste("MSE:", mean(poisson4$residuals^2))
-paste("AIC:", poisson4_2$aic)
-paste(c("Null deviance: ", "Residual deviance:"),
-       round(c(poisson4_2$null.deviance, deviance(poisson4_2)), 2))
-```
-
 ## Poisson with `Elapsed time`, `Age` and `Departments` as predictors for `New cases/day`
 
 ```{r pois4day, echo=TRUE, warning=FALSE}
-poisson4bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima` + `Departamento o Distrito_Valle del Cauca`, data=data1[1:22, ], family=poisson)
+poisson4bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+# MISSING `Departamento o Distrito_Valle del Cauca` !!!!!!!!!!!!!!!!!!!!!!!!
 par(mfrow=c(2,2))
 plot(poisson4bis)
 pred.pois4bis <- poisson4bis$fitted.values
 res.st4bis <- (data1$`Cumulative cases` - pred.pois4bis)/sqrt(pred.pois4bis)
-#n=25 
-#k=19
-#n-k=6
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4bis^2)/6))
-poisson4bis.pred <- predict(poisson4bis, newdata = data1[23:25, ], type="response")
-paste("RMSE:", sqrt(mean((poisson4bis.pred - data1$`New cases/day`[23:25])^2)))
+#n=120, k=19, n-k=101
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4bis^2)/101))
+poisson4bis.pred <- predict(poisson4bis, newdata = data1[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson4bis.pred - data1$`New cases/day`[120:126])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
 paste("AIC:", poisson4bis$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson4bis$null.deviance, deviance(poisson4bis)), 2))
 ```
 
-## Poisson with `Elapsed time`, `Age`, `Departments` and `Continent of origin` as predictors
-
-```{r pois5, echo=TRUE, warning=FALSE}
-poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`+`Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica` + `Continente de procedencia_Sudamerica`, data=data1, family=poisson)
-#par(mfrow=c(2,2))
-#plot(poisson5)
-pred.pois5 <- poisson5$fitted.values
-res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
-plot(pred.pois5, res.st5)
-abline(h=0, lty=3, col="gray75")
-poisson5.pred <- predict(poisson5, newdata = data1[23:25, ], type="response")
-paste("RMSE:", sqrt(mean((poisson5.pred - data1$`Cumulative cases`[23:25])^2)))
-#paste("MSE:", mean(poisson5$residuals^2))
-paste("AIC:", poisson5$aic)
-paste(c("Null deviance: ", "Residual deviance:"),
-       round(c(poisson5$null.deviance, deviance(poisson5)), 2))
-```
-
-```{r Giullia13, echo=TRUE, warning=FALSE}
-poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia` + `Continente de procedencia_Centroamérica` + `Continente de procedencia_Colombia` + `Continente de procedencia_Europa` + `Continente de procedencia_Norteamérica` + `Continente de procedencia_Sudamerica`, data = data1, family=poisson)
-par(mfrow=c(2,2))
-plot(poisson6)
-poisson6.pred <- predict(poisson6, newdata = data1[23:25, ], type="response")
-paste("RMSE:", sqrt(mean((poisson6.pred - data1$`Cumulative cases`[23:25])^2)))
-#paste("MSE:", mean(poisson6$residuals^2))
-paste("AIC:", poisson6$aic)
-paste(c("Null deviance: ", "Residual deviance:"),
-       round(c(poisson6$null.deviance, deviance(poisson6)), 2))
-```
-
-We confirmed that the continent of origin variable is not significant at all when being a predictor just together with the time variable.
-
 ## ANOVA to compare the Poisson models
 
 ```{r Angela11, echo=TRUE, warning=FALSE}
-#anova(poisson1, poisson3, poisson4, poisson5, test="Chisq")
 anova(poisson1, poisson3, poisson4, test="Chisq")
 ```
 
@@ -899,73 +749,32 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
 }
 ```
 
-```{r pre_acc_pois, warning=FALSE, include=FALSE}
+```{r pre_acc_pois, echo=TRUE, warning=FALSE}
 attach(data1)
-conf.df_pois <- predict.confidence(poisson4, newdata = data1[23:25])
+conf.df_pois <- predict.confidence(poisson4, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 print(conf.df_pois)
-n <- 25
+n <- 120
 freq_coverage_pois <- sum(`Cumulative cases` >= conf.df_pois[, 2] & `Cumulative cases` <= conf.df_pois[, 3])
 freq_coverage_pois <- freq_coverage_pois/n
 detach(data1)
 ```
 
-```{r precc_acc_pois_plot, echo=FALSE, warning=FALSE}
+```{r precc_acc_pois_plot_2, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[1:22], ymax = conf.df_pois$upr[1:22]),
-              data = data1[1:22, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[1:122], ymax = conf.df_pois$upr[1:122]),
+              data = data1[1:122, ],
               fill = color_scheme_get("blue")[[2]]) + 
-  #geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[23:25], ymax = conf.df_pois$upr[23:25]),
-  #            data = data1[22:25, ],
-  #            fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_pois$fit[1:22]),
-              data = data1[1:22, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[120:126],
+              ymax = conf.df_pois$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois$fit[1:120]),
+              data = data1[1:120, ],
               color = color_scheme_get("blue")[[4]], 
               size = 1.1) +
   geom_line(aes(x= `Elapsed time`, y = poisson4.pred),
-              data = data1[23:25, ],
-              color = color_scheme_get("red")[[4]],
-              size = 1.1) +
-  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
-  expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
-  # facet_wrap('reg', scales ='free') +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
-
-## New dataset
-
-```{r pre_acc_pois_2, warning=FALSE, include=FALSE}
-attach(data2)
-conf.df_pois2 <- predict.confidence(poisson4_2, newdata = data2[1:120, ])
-#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
-print(conf.df_pois2)
-n <- 25
-freq_coverage_pois2 <- sum(`Cumulative cases` >= conf.df_pois[, 2] & `Cumulative cases` <= conf.df_pois[, 3])
-freq_coverage_pois2 <- freq_coverage_pois/n
-detach(data2)
-```
-
-```{r precc_acc_pois_plot_2, echo=FALSE, warning=FALSE}
-ggplot(data2, aes(`Elapsed time`, `Cumulative cases`)) +
-  #geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:122], ymax = conf.df_pois2$upr[1:122]),
-  #            data = data1[1:122, ],
-  #            fill = color_scheme_get("blue")[[2]]) + 
-  #geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[23:25], ymax = conf.df_pois$upr[23:25]),
-  #            data = data1[22:25, ],
-  #            fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_pois2$fit[1:120]),
-              data = data2[1:120, ],
-              color = color_scheme_get("blue")[[4]], 
-              size = 1.1) +
-  geom_line(aes(x= `Elapsed time`, y = poisson4.pred_2),
-              data = data2[120:126, ],
+              data = data1[120:126, ],
               color = color_scheme_get("red")[[4]],
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
@@ -987,10 +796,10 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_pois2, warning=FALSE, include=FALSE}
 attach(data1)
-conf.df_pois2 <- predict.confidence(poisson4bis, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`New cases/day`)))
+conf.df_pois2 <- predict.confidence(poisson4bis, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 print(conf.df_pois2)
-n <- 25
+n <- 120
 freq_coverage_pois2 <- sum(`New cases/day` >= conf.df_pois2[, 2] & `New cases/day` <= conf.df_pois2[, 3])
 freq_coverage_pois2 <- freq_coverage_pois2/n
 detach(data1)
@@ -998,18 +807,19 @@ detach(data1)
 
 ```{r precc_acc_pois_plot2, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:22], ymax = conf.df_pois2$upr[1:22]),
-              data = data1[1:22, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:120], ymax = conf.df_pois2$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
-  #geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[22:25], ymax = conf.df_pois$upr[22:25]),
-  #            data = data1[22:25, ],
-  #            fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_pois2$fit[1:22]),
-              data = data1[1:22, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[120:126],
+              ymax = conf.df_pois2$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois2$fit[1:120]),
+              data = data1[1:120, ],
               color = color_scheme_get("blue")[[4]], 
               size = 1.1) +
   geom_line(aes(x= `Elapsed time`, y = poisson4bis.pred),
-              data = data1[23:25, ],
+              data = data1[120:126, ],
               color = color_scheme_get("red")[[4]],
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
@@ -1028,13 +838,16 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 ## Quasi Poisson with `Elapsed time` as predictor
 
 ```{r quasi_pois_time, echo=TRUE, warning=FALSE}
-poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=cases, family=quasipoisson)
+poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
 par(mfrow=c(2,2))
 plot(poisson1quasi)
 pred.poisq <- poisson1quasi$fitted.values
 res.stq <- (data1$`Cumulative cases` - pred.poisq)/sqrt(summary(poisson1quasi)$dispersion*pred.poisq)
+#n=120, k= ?, n-k=?
 print(paste("Estimated overdispersion", sum(res.stq^2)/23))
-paste("MSE:", mean(poisson1quasi$residuals^2))
+poisson1quasi.pred <- predict(poisson1quasi, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", sqrt(mean((poisson1quasi.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(poisson1quasi$residuals^2))
 paste("AIC:", poisson1quasi$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1quasi$null.deviance, deviance(poisson1quasi)), 2))
@@ -1044,13 +857,16 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r quasi_pois, echo=TRUE, warning=FALSE}
 #Let's apply a quasi poisson and see what happens
-poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1, family=quasipoisson)
+poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=quasipoisson)
 par(mfrow=c(2,2))
 plot(poisson1quasi)
 pred.poisq2 <- poisson2quasi$fitted.values
 res.stq2 <- (data1$`Cumulative cases` - pred.poisq2)/sqrt(summary(poisson2quasi)$dispersion*pred.poisq2)
+#n=120, k= ?, n-k=?
 print(paste("Estimated overdispersion", sum(res.stq2^2)/18))
-paste("MSE:", mean(poisson2quasi$residuals^2))
+poisson2quasi.pred <- predict(poisson2quasi, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", sqrt(mean((poisson2quasi.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(poisson2quasi$residuals^2))
 paste("AIC:", poisson2quasi$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson2quasi$null.deviance, deviance(poisson2quasi)), 2))
@@ -1059,14 +875,14 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time` as predictor
 
 ```{r nb1, echo=TRUE, warning=FALSE}
-nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:22, ])
+nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ])
 par(mfrow=c(2,2))
 plot(nb1)
-#n=25, k=2, n-k=23
+#n=120, k=2, n-k=118
 stdres <- rstandard(nb1)
-print(paste("Estimated overdispersion", sum(stdres^2)/23))
-nb1.pred <- predict(nb1, newdata = data1[23:25, ], type = "response")
-paste("RMSE:", sqrt(mean((nb1.pred - data1$`Cumulative cases`[23:25])^2)))
+print(paste("Estimated overdispersion", sum(stdres^2)/118))
+nb1.pred <- predict(nb1, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", sqrt(mean((nb1.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb1$residuals^2))
 paste("AIC:", nb1$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -1076,11 +892,11 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time` plus `Age` as predictors
 
 ```{r nb2, echo=TRUE, warning=FALSE}
-nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:22, ])
+nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ])
 par(mfrow=c(2,2))
 plot(nb2)
-nb2.pred <- predict(nb2, newdata = data1[23:25, ], type = "response")
-paste("RMSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[23:25])^2)))
+nb2.pred <- predict(nb2, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb2$residuals^2))
 paste("AIC:", nb2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -1090,11 +906,11 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time` plus `Department` as predictors
 
 ```{r nb3, echo=TRUE, warning=FALSE}
-nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1[1:22, ])
+nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
 par(mfrow=c(2,2))
 plot(nb3)
-nb3.pred <- predict(nb3, newdata = data1[23:25, ], type = "response")
-paste("RMSE:", sqrt(mean((nb3.pred - data1$`Cumulative cases`[23:25])^2)))
+nb3.pred <- predict(nb3, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", sqrt(mean((nb3.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb3$residuals^2))
 paste("AIC:", nb3$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -1104,32 +920,49 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time` plus `Continent of origin` as predictors
 
 ```{r nb4, echo=TRUE, warning=FALSE}
-nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1[1:22, ])
-par(mfrow=c(2,2))
-plot(nb4)
-nb4.pred <- predict(nb4, newdata = data1[23:25, ], type = "response")
-paste("RMSE:", sqrt(mean((nb4.pred - data1$`Cumulative cases`[23:25])^2)))
-#paste("MSE:", mean(nb4$residuals^2))
-paste("AIC:", nb4$aic)
-paste(c("Null deviance: ", "Residual deviance:"),
-       round(c(nb4$null.deviance, deviance(nb4)), 2))
+# nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1[1:22, ])
+# par(mfrow=c(2,2))
+# plot(nb4)
+# nb4.pred <- predict(nb4, newdata = data1[23:25, ], type = "response")
+# paste("RMSE:", sqrt(mean((nb4.pred - data1$`Cumulative cases`[23:25])^2)))
+# #paste("MSE:", mean(nb4$residuals^2))
+# paste("AIC:", nb4$aic)
+# paste(c("Null deviance: ", "Residual deviance:"),
+#        round(c(nb4$null.deviance, deviance(nb4)), 2))
 ```
 
 ## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
 ```{r nb5, echo=TRUE, warning=FALSE}
-nb5 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`+`Departamento o Distrito_Valle del Cauca`, data=data1[1:22, ])
+nb5 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
 par(mfrow=c(2,2))
 plot(nb5)
-# Calculating overdispersion n=25 k=19 n-k=6
+# Calculating overdispersion n=120 k=19 n-k=101
 stdres <- rstandard(nb5)
-print(paste("Estimated overdispersion", sum(stdres^2)/6))
-nb5.pred <- predict(nb5, newdata = data1[23:25, ], type = "response")
-paste("RMSE:", sqrt(mean((nb5.pred - data1$`Cumulative cases`[23:25])^2)))
+print(paste("Estimated overdispersion", sum(stdres^2)/101))
+nb5.pred <- predict(nb5, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", sqrt(mean((nb5.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb5$residuals^2))
 paste("AIC:", nb5$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb5$null.deviance, deviance(nb5)), 2))
+```
+
+## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
+
+```{r nb5bis, echo=TRUE, warning=FALSE}
+nb5bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+par(mfrow=c(2,2))
+plot(nb5bis)
+# Calculating overdispersion n=120 k=19 n-k=101
+stdres2 <- rstandard(nb5bis)
+print(paste("Estimated overdispersion", sum(stdres2^2)/101))
+nb5bis.pred <- predict(nb5bis, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", sqrt(mean((nb5bis.pred - data1$`New cases/day`[120:126])^2)))
+#paste("MSE:", mean(nb5bis$residuals^2))
+paste("AIC:", nb5bis$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(nb5bis$null.deviance, deviance(nb5bis)), 2))
 ```
 
 ### Applying ANOVA to compare the negative binomial models
@@ -1147,10 +980,10 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_nb, warning=FALSE, include=FALSE}
 attach(data1)
-conf.df_nb <- predict.confidence(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)))
+conf.df_nb <- predict.confidence(nb5, newdata = data1[1:120, ])
 #conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 print(conf.df_pois)
-n <- 25
+n <- 120
 freq_coverage_nb <- sum(`Cumulative cases` >= conf.df_nb[, 2] & `Cumulative cases` <= conf.df_nb[, 3])
 freq_coverage_nb <- freq_coverage_nb/n
 detach(data1)
@@ -1158,25 +991,69 @@ detach(data1)
 
 ```{r precc_acc_nb_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[1:22], ymax = conf.df_nb$upr[1:22]),
-              data = data1[1:22, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[1:120], ymax = conf.df_nb$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
-  #geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[22:25], ymax = conf.df_nb$upr[22:25]),
-  #            data = data1[22:25, ],
-  #            fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_nb$fit[1:22]),
-              data = data1[1:22, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[120:126], ymax = conf.df_nb$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_nb$fit[1:120]),
+              data = data1[1:120, ],
               color = color_scheme_get("blue")[[4]], 
               size = 1.1) +
   geom_line(aes(x= `Elapsed time`, y = nb5.pred),
-              data = data1[23:25, ],
+              data = data1[120:126, ],
               color = color_scheme_get("red")[[4]],
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
   ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
   # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Predictive accuracy of the NB model for `New cases/day`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_nb2, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_nb2 <- predict.confidence(nb5bis, newdata = data1[1:120, ])
+#conf.df_nb2 <- predict.glm(nb5, newdata = data1[1:120, ], interval = 'confidence')
+print(conf.df_nb2)
+n <- 120
+freq_coverage_nb2 <- sum(`New cases/day` >= conf.df_nb2[, 2] & `New cases/day` <= conf.df_nb2[, 3])
+freq_coverage_nb2 <- freq_coverage_nb2/n
+detach(data1)
+```
+
+```{r precc_acc_nb_plot2, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[1:120], ymax = conf.df_nb2$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[120:126], ymax = conf.df_nb$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_nb2$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = nb5bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
         color = "#993333", angle = 45, size = 9),
@@ -1430,7 +1307,7 @@ cases_dep[which(cases_dep$`Department ID` == 9),]$People  <- 0.53
 cases_dep[which(cases_dep$`Department ID` == 10),]$People <- 0.94
 cases_dep[which(cases_dep$`Department ID` == 11),]$People <- 2.18
 cases_dep[which(cases_dep$`Department ID` == 12),]$People <- 1.33
-cases_dep[which(cases_dep$`Department ID` == 13),]$People <- 4.4
+#cases_dep[which(cases_dep$`Department ID` == 13),]$People <- 4.4
 
 # km^2
 cases_dep$Surface <- rep(0, nrow(cases_dep))
@@ -1446,7 +1323,7 @@ cases_dep[which(cases_dep$`Department ID` ==9),]$Surface  <- 1845
 cases_dep[which(cases_dep$`Department ID` ==10),]$Surface <- 4140
 cases_dep[which(cases_dep$`Department ID` ==11),]$Surface <- 30537
 cases_dep[which(cases_dep$`Department ID` ==12),]$Surface <- 23562
-cases_dep[which(cases_dep$`Department ID` ==13),]$Surface <- 22195
+#cases_dep[which(cases_dep$`Department ID` ==13),]$Surface <- 22195
 
 # Population density inhabitants/km^2
 cases_dep$Density <- rep(0, nrow(cases_dep))
@@ -1462,7 +1339,7 @@ cases_dep[which(cases_dep$`Department ID` ==9),]$Density  <- 290
 cases_dep[which(cases_dep$`Department ID` ==10),]$Density <- 59.16
 cases_dep[which(cases_dep$`Department ID` ==11),]$Density <- 72
 cases_dep[which(cases_dep$`Department ID` ==12),]$Density <- 56
-cases_dep[which(cases_dep$`Department ID` ==13),]$Density <- 183.04
+#cases_dep[which(cases_dep$`Department ID` ==13),]$Density <- 183.04
 ```
 
 The model is:
