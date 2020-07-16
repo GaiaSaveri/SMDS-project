@@ -103,7 +103,6 @@ central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% cen
 colombia_covid <- colombia_covid[central.colombia.rows, ]
 colombia_covid <- colombia_covid[-which(colombia_covid$`Fecha de diagnóstico`== "-"), ]
 ```
-
  
 ## Description of variables
 
@@ -581,7 +580,7 @@ data1 <- bind_cols(cases, group_dummy)
 
 ## Poisson with `Elapsed time` as predictor
 
-```{r pois_time, echo=TRUE, warning=FALSE}
+```{r pois_time, results = "hold", echo=TRUE, warning=FALSE}
 poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=poisson)
 pred.pois <- poisson1$fitted.values
 res.st <- (data1$`Cumulative cases`[1:120] - pred.pois)/sqrt(pred.pois)
@@ -602,7 +601,7 @@ plot(poisson1, which=1)
 
 ## Using `cases_relev_dep`
 
-```{r pois_time/dep, echo=TRUE, warning=FALSE}
+```{r pois_time/dep, results = "hold", echo=TRUE, warning=FALSE}
 poisson1A <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=cases_relev_dep, family=poisson)
 summary(poisson1A)
 paste("MSE:", mean(poisson1A$residuals^2))
@@ -613,7 +612,7 @@ We can see that the AIC is enormous.
 
 ## Using `New cases/day`
 
-```{r things, echo=TRUE, warning=FALSE}
+```{r things, results = "hold", echo=TRUE, warning=FALSE}
 poisson1B <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
 #print(paste("Estimated overdispersion", sum(res.st^2)/23))
 plot(poisson1B, which=1)
@@ -625,7 +624,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
 
-```{r pois_time2, echo=TRUE, warning=FALSE}
+```{r pois_time2, results = "hold", echo=TRUE, warning=FALSE}
 poisson1 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
 pred.pois <- poisson1$fitted.values
 res.st <- (cases$`Cumulative cases`[1:120] - pred.pois)/sqrt(pred.pois)
@@ -644,7 +643,7 @@ plot(poisson1, which=1)
 
 ### Poisson with `Elapsed time` plus `Sexo`
 
-```{r pois2, echo=TRUE, warning=FALSE}
+```{r pois2, results = "hold", echo=TRUE, warning=FALSE}
 poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1[1:120, ], family=poisson)
 poisson2.pred <- predict(poisson2, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[120:126])^2)))
@@ -657,7 +656,7 @@ plot(poisson2, which=1)
 
 ### Poisson with `Elapsed time` plus `Group de edad`
 
-```{r pois3, echo=TRUE, warning=FALSE}
+```{r pois3, results = "hold", echo=TRUE, warning=FALSE}
 poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=poisson)
 pred.pois3 <- poisson3$fitted.values
 res.st3 <- (data1$`Cumulative cases` - pred.pois3)/sqrt(pred.pois3)
@@ -674,15 +673,15 @@ plot(poisson3, which=1)
 
 ## Poisson with `Elapsed time`, `Age` and `Departments` as predictors
 
-```{r pois4, echo=TRUE, warning=FALSE}
+```{r pois4, results = "hold", echo=TRUE, warning=FALSE}
 poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
 plot(poisson4, which=1)
 pred.pois4 <- poisson4$fitted.values
 res.st4 <- (data1$`Cumulative cases` - pred.pois4)/sqrt(pred.pois4)
-#n=25, k=19, n-k=6
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4^2)/6))
+#n=120, k=17, n-k=103
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4^2)/103))
 poisson4.pred <- predict(poisson4, newdata = data1[120:126, ], type="response")
-paste("Real: ", data1$`Cumulative cases`[120:126], "Predict: ", poisson4.pred)
+#paste("Real: ", data1$`Cumulative cases`[120:126], "Predict: ", poisson4.pred)
 paste("RMSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
 paste("AIC:", poisson4$aic)
@@ -692,7 +691,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Poisson with `Elapsed time`, `Age` and `Departments` as predictors for `New cases/day`
 
-```{r pois4day, echo=TRUE, warning=FALSE}
+```{r pois4day, results = "hold", echo=TRUE, warning=FALSE}
 poisson4bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
 plot(poisson4bis, which=1)
 pred.pois4bis <- poisson4bis$fitted.values
@@ -705,6 +704,24 @@ paste("RMSE:", sqrt(mean((poisson4bis.pred - data1$`New cases/day`[120:126])^2))
 paste("AIC:", poisson4bis$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson4bis$null.deviance, deviance(poisson4bis)), 2))
+```
+
+## Poisson with `Elapsed time`, `Age` and `Departments` as predictors
+
+```{r pois5, results = "hold", echo=TRUE, warning=FALSE}
+poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+plot(poisson5, which=1)
+pred.pois5 <- poisson5$fitted.values
+res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
+#n=120, k=18, n-k=102
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st5^2)/102))
+poisson5.pred <- predict(poisson5, newdata = data1[120:126, ], type="response")
+#paste("Real: ", data1$`Cumulative cases`[120:126], "Predict: ", poisson5.pred)
+paste("RMSE:", sqrt(mean((poisson5.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(poisson4$residuals^2))
+paste("AIC:", poisson5$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(poisson5$null.deviance, deviance(poisson5)), 2))
 ```
 
 ## ANOVA to compare the Poisson models
@@ -740,18 +757,17 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
 }
 ```
 
-```{r pre_acc_pois, echo=TRUE, warning=FALSE}
+```{r pre_acc_pois, warning=FALSE, include=FALSE}
 attach(data1)
 conf.df_pois <- predict.confidence(poisson4, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
-print(conf.df_pois)
 n <- 120
 freq_coverage_pois <- sum(`Cumulative cases` >= conf.df_pois[, 2] & `Cumulative cases` <= conf.df_pois[, 3])
 freq_coverage_pois <- freq_coverage_pois/n
 detach(data1)
 ```
 
-```{r precc_acc_pois_plot_2, echo=FALSE, warning=FALSE}
+```{r precc_acc_pois_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[1:122], ymax = conf.df_pois$upr[1:122]),
               data = data1[1:122, ],
@@ -782,22 +798,62 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.y = element_text(size = 18))
 ```
 
+```{r pre_acc_pois2, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_pois2 <- predict.confidence(poisson5, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_pois2 <- sum(`Cumulative cases` >= conf.df_pois2[, 2] & `Cumulative cases` <= conf.df_pois2[, 3])
+freq_coverage_pois2 <- freq_coverage_pois2/n
+detach(data1)
+```
+
+```{r precc_acc_pois2_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:122], ymax = conf.df_pois2$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[120:126],
+              ymax = conf.df_pois$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois2$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson5.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
 ### Predictive accuracy of the Poisson model for `New cases/day`
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_pois2, warning=FALSE, include=FALSE}
+```{r pre_acc_pois_new, warning=FALSE, include=FALSE}
 attach(data1)
 conf.df_pois2 <- predict.confidence(poisson4bis, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
-print(conf.df_pois2)
 n <- 120
 freq_coverage_pois2 <- sum(`New cases/day` >= conf.df_pois2[, 2] & `New cases/day` <= conf.df_pois2[, 3])
 freq_coverage_pois2 <- freq_coverage_pois2/n
 detach(data1)
 ```
 
-```{r precc_acc_pois_plot2, echo=FALSE, warning=FALSE}
+```{r precc_acc_pois_new_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:120], ymax = conf.df_pois2$upr[1:120]),
               data = data1[1:120, ],
@@ -829,7 +885,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 
 ## Quasi Poisson with `Elapsed time` as predictor
 
-```{r quasi_pois_time, echo=TRUE, warning=FALSE}
+```{r quasi_pois_time, results = "hold", echo=TRUE, warning=FALSE}
 poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
 plot(poisson1quasi, which=1)
 pred.poisq <- poisson1quasi$fitted.values
@@ -846,7 +902,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Quasi Poisson with `Elapsed time` and `Age` as predictor
 
-```{r quasi_pois, echo=TRUE, warning=FALSE}
+```{r quasi_pois, results = "hold", echo=TRUE, warning=FALSE}
 poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=quasipoisson)
 plot(poisson1quasi, which=1)
 pred.poisq2 <- poisson2quasi$fitted.values
@@ -863,7 +919,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Negative Binomial with `Elapsed time` as predictor
 
-```{r nb1, echo=TRUE, warning=FALSE}
+```{r nb1, results = "hold", echo=TRUE, warning=FALSE}
 nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ])
 plot(nb1, which=1)
 #n=120, k=2, n-k=118
@@ -879,7 +935,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Negative Binomial with `Elapsed time` plus `Age` as predictors
 
-```{r nb2, echo=TRUE, warning=FALSE}
+```{r nb2, results = "hold", echo=TRUE, warning=FALSE}
 nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ])
 plot(nb2, which=1)
 nb2.pred <- predict(nb2, newdata = data1[120:126, ], type = "response")
@@ -892,7 +948,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Negative Binomial with `Elapsed time` plus `Department` as predictors
 
-```{r nb3, echo=TRUE, warning=FALSE}
+```{r nb3, results = "hold", echo=TRUE, warning=FALSE}
 nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
 plot(nb3, which=1)
 nb3.pred <- predict(nb3, newdata = data1[120:126, ], type = "response")
@@ -905,7 +961,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Negative Binomial with `Elapsed time` plus `Continent of origin` as predictors
 
-```{r nb4, echo=TRUE, warning=FALSE}
+```{r nb4, results = "hold", echo=TRUE, warning=FALSE}
 # nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1[1:22, ])
 # plot(nb4, which=1)
 # nb4.pred <- predict(nb4, newdata = data1[23:25, ], type = "response")
@@ -918,7 +974,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
-```{r nb5, echo=TRUE, warning=FALSE}
+```{r nb5, results = "hold", echo=TRUE, warning=FALSE}
 nb5 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
 plot(nb5, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
@@ -934,7 +990,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
-```{r nb5bis, echo=TRUE, warning=FALSE}
+```{r nb5bis, results = "hold", echo=TRUE, warning=FALSE}
 nb5bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
 plot(nb5bis, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
@@ -965,7 +1021,6 @@ Predicting with a $95\%$ confidence interval
 attach(data1)
 conf.df_nb <- predict.confidence(nb5, newdata = data1[1:120, ])
 #conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
-print(conf.df_pois)
 n <- 120
 freq_coverage_nb <- sum(`Cumulative cases` >= conf.df_nb[, 2] & `Cumulative cases` <= conf.df_nb[, 3])
 freq_coverage_nb <- freq_coverage_nb/n
@@ -1009,7 +1064,6 @@ Predicting with a $95\%$ confidence interval
 attach(data1)
 conf.df_nb2 <- predict.confidence(nb5bis, newdata = data1[1:120, ])
 #conf.df_nb2 <- predict.glm(nb5, newdata = data1[1:120, ], interval = 'confidence')
-print(conf.df_nb2)
 n <- 120
 freq_coverage_nb2 <- sum(`New cases/day` >= conf.df_nb2[, 2] & `New cases/day` <= conf.df_nb2[, 3])
 freq_coverage_nb2 <- freq_coverage_nb2/n
@@ -1078,10 +1132,11 @@ fit1 <- stan("stan/poisson_regression.stan", data=model.data, chains = 4, iter =
 
 ```{r poisson_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
 y_rep <- as.matrix(fit1, pars="y_rep")
-ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) + 
+  coord_cartesian(xlim = c(-1, 7000))
 ```
 
-<img src="stan_figs/poisson_posterior-1_new.png" alt="poisson_posterior-1_new" style="zoom:40%;" class="center"/>
+<img src="stan_figs/poisson_posterior-1_new.png" alt="poisson_posterior-1_new" style="zoom:100%;" class="center"/>
 
 The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis.
 
@@ -1094,7 +1149,7 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep)
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/first_residual-1_new.png" alt="first_residual-1_new" style="zoom:38%;" class="center"/>
+<img src="stan_figs/first_residual-1_new.png" alt="first_residual-1_new" style="zoom:100%;" class="center"/>
 
 The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at $+2$ and $-2$ indicates approximate $95\%$ error bounds). 
 
@@ -1140,10 +1195,11 @@ fit2 <- sampling(model.NB, data=model.data)
 ```{r NB_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
 samples_NB <- rstan::extract(fit2)
 y_rep <- samples_NB$y_rep
-ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) + 
+  coord_cartesian(xlim = c(-1, 6000))
 ```
 
-<img src="stan_figs/NB_posterior-1_new.png" alt="NB_posterior-1_new" style="zoom:40%;" class="center"/>
+<img src="stan_figs/NB_posterior-1_new.png" alt="NB_posterior-1_new" style="zoom:100%;" class="center"/>
 
 ## Residual check
 
@@ -1158,7 +1214,7 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/NB_residuals_new.png" alt="NB_residuals_new.png" style="zoom:60%;" class="center"/>
+<img src="stan_figs/NB_residuals_new.png" alt="NB_residuals_new.png" style="zoom:100%;" class="center"/>
 
 The situation is better now, but still we have too many residuals outside the $95\%$ interval.
 
@@ -1174,7 +1230,7 @@ ppc_stat_grouped(
 )
 ```
 
-<img src="stan_figs/NB_deps_new.png" alt="NB_deps_new" style="zoom:60%;" class="center"/>
+<img src="stan_figs/NB_deps_new.png" alt="NB_deps_new" style="zoom:100%;" class="center"/>
 
 We should take into account the differences across departments. 
 
@@ -1209,10 +1265,11 @@ fit3<-sampling(model2.NB, model.data2)
 ```{r NB2_posterior_check, echo=TRUE, warning=FALSE, eval=FALSE}
 samples_NB2 <- rstan::extract(fit3)
 y_rep <- samples_NB2$y_rep
-ppc_dens_overlay(y = model.data2$cases, y_rep[1:200,]) 
+ppc_dens_overlay(y = model.data2$cases, y_rep[1:200,]) + 
+  coord_cartesian(xlim = c(-1, 6000))
 ```
 
-<img src="stan_figs/NB2_posterior_new.png" alt="NB2_posterior_new" style="zoom:80%;" class="center"/>
+<img src="stan_figs/NB2_posterior_new.png" alt="NB2_posterior_new" style="zoom:100%;" class="center"/>
 
 ```{r looic_NB2, echo=FALSE, warning=FALSE, eval=FALSE}
 loo.model.NB2 <- loo(fit3)$estimates
@@ -1227,11 +1284,11 @@ std_residual <- (model.data2$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/NB2_res_new.png" alt="NB2_res_new" style="zoom:70%;" class="center"/>
+<img src="stan_figs/NB2_res_new.png" alt="NB2_res_new" style="zoom:100%;" class="center"/>
 
 ## Accuracy across departments
 
-```{r deps_NB2, eval=FALSE, echo=TRUE, warning=FALSE}
+```{r deps_NB2, eval=FALSE, warning=FALSE, include=FALSE}
 ppc_stat_grouped(
   y = model.data2$cases,
   yrep = y_rep,
@@ -1241,7 +1298,7 @@ ppc_stat_grouped(
 )
 ```
 
-<img src="stan_figs/NB2_dep.png" alt="NB2_dep" style="zoom:60%;" class="center"/>
+<img src="stan_figs/NB2_dep_new.png" alt="NB2_dep_new" style="zoom:100%;" class="center"/>
 
 ## Hierarchical model {.smaller}
 
@@ -1366,10 +1423,10 @@ fit.4 <- sampling(model3.NB, data.hier.NB.complete)
 samples_hier <- rstan::extract(fit.4)
 y_rep <- samples_hier$y_rep
 ppc_dens_overlay(y = data.hier.NB.complete$cases, y_rep[1:200,]) + 
-  coord_cartesian(xlim = c(0, 5000))
+  coord_cartesian(xlim = c(-1, 6000))
 ```
 
-<img src="stan_figs/hier_posterior_new.png" alt="hier_posterior_new" style="zoom:70%;" class="center"/>
+<img src="stan_figs/hier_posterior_new.png" alt="hier_posterior_new" style="zoom:100%;" class="center"/>
 
 ## Residual check
 
@@ -1380,7 +1437,7 @@ std_residual <- (data.hier.NB.complete$cases - mean_y_rep) / sqrt(mean_y_rep + m
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/hier_residual_new.png" alt="hier_residual_new" style="zoom:60%;" class="center"/>
+<img src="stan_figs/hier_residual_new.png" alt="hier_residual_new" style="zoom:100%;" class="center"/>
 
 Very few points are now outside the $95\%$ confidence interval.
 
@@ -1396,7 +1453,7 @@ ppc_stat_grouped(
 )
 ```
 
-<img src="stan_figs/hier_deps_new.png" alt="hier_deps_new" style="zoom:60%;" class="center"/>
+<img src="stan_figs/hier_deps_new.png" alt="hier_deps_new" style="zoom:100%;" class="center"/>
 
 We can clearly see that the accuracy across the departments has significantly increased with respect to the previous models.
 
@@ -1428,4 +1485,4 @@ axis(1, c(1:4), c("Poisson", "NB-sl", "NB-ml",
                     las=2)
 ```
 
-<img src="stan_figs/looic_new.png" alt="looic_new" style="zoom:60%;" class="center"/>
+<img src="stan_figs/looic_new.png" alt="looic_new" style="zoom:100%;" class="center"/>
