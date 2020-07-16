@@ -20,6 +20,10 @@ output:
     widescreen: true
     smaller: true
     logo: Logo_units_blu.png #logo_dssc_alt.png
+  pdf_document:
+    highlight: kate
+    keep_tex: yes
+    toc: yes
   slidy_presentation:
     fig.height: 3
     fig.width: 4
@@ -29,11 +33,7 @@ output:
     theme: "metropolis"
     colortheme: "metropolis"
     fonttheme: "structurebold"
-    always_allow_html: true
-  pdf_document:
-    highlight: kate
-    keep_tex: yes
-    toc: yes
+    #always_allow_html: true
   slide_level: 2
 header-includes:
 - \usepackage{color}
@@ -597,8 +597,7 @@ paste("RMSE:", sqrt(mean((poisson1.pred - data1$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson1$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1$null.deviance, deviance(poisson1)), 2))
-par(mfrow=c(2,2))
-plot(poisson1)
+plot(poisson1, which=1)
 ```
 
 ## Using `cases_relev_dep`
@@ -617,8 +616,7 @@ We can see that the AIC is enormous.
 ```{r things, echo=TRUE, warning=FALSE}
 poisson1B <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
 #print(paste("Estimated overdispersion", sum(res.st^2)/23))
-par(mfrow=c(2,2))
-plot(poisson1B)
+plot(poisson1B, which=1)
 paste("MSE:", mean(poisson1B$residuals^2))
 paste("AIC:", poisson1B$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
@@ -641,8 +639,7 @@ paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson1$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1$null.deviance, deviance(poisson1)), 2))
-par(mfrow=c(2,2))
-plot(poisson1)
+plot(poisson1, which=1)
 ```
 
 ### Poisson with `Elapsed time` plus `Sexo`
@@ -655,8 +652,7 @@ paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson2$null.deviance, deviance(poisson2)), 2))
-par(mfrow=c(2,2))
-plot(poisson2)
+plot(poisson2, which=1)
 ```
 
 ### Poisson with `Elapsed time` plus `Group de edad`
@@ -673,17 +669,14 @@ paste("RMSE:", sqrt(mean((poisson3.pred - data1$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson3$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson3$null.deviance, deviance(poisson3)), 2))
-par(mfrow=c(2,2))
-plot(poisson3)
+plot(poisson3, which=1)
 ```
 
 ## Poisson with `Elapsed time`, `Age` and `Departments` as predictors
 
 ```{r pois4, echo=TRUE, warning=FALSE}
 poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
-# MISSING `Departamento o Distrito_Valle del Cauca` !!!!!!!!!!!!!!!!!!!!!!!!
-par(mfrow=c(2,2))
-plot(poisson4)
+plot(poisson4, which=1)
 pred.pois4 <- poisson4$fitted.values
 res.st4 <- (data1$`Cumulative cases` - pred.pois4)/sqrt(pred.pois4)
 #n=25, k=19, n-k=6
@@ -701,9 +694,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r pois4day, echo=TRUE, warning=FALSE}
 poisson4bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
-# MISSING `Departamento o Distrito_Valle del Cauca` !!!!!!!!!!!!!!!!!!!!!!!!
-par(mfrow=c(2,2))
-plot(poisson4bis)
+plot(poisson4bis, which=1)
 pred.pois4bis <- poisson4bis$fitted.values
 res.st4bis <- (data1$`Cumulative cases` - pred.pois4bis)/sqrt(pred.pois4bis)
 #n=120, k=19, n-k=101
@@ -840,8 +831,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 
 ```{r quasi_pois_time, echo=TRUE, warning=FALSE}
 poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
-par(mfrow=c(2,2))
-plot(poisson1quasi)
+plot(poisson1quasi, which=1)
 pred.poisq <- poisson1quasi$fitted.values
 res.stq <- (data1$`Cumulative cases` - pred.poisq)/sqrt(summary(poisson1quasi)$dispersion*pred.poisq)
 #n=120, k= ?, n-k=?
@@ -857,10 +847,8 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Quasi Poisson with `Elapsed time` and `Age` as predictor
 
 ```{r quasi_pois, echo=TRUE, warning=FALSE}
-#Let's apply a quasi poisson and see what happens
 poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=quasipoisson)
-par(mfrow=c(2,2))
-plot(poisson1quasi)
+plot(poisson1quasi, which=1)
 pred.poisq2 <- poisson2quasi$fitted.values
 res.stq2 <- (data1$`Cumulative cases` - pred.poisq2)/sqrt(summary(poisson2quasi)$dispersion*pred.poisq2)
 #n=120, k= ?, n-k=?
@@ -877,8 +865,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r nb1, echo=TRUE, warning=FALSE}
 nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ])
-par(mfrow=c(2,2))
-plot(nb1)
+plot(nb1, which=1)
 #n=120, k=2, n-k=118
 stdres <- rstandard(nb1)
 print(paste("Estimated overdispersion", sum(stdres^2)/118))
@@ -894,8 +881,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r nb2, echo=TRUE, warning=FALSE}
 nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ])
-par(mfrow=c(2,2))
-plot(nb2)
+plot(nb2, which=1)
 nb2.pred <- predict(nb2, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb2$residuals^2))
@@ -908,8 +894,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r nb3, echo=TRUE, warning=FALSE}
 nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
-par(mfrow=c(2,2))
-plot(nb3)
+plot(nb3, which=1)
 nb3.pred <- predict(nb3, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb3.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb3$residuals^2))
@@ -922,8 +907,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r nb4, echo=TRUE, warning=FALSE}
 # nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1[1:22, ])
-# par(mfrow=c(2,2))
-# plot(nb4)
+# plot(nb4, which=1)
 # nb4.pred <- predict(nb4, newdata = data1[23:25, ], type = "response")
 # paste("RMSE:", sqrt(mean((nb4.pred - data1$`Cumulative cases`[23:25])^2)))
 # #paste("MSE:", mean(nb4$residuals^2))
@@ -936,8 +920,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r nb5, echo=TRUE, warning=FALSE}
 nb5 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
-par(mfrow=c(2,2))
-plot(nb5)
+plot(nb5, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
 stdres <- rstandard(nb5)
 print(paste("Estimated overdispersion", sum(stdres^2)/101))
@@ -953,8 +936,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r nb5bis, echo=TRUE, warning=FALSE}
 nb5bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
-par(mfrow=c(2,2))
-plot(nb5bis)
+plot(nb5bis, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
 stdres2 <- rstandard(nb5bis)
 print(paste("Estimated overdispersion", sum(stdres2^2)/101))
@@ -1099,7 +1081,7 @@ y_rep <- as.matrix(fit1, pars="y_rep")
 ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
 ```
 
-<img src="stan_figs/poisson_posterior-1.png" alt="poisson_posterior-1" style="zoom:40%;" class="center"/>
+<img src="stan_figs/poisson_posterior-1_new.png" alt="poisson_posterior-1_new" style="zoom:40%;" class="center"/>
 
 The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis.
 
@@ -1112,7 +1094,7 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep)
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/first_residual-1.png" alt="first_residual-1" style="zoom:38%;" class="center"/>
+<img src="stan_figs/first_residual-1_new.png" alt="first_residual-1_new" style="zoom:38%;" class="center"/>
 
 The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at $+2$ and $-2$ indicates approximate $95\%$ error bounds). 
 
@@ -1161,7 +1143,7 @@ y_rep <- samples_NB$y_rep
 ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
 ```
 
-<img src="stan_figs/NB_posterior-1.png" alt="NB_posterior-1" style="zoom:40%;" class="center"/>
+<img src="stan_figs/NB_posterior-1_new.png" alt="NB_posterior-1_new" style="zoom:40%;" class="center"/>
 
 ## Residual check
 
@@ -1176,7 +1158,7 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/NB_residuals.png" alt="NB_residuals.png" style="zoom:60%;" class="center"/>
+<img src="stan_figs/NB_residuals_new.png" alt="NB_residuals_new.png" style="zoom:60%;" class="center"/>
 
 The situation is better now, but still we have too many residuals outside the $95\%$ interval.
 
@@ -1192,7 +1174,7 @@ ppc_stat_grouped(
 )
 ```
 
-<img src="stan_figs/NB_deps.png" alt="NB_deps" style="zoom:60%;" class="center"/>
+<img src="stan_figs/NB_deps_new.png" alt="NB_deps_new" style="zoom:60%;" class="center"/>
 
 We should take into account the differences across departments. 
 
@@ -1230,7 +1212,7 @@ y_rep <- samples_NB2$y_rep
 ppc_dens_overlay(y = model.data2$cases, y_rep[1:200,]) 
 ```
 
-<img src="stan_figs/NB2_posterior.png" alt="NB2_posterior" style="zoom:80%;" class="center"/>
+<img src="stan_figs/NB2_posterior_new.png" alt="NB2_posterior_new" style="zoom:80%;" class="center"/>
 
 ```{r looic_NB2, echo=FALSE, warning=FALSE, eval=FALSE}
 loo.model.NB2 <- loo(fit3)$estimates
@@ -1245,11 +1227,11 @@ std_residual <- (model.data2$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/NB2_res.png" alt="NB2_res" style="zoom:70%;" class="center"/>
+<img src="stan_figs/NB2_res_new.png" alt="NB2_res_new" style="zoom:70%;" class="center"/>
 
 ## Accuracy across departments
 
-```{r deps_NB2, echo=TRUE, warning=FALSE, eval=FALSE}
+```{r deps_NB2, eval=FALSE, echo=TRUE, warning=FALSE}
 ppc_stat_grouped(
   y = model.data2$cases,
   yrep = y_rep,
@@ -1300,6 +1282,7 @@ cases_dep[which(cases_dep$`Department ID` == 1),]$People  <- 6.4
 cases_dep[which(cases_dep$`Department ID` == 2),]$People  <- 7.4
 cases_dep[which(cases_dep$`Department ID` == 3),]$People  <- 1.2
 cases_dep[which(cases_dep$`Department ID` == 4),]$People  <- 0.99
+
 cases_dep[which(cases_dep$`Department ID` == 5),]$People  <- 0.4
 cases_dep[which(cases_dep$`Department ID` == 6),]$People  <- 1.4
 cases_dep[which(cases_dep$`Department ID` == 7),]$People  <- 2.9
@@ -1347,7 +1330,7 @@ The model is:
   
 ```{r hierarchical_complete_data, eval=FALSE, warning=FALSE, include=FALSE}
 #compile the model 
-model3.NB <- nstan_model("stan/NB_model3.stan")
+model3.NB <- stan_model("stan/NB_model3.stan")
 
 People <- cases_dep %>% select(People) %>% unique()
 People <- as.vector(People[1])
@@ -1366,8 +1349,8 @@ data.hier.NB.complete<-
             cases = cases_dep$`Cumulative cases/Department`,
             time = cases_dep$`Elapsed time`,
             age = cases_dep$`Mean age`,
-            K=3, 
-            J=13,
+            K = 3, 
+            J = 12, #13,
             dep_id = cases_dep$`Department ID`,
             dep_data = dep_data.complete
        )
@@ -1382,10 +1365,11 @@ fit.4 <- sampling(model3.NB, data.hier.NB.complete)
 ```{r hier_posterior_check, echo=TRUE, warning=FALSE, eval=FALSE}
 samples_hier <- rstan::extract(fit.4)
 y_rep <- samples_hier$y_rep
-ppc_dens_overlay(y = data.hier.NB.complete$cases, y_rep[1:200,]) 
+ppc_dens_overlay(y = data.hier.NB.complete$cases, y_rep[1:200,]) + 
+  coord_cartesian(xlim = c(0, 5000))
 ```
 
-<img src="stan_figs/hier_posterior.png" alt="hier_posterior" style="zoom:70%;" class="center"/>
+<img src="stan_figs/hier_posterior_new.png" alt="hier_posterior_new" style="zoom:70%;" class="center"/>
 
 ## Residual check
 
@@ -1396,7 +1380,7 @@ std_residual <- (data.hier.NB.complete$cases - mean_y_rep) / sqrt(mean_y_rep + m
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/hier_residual.png" alt="hier_residual" style="zoom:60%;" class="center"/>
+<img src="stan_figs/hier_residual_new.png" alt="hier_residual_new" style="zoom:60%;" class="center"/>
 
 Very few points are now outside the $95\%$ confidence interval.
 
@@ -1412,7 +1396,7 @@ ppc_stat_grouped(
 )
 ```
 
-<img src="stan_figs/hier_deps.png" alt="hier_deps" style="zoom:60%;" class="center"/>
+<img src="stan_figs/hier_deps_new.png" alt="hier_deps_new" style="zoom:60%;" class="center"/>
 
 We can clearly see that the accuracy across the departments has significantly increased with respect to the previous models.
 
@@ -1444,4 +1428,4 @@ axis(1, c(1:4), c("Poisson", "NB-sl", "NB-ml",
                     las=2)
 ```
 
-<img src="stan_figs/looic.png" alt="looic" style="zoom:60%;" class="center"/>
+<img src="stan_figs/looic_new.png" alt="looic_new" style="zoom:60%;" class="center"/>
