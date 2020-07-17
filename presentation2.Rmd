@@ -560,6 +560,28 @@ Now let's plot a pie chart to be able to see the distribution of cases across th
 
 The majority of the cases in the country are people that got infected inside Colombia. Then, people that contracted the disease abroad came mainly from Europe, followed by North America and Central America. 
 
+```{r function, include=FALSE}
+predict.confidence <- function(object, newdata, level = 0.95, ...) {
+    if (!is(object, "glm")) {
+        stop("Model should be a glm")
+    }
+    if (!is(newdata, "data.frame")) {
+        stop("Plase input a data frame for newdata")
+    }
+    if (!is.numeric(level) | level < 0 | level > 1) {
+        stop("level should be numeric and between 0 and 1")
+    }
+    ilink <- family(object)$linkinv
+    ci.factor <- qnorm(1 - (1 - level)/2)
+    # calculate CIs:
+    fit <- predict(object, newdata = newdata, level = level, 
+                    type = "link", se.fit = TRUE, ...)
+    lwr <- ilink(fit$fit - ci.factor * fit$se.fit)
+    upr <- ilink(fit$fit + ci.factor * fit$se.fit)
+    df <- data.frame("fit" = ilink(fit$fit), "lwr" = lwr, "upr" = upr)
+    return(df)
+}
+```
 
 # The frequentist approach
 
@@ -578,7 +600,9 @@ group_dummy <- covid19_dummy %>%
 data1 <- bind_cols(cases, group_dummy)
 ```
 
-## Poisson with `Elapsed time` as predictor
+## Poisson
+
+### Poisson with `Elapsed time` as predictor
 
 ```{r pois_time, results = "hold", echo=TRUE, warning=FALSE}
 poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=poisson)
@@ -599,7 +623,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 plot(poisson1, which=1)
 ```
 
-## Using `cases_relev_dep`
+### Using `cases_relev_dep`
 
 ```{r pois_time/dep, results = "hold", echo=TRUE, warning=FALSE}
 poisson1A <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=cases_relev_dep, family=poisson)
@@ -610,7 +634,7 @@ paste("AIC:", poisson1A$aic)
 
 We can see that the AIC is enormous.
 
-## Using `New cases/day`
+### Using `New cases/day`
 
 ```{r things, results = "hold", echo=TRUE, warning=FALSE}
 poisson1B <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
@@ -622,7 +646,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1B$null.deviance, deviance(poisson1B)), 2))
 ```
 
-## Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
+### Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
 
 ```{r pois_time2, results = "hold", echo=TRUE, warning=FALSE}
 poisson1c <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
@@ -654,6 +678,51 @@ paste(c("Null deviance: ", "Residual deviance:"),
 plot(poisson2, which=1)
 ```
 
+#### Predictive accuracy of the Poisson model for `Cumulative cases`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois2, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_pois2 <- predict.confidence(poisson2, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_pois2 <- sum(`Cumulative cases` >= conf.df_pois2[, 2] & `Cumulative cases` <= conf.df_pois2[, 3])
+freq_coverage_pois2 <- freq_coverage_pois2/n
+detach(data1)
+```
+
+```{r precc_acc_pois2_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:122], ymax = conf.df_pois2$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[120:126],
+              ymax = conf.df_pois2$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois2$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson2.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
 ### Poisson with `Elapsed time` plus `Group de edad`
 
 ```{r pois3, results = "hold", echo=TRUE, warning=FALSE}
@@ -671,7 +740,52 @@ paste(c("Null deviance: ", "Residual deviance:"),
 plot(poisson3, which=1)
 ```
 
-## Poisson with `Elapsed time`, `Age` and `Departments` as predictors
+#### Predictive accuracy of the Poisson model for `Cumulative cases`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois3, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_pois3 <- predict.confidence(poisson3, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_pois3 <- sum(`Cumulative cases` >= conf.df_pois3[, 2] & `Cumulative cases` <= conf.df_pois3[, 3])
+freq_coverage_pois3 <- freq_coverage_pois3/n
+detach(data1)
+```
+
+```{r precc_acc_pois3_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois3$lwr[1:122], ymax = conf.df_pois3$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois3$lwr[120:126],
+              ymax = conf.df_pois3$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois3$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson3.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Poisson with `Elapsed time`, `Age` and `Departments` as predictors
 
 ```{r pois4, results = "hold", echo=TRUE, warning=FALSE}
 poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
@@ -689,7 +803,52 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson4$null.deviance, deviance(poisson4)), 2))
 ```
 
-## Poisson with `Elapsed time`, `Age` and `Departments` as predictors for `New cases/day`
+#### Predictive accuracy of the Poisson model for `Cumulative cases`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois4, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_pois4 <- predict.confidence(poisson4, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_pois4 <- sum(`Cumulative cases` >= conf.df_pois4[, 2] & `Cumulative cases` <= conf.df_pois4[, 3])
+freq_coverage_pois4 <- freq_coverage_pois4/n
+detach(data1)
+```
+
+```{r precc_acc_pois4_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4$lwr[1:122], ymax = conf.df_pois4$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4$lwr[120:126],
+              ymax = conf.df_pois4$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois4$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson4.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Poisson with `Elapsed time`, `Age` and `Departments` as predictors for `New cases/day`
 
 ```{r pois4day, results = "hold", echo=TRUE, warning=FALSE}
 poisson4bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
@@ -706,7 +865,51 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson4bis$null.deviance, deviance(poisson4bis)), 2))
 ```
 
-## Poisson with `Elapsed time`, `Age` and `Departments` as predictors
+#### Predictive accuracy of the Poisson model for `New cases/day`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois4bis, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_pois4bis <- predict.confidence(poisson4bis, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_pois4bis <- sum(`New cases/day` >= conf.df_pois4bis[, 2] & `New cases/day` <= conf.df_pois4bis[, 3])
+freq_coverage_pois4bis <- freq_coverage_pois4bis/n
+detach(data1)
+```
+
+```{r precc_acc_pois_new_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4bis$lwr[1:120], ymax = conf.df_pois4bis$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4bis$lwr[120:126],
+              ymax = conf.df_pois4bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois4bis$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson4bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Poisson with `Elapsed time`, `Age` and `Departments` as predictors
 
 ```{r pois5, results = "hold", echo=TRUE, warning=FALSE}
 poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
@@ -724,11 +927,54 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson5$null.deviance, deviance(poisson5)), 2))
 ```
 
-## Autocorrelation to compare Poisson models
+#### Predictive accuracy of the Poisson model for `Cumulative cases`
+
+```{r pre_acc_pois5, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_pois5 <- predict.confidence(poisson5, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_pois5 <- sum(`Cumulative cases` >= conf.df_pois5[, 2] & `Cumulative cases` <= conf.df_pois5[, 3])
+freq_coverage_pois5 <- freq_coverage_pois5/n
+detach(data1)
+```
+
+```{r precc_acc_pois5_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois5$lwr[1:122], ymax = conf.df_pois5$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois5$lwr[120:126],
+              ymax = conf.df_pois5$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois5$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson5.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Autocorrelation to compare Poisson models
 
 We generated 1000 samples from each of the four Poisson models and calculated the autocorrelation and compared against the autocorrelation of our original sample.
 
-```{r Autocorrelation, echo=TRUE, warning=FALSE}
+```{r Autocorrelation, echo=FALSE, warning=FALSE}
 #Poisson1
 rpois1 <- simulate(poisson1,nsim=10000)
 matrix1 <- data.matrix(rpois1)
@@ -786,167 +1032,15 @@ p + geom_hline(aes(yintercept=hline1,linetype="Autocorrelation"),color="red",siz
   scale_linetype_manual(name = "Original sample",values = c(1, 1))
 ```
 
-
-## ANOVA to compare the Poisson models
+### ANOVA to compare the Poisson models
 
 ```{r Angela11, echo=TRUE, warning=FALSE}
 anova(poisson1, poisson2, poisson3, poisson4, test="Chisq")
 ```
 
-### Predictive accuracy of the Poisson model for `Cumulative cases`
+## Quasi-Poisson
 
-Predicting with a $95\%$ confidence interval
-
-```{r function, include=FALSE}
-predict.confidence <- function(object, newdata, level = 0.95, ...) {
-    if (!is(object, "glm")) {
-        stop("Model should be a glm")
-    }
-    if (!is(newdata, "data.frame")) {
-        stop("Plase input a data frame for newdata")
-    }
-    if (!is.numeric(level) | level < 0 | level > 1) {
-        stop("level should be numeric and between 0 and 1")
-    }
-    ilink <- family(object)$linkinv
-    ci.factor <- qnorm(1 - (1 - level)/2)
-    # calculate CIs:
-    fit <- predict(object, newdata = newdata, level = level, 
-                    type = "link", se.fit = TRUE, ...)
-    lwr <- ilink(fit$fit - ci.factor * fit$se.fit)
-    upr <- ilink(fit$fit + ci.factor * fit$se.fit)
-    df <- data.frame("fit" = ilink(fit$fit), "lwr" = lwr, "upr" = upr)
-    return(df)
-}
-```
-
-```{r pre_acc_pois, warning=FALSE, include=FALSE}
-attach(data1)
-conf.df_pois <- predict.confidence(poisson4, newdata = data1[1:120, ])
-#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
-n <- 120
-freq_coverage_pois <- sum(`Cumulative cases` >= conf.df_pois[, 2] & `Cumulative cases` <= conf.df_pois[, 3])
-freq_coverage_pois <- freq_coverage_pois/n
-detach(data1)
-```
-
-```{r precc_acc_pois_plot, echo=FALSE, warning=FALSE}
-ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[1:122], ymax = conf.df_pois$upr[1:122]),
-              data = data1[1:122, ],
-              fill = color_scheme_get("blue")[[2]]) + 
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois$lwr[120:126],
-              ymax = conf.df_pois$upr[120:126]),
-              data = data1[120:126, ],
-              fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_pois$fit[1:120]),
-              data = data1[1:120, ],
-              color = color_scheme_get("blue")[[4]], 
-              size = 1.1) +
-  geom_line(aes(x= `Elapsed time`, y = poisson4.pred),
-              data = data1[120:126, ],
-              color = color_scheme_get("red")[[4]],
-              size = 1.1) +
-  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
-  expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
-  # facet_wrap('reg', scales ='free') +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
-
-```{r pre_acc_pois2, warning=FALSE, include=FALSE}
-attach(data1)
-conf.df_pois2 <- predict.confidence(poisson5, newdata = data1[1:120, ])
-#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
-n <- 120
-freq_coverage_pois2 <- sum(`Cumulative cases` >= conf.df_pois2[, 2] & `Cumulative cases` <= conf.df_pois2[, 3])
-freq_coverage_pois2 <- freq_coverage_pois2/n
-detach(data1)
-```
-
-```{r precc_acc_pois2_plot, echo=FALSE, warning=FALSE}
-ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:122], ymax = conf.df_pois2$upr[1:122]),
-              data = data1[1:122, ],
-              fill = color_scheme_get("blue")[[2]]) + 
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[120:126],
-              ymax = conf.df_pois$upr[120:126]),
-              data = data1[120:126, ],
-              fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_pois2$fit[1:120]),
-              data = data1[1:120, ],
-              color = color_scheme_get("blue")[[4]], 
-              size = 1.1) +
-  geom_line(aes(x= `Elapsed time`, y = poisson5.pred),
-              data = data1[120:126, ],
-              color = color_scheme_get("red")[[4]],
-              size = 1.1) +
-  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
-  expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
-  # facet_wrap('reg', scales ='free') +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
-
-### Predictive accuracy of the Poisson model for `New cases/day`
-
-Predicting with a $95\%$ confidence interval
-
-```{r pre_acc_pois_new, warning=FALSE, include=FALSE}
-attach(data1)
-conf.df_pois2 <- predict.confidence(poisson4bis, newdata = data1[1:120, ])
-#conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
-n <- 120
-freq_coverage_pois2 <- sum(`New cases/day` >= conf.df_pois2[, 2] & `New cases/day` <= conf.df_pois2[, 3])
-freq_coverage_pois2 <- freq_coverage_pois2/n
-detach(data1)
-```
-
-```{r precc_acc_pois_new_plot, echo=FALSE, warning=FALSE}
-ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:120], ymax = conf.df_pois2$upr[1:120]),
-              data = data1[1:120, ],
-              fill = color_scheme_get("blue")[[2]]) + 
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[120:126],
-              ymax = conf.df_pois2$upr[120:126]),
-              data = data1[120:126, ],
-              fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_pois2$fit[1:120]),
-              data = data1[1:120, ],
-              color = color_scheme_get("blue")[[4]], 
-              size = 1.1) +
-  geom_line(aes(x= `Elapsed time`, y = poisson4bis.pred),
-              data = data1[120:126, ],
-              color = color_scheme_get("red")[[4]],
-              size = 1.1) +
-  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
-  expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
-  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
-  # facet_wrap('reg', scales ='free') +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
-
-## Quasi Poisson with `Elapsed time` as predictor
+### Quasi Poisson with `Elapsed time` as predictor
 
 ```{r quasi_pois_time, results = "hold", echo=TRUE, warning=FALSE}
 poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
@@ -963,7 +1057,52 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1quasi$null.deviance, deviance(poisson1quasi)), 2))
 ```
 
-## Quasi Poisson with `Elapsed time` and `Age` as predictor
+#### Predictive accuracy of the Quasi-Poisson model for `Cumulative cases`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_qpois, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_qpois <- predict.confidence(poisson1quasi, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_qpois <- sum(`Cumulative cases` >= conf.df_qpois[, 2] & `Cumulative cases` <= conf.df_qpois[, 3])
+freq_coverage_qpois <- freq_coverage_qpois/n
+detach(data1)
+```
+
+```{r precc_acc_qpois_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois$lwr[1:122], ymax = conf.df_qpois$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois$lwr[120:126],
+              ymax = conf.df_qpois$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson1quasi.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Quasi Poisson with `Elapsed time` and `Age` as predictor
 
 ```{r quasi_pois, results = "hold", echo=TRUE, warning=FALSE}
 poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=quasipoisson)
@@ -980,7 +1119,54 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson2quasi$null.deviance, deviance(poisson2quasi)), 2))
 ```
 
-## Negative Binomial with `Elapsed time` as predictor
+#### Predictive accuracy of the Quasi-Poisson model for `Cumulative cases`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_qpois2, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_qpois2 <- predict.confidence(poisson2quasi, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_qpois2 <- sum(`Cumulative cases` >= conf.df_qpois2[, 2] & `Cumulative cases` <= conf.df_qpois2[, 3])
+freq_coverage_qpois2 <- freq_coverage_qpois2/n
+detach(data1)
+```
+
+```{r precc_acc_qpois2_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois2$lwr[1:122], ymax = conf.df_qpois2$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois2$lwr[120:126],
+              ymax = conf.df_qpois2$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois2$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson2quasi.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+## Negative Binomial
+
+### Negative Binomial with `Elapsed time` as predictor
 
 ```{r nb1, results = "hold", echo=TRUE, warning=FALSE}
 nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ])
@@ -996,7 +1182,50 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb1$null.deviance, deviance(nb1)), 2))
 ```
 
-## Negative Binomial with `Elapsed time` plus `Age` as predictors
+#### Predictive accuracy of the Negative Binomial model
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_nb1, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_nb1 <- predict.confidence(nb1, newdata = data1[1:120, ])
+#conf.df_nb1 <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_nb1 <- sum(`Cumulative cases` >= conf.df_nb1[, 2] & `Cumulative cases` <= conf.df_nb1[, 3])
+freq_coverage_nb1 <- freq_coverage_nb1/n
+detach(data1)
+```
+
+```{r precc_acc_nb1_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb1$lwr[1:120], ymax = conf.df_nb1$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb1$lwr[120:126], ymax = conf.df_nb1$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_nb1$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = nb1.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Negative Binomial with `Elapsed time` plus `Age` as predictors
 
 ```{r nb2, results = "hold", echo=TRUE, warning=FALSE}
 nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ])
@@ -1009,7 +1238,50 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb2$null.deviance, deviance(nb2)), 2))
 ```
 
-## Negative Binomial with `Elapsed time` plus `Department` as predictors
+#### Predictive accuracy of the Negative Binomial model
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_nb2, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_nb2 <- predict.confidence(nb2, newdata = data1[1:120, ])
+#conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_nb2 <- sum(`Cumulative cases` >= conf.df_nb2[, 2] & `Cumulative cases` <= conf.df_nb2[, 3])
+freq_coverage_nb2 <- freq_coverage_nb2/n
+detach(data1)
+```
+
+```{r precc_acc_nb2_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[1:120], ymax = conf.df_nb2$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[120:126], ymax = conf.df_nb2$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_nb2$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = nb2.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Negative Binomial with `Elapsed time` plus `Department` as predictors
 
 ```{r nb3, results = "hold", echo=TRUE, warning=FALSE}
 nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
@@ -1022,7 +1294,50 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb3$null.deviance, deviance(nb3)), 2))
 ```
 
-## Negative Binomial with `Elapsed time` plus `Continent of origin` as predictors
+#### Predictive accuracy of the Negative Binomial model
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_nb3, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_nb3 <- predict.confidence(nb3, newdata = data1[1:120, ])
+#conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_nb3 <- sum(`Cumulative cases` >= conf.df_nb3[, 2] & `Cumulative cases` <= conf.df_nb3[, 3])
+freq_coverage_nb3 <- freq_coverage_nb3/n
+detach(data1)
+```
+
+```{r precc_acc_nb3_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb3$lwr[1:120], ymax = conf.df_nb3$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb3$lwr[120:126], ymax = conf.df_nb3$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_nb3$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = nb3.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Negative Binomial with `Elapsed time` plus `Continent of origin` as predictors
 
 ```{r nb4, results = "hold", echo=TRUE, warning=FALSE}
 # nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Continente de procedencia_Asia`+`Continente de procedencia_Centroamérica`+`Continente de procedencia_Colombia`+`Continente de procedencia_Europa`+`Continente de procedencia_Norteamérica`+`Continente de procedencia_Sudamerica`, data=data1[1:22, ])
@@ -1035,7 +1350,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 #        round(c(nb4$null.deviance, deviance(nb4)), 2))
 ```
 
-## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
+### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
 ```{r nb5, results = "hold", echo=TRUE, warning=FALSE}
 nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
@@ -1051,7 +1366,50 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb4$null.deviance, deviance(nb4)), 2))
 ```
 
-## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
+#### Predictive accuracy of the Negative Binomial model
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_nb4, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_nb4 <- predict.confidence(nb4, newdata = data1[1:120, ])
+#conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_nb4 <- sum(`Cumulative cases` >= conf.df_nb4[, 2] & `Cumulative cases` <= conf.df_nb4[, 3])
+freq_coverage_nb4 <- freq_coverage_nb4/n
+detach(data1)
+```
+
+```{r precc_acc_nb4_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb4$lwr[1:120], ymax = conf.df_nb4$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb4$lwr[120:126], ymax = conf.df_nb4$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_nb4$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = nb4.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
 ```{r nb5bis, results = "hold", echo=TRUE, warning=FALSE}
 nb5bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
@@ -1067,11 +1425,54 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb5bis$null.deviance, deviance(nb5bis)), 2))
 ```
 
-## Autocorrelation to compare Negative Binomial models
+#### Predictive accuracy of the NB model for `New cases/day`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_nb5bis, warning=FALSE, include=FALSE}
+attach(data1)
+conf.df_nb2 <- predict.confidence(nb5bis, newdata = data1[1:120, ])
+#conf.df_nb2 <- predict.glm(nb5, newdata = data1[1:120, ], interval = 'confidence')
+n <- 120
+freq_coverage_nb2 <- sum(`New cases/day` >= conf.df_nb2[, 2] & `New cases/day` <= conf.df_nb2[, 3])
+freq_coverage_nb2 <- freq_coverage_nb2/n
+detach(data1)
+```
+
+```{r precc_acc_nb5bis_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[1:120], ymax = conf.df_nb2$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[120:126], ymax = conf.df_nb2$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_nb2$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = nb5bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Autocorrelation to compare Negative Binomial models
 
 We generated 1000 samples from each of the four Negative Binomial models and calculated the autocorrelation and compared against the autocorrelation of our original sample.
 
-```{r Autocorrelation2, echo=TRUE, warning=FALSE}
+```{r Autocorrelation2, echo=FALSE, warning=FALSE}
 #nb1
 rnb1 <- simulate(nb1,nsim=10000)
 mat1 <- data.matrix(rnb1)
@@ -1134,93 +1535,6 @@ q + geom_hline(aes(yintercept=hline1,linetype="Autocorrelation"),color="red",siz
 #Applying ANOVA to compare the negative binomial models
 anova(nb1, nb2, nb3, nb4)
 ```
-
-## Predictive accuracy of the Negative Binomial model
-
-Predicting with a $95\%$ confidence interval
-
-```{r pre_acc_nb, warning=FALSE, include=FALSE}
-attach(data1)
-conf.df_nb <- predict.confidence(nb4, newdata = data1[1:120, ])
-#conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
-n <- 120
-freq_coverage_nb <- sum(`Cumulative cases` >= conf.df_nb[, 2] & `Cumulative cases` <= conf.df_nb[, 3])
-freq_coverage_nb <- freq_coverage_nb/n
-detach(data1)
-```
-
-```{r precc_acc_nb_plot, echo=FALSE, warning=FALSE}
-ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[1:120], ymax = conf.df_nb$upr[1:120]),
-              data = data1[1:120, ],
-              fill = color_scheme_get("blue")[[2]]) + 
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb$lwr[120:126], ymax = conf.df_nb$upr[120:126]),
-              data = data1[120:126, ],
-              fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_nb$fit[1:120]),
-              data = data1[1:120, ],
-              color = color_scheme_get("blue")[[4]], 
-              size = 1.1) +
-  geom_line(aes(x= `Elapsed time`, y = nb4.pred),
-              data = data1[120:126, ],
-              color = color_scheme_get("red")[[4]],
-              size = 1.1) +
-  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
-  expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
-  # facet_wrap(~"Department", scales ='free') +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
-
-### Predictive accuracy of the NB model for `New cases/day`
-
-Predicting with a $95\%$ confidence interval
-
-```{r pre_acc_nb2, warning=FALSE, include=FALSE}
-attach(data1)
-conf.df_nb2 <- predict.confidence(nb5bis, newdata = data1[1:120, ])
-#conf.df_nb2 <- predict.glm(nb5, newdata = data1[1:120, ], interval = 'confidence')
-n <- 120
-freq_coverage_nb2 <- sum(`New cases/day` >= conf.df_nb2[, 2] & `New cases/day` <= conf.df_nb2[, 3])
-freq_coverage_nb2 <- freq_coverage_nb2/n
-detach(data1)
-```
-
-```{r precc_acc_nb_plot2, echo=FALSE, warning=FALSE}
-ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[1:120], ymax = conf.df_nb2$upr[1:120]),
-              data = data1[1:120, ],
-              fill = color_scheme_get("blue")[[2]]) + 
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[120:126], ymax = conf.df_nb2$upr[120:126]),
-              data = data1[120:126, ],
-              fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_nb2$fit[1:120]),
-              data = data1[1:120, ],
-              color = color_scheme_get("blue")[[4]], 
-              size = 1.1) +
-  geom_line(aes(x= `Elapsed time`, y = nb5bis.pred),
-              data = data1[120:126, ],
-              color = color_scheme_get("red")[[4]],
-              size = 1.1) +
-  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
-  expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
-  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
-  # facet_wrap('reg', scales ='free') +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
-
 
 
 # The Bayesian approach
