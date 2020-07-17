@@ -604,14 +604,13 @@ data1 <- bind_cols(cases, group_dummy)
 
 ### Poisson with `Elapsed time` as predictor
 
-```{r pois_time, results = "hold", echo=TRUE, warning=FALSE}
+```{r pois1, results = "hold", echo=TRUE, warning=FALSE}
 poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=poisson)
-pred.pois <- poisson1$fitted.values
-res.st <- (data1$`Cumulative cases`[1:120] - pred.pois)/sqrt(pred.pois)
-#n=120
-#k=2
-#n-k=118
-print(paste("Estimated overdispersion", sum(res.st^2)/118))
+plot(poisson1, which=1)
+pred.pois1 <- poisson1$fitted.values
+res.st1 <- (data1$`Cumulative cases`[1:120] - pred.pois1)/sqrt(pred.pois1)
+#n=120, k=2, n-k=118
+print(paste("Estimated overdispersion", sum(res.st1^2)/118))
 poisson1.pred <- predict(poisson1, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson1.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
@@ -620,49 +619,237 @@ paste("RMSE:", sqrt(mean((poisson1.pred - data1$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson1$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1$null.deviance, deviance(poisson1)), 2))
-plot(poisson1, which=1)
+```
+
+#### Predictive accuracy of the Poisson model for `Cumulative cases`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois1, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_pois1 <- predict.confidence(poisson1, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_pois1 <- sum(`Cumulative cases` >= conf.df_pois1[, 2] & `Cumulative cases` <= conf.df_pois1[, 3])
+paste("Frequency of coverage:", freq_coverage_pois1 <- freq_coverage_pois1/n)
+detach(data1)
+```
+
+```{r precc_acc_pois1_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1$lwr[1:122], ymax = conf.df_pois1$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1$lwr[120:126],
+              ymax = conf.df_pois1$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois1$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson1.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
 ```
 
 ### Using `cases_relev_dep`
 
 ```{r pois_time/dep, results = "hold", echo=TRUE, warning=FALSE}
 poisson1A <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=cases_relev_dep, family=poisson)
-summary(poisson1A)
-paste("MSE:", mean(poisson1A$residuals^2))
+plot(poisson1, which=1)
+pred.pois1A <- poisson1A$fitted.values
+res.st1A <- (data1$`Cumulative cases`[1:120] - pred.pois1A)/sqrt(pred.pois1A)
+#n=120, k=2, n-k=118
+print(paste("Estimated overdispersion", sum(res.st1A^2)/118))
+poisson1A.pred <- predict(poisson1A, newdata = data1[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson1A.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(poisson1A$residuals^2))
 paste("AIC:", poisson1A$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(poisson1A$null.deviance, deviance(poisson1A)), 2))
 ```
 
 We can see that the AIC is enormous.
 
+#### Predictive accuracy of the Poisson model for `Cumulative cases`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois1A, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_pois1A <- predict.confidence(poisson1A, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_pois1A <- sum(`Cumulative cases` >= conf.df_pois1A[, 2] & `Cumulative cases` <= conf.df_pois1A[, 3])
+paste("Frequency of coverage:", freq_coverage_pois1A <- freq_coverage_pois1A/n)
+detach(data1)
+```
+
+```{r precc_acc_pois1A_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1A$lwr[1:122], ymax = conf.df_pois1A$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1A$lwr[120:126],
+              ymax = conf.df_pois1A$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois1A$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson1A.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
 ### Using `New cases/day`
 
-```{r things, results = "hold", echo=TRUE, warning=FALSE}
+```{r pois1B, results = "hold", echo=TRUE, warning=FALSE}
 poisson1B <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
 #print(paste("Estimated overdispersion", sum(res.st^2)/23))
 plot(poisson1B, which=1)
-paste("MSE:", mean(poisson1B$residuals^2))
+poisson1B.pred <- predict(poisson1B, newdata = data1[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson1B.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(poisson1B$residuals^2))
 paste("AIC:", poisson1B$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1B$null.deviance, deviance(poisson1B)), 2))
 ```
 
+#### Predictive accuracy of the Poisson model for `New cases/day`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois1B, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_pois1B <- predict.confidence(poisson1B, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_pois1B <- sum(`New cases/day` >= conf.df_pois1B[, 2] & `New cases/day` <= conf.df_pois1B[, 3])
+paste("Frequency of coverage:", freq_coverage_pois1B <- freq_coverage_pois1B/n)
+detach(data1)
+```
+
+```{r precc_acc_pois1B_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1B$lwr[1:120], ymax = conf.df_pois1B$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1B$lwr[120:126],
+              ymax = conf.df_pois1B$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois1B$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson1B.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
 ### Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
 
-```{r pois_time2, results = "hold", echo=TRUE, warning=FALSE}
-poisson1c <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
-pred.pois <- poisson1c$fitted.values
-res.st <- (cases$`Cumulative cases`[1:120] - pred.pois)/sqrt(pred.pois)
+```{r pois1C, results = "hold", echo=TRUE, warning=FALSE}
+poisson1C <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
+pred.pois1C <- poisson1C$fitted.values
+res.st1C <- (cases$`Cumulative cases`[1:120] - pred.pois1C)/sqrt(pred.pois1C)
 #n=120, k=2, n-k=118
-print(paste("Estimated overdispersion", sum(res.st^2)/118))
-poisson1.pred <- predict(poisson1c, newdata = cases[120:126, ], type="response")
-paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[120:126])^2)))
+print(paste("Estimated overdispersion", sum(res.st1C^2)/118))
+poisson1C.pred <- predict(poisson1C, newdata = cases[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson1C.pred - cases$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
 #print(sprintf("MSE: %0.2f", sum(poisson1$residuals^2)/poisson1$df.residual))
 #print(sprintf("MSE: %0.2f", anova(poisson1)['Residuals', 'Mean Sq']))
-paste("AIC:", poisson1c$aic)
+paste("AIC:", poisson1C$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
-       round(c(poisson1c$null.deviance, deviance(poisson1c)), 2))
-plot(poisson1c, which=1)
+       round(c(poisson1C$null.deviance, deviance(poisson1C)), 2))
+plot(poisson1C, which=1)
+```
+
+#### Predictive accuracy of the Poisson model for `Cumulative cases`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois1C, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_pois1C <- predict.confidence(poisson1C, newdata = data1[1:120, ])
+#conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
+n <- 120
+freq_coverage_pois1C <- sum(`Cumulative cases` >= conf.df_pois1C[, 2] & `Cumulative cases` <= conf.df_pois1C[, 3])
+paste("Frequency of coverage:", freq_coverage_pois1C <- freq_coverage_pois1C/n)
+detach(data1)
+```
+
+```{r precc_acc_pois1C_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1C$lwr[1:122], ymax = conf.df_pois1C$upr[1:122]),
+              data = data1[1:122, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1C$lwr[120:126],
+              ymax = conf.df_pois1C$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois1C$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson1C.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 28) +
+  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
+  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
+  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
 ```
 
 ### Poisson with `Elapsed time` plus `Sexo`
@@ -682,13 +869,13 @@ plot(poisson2, which=1)
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_pois2, warning=FALSE, include=FALSE}
+```{r pre_acc_pois2, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_pois2 <- predict.confidence(poisson2, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois2 <- sum(`Cumulative cases` >= conf.df_pois2[, 2] & `Cumulative cases` <= conf.df_pois2[, 3])
-freq_coverage_pois2 <- freq_coverage_pois2/n
+paste("Frequency of coverage:", freq_coverage_pois2 <- freq_coverage_pois2/n)
 detach(data1)
 ```
 
@@ -744,13 +931,13 @@ plot(poisson3, which=1)
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_pois3, warning=FALSE, include=FALSE}
+```{r pre_acc_pois3, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_pois3 <- predict.confidence(poisson3, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois3 <- sum(`Cumulative cases` >= conf.df_pois3[, 2] & `Cumulative cases` <= conf.df_pois3[, 3])
-freq_coverage_pois3 <- freq_coverage_pois3/n
+paste("Frequency of coverage:", freq_coverage_pois3 <- freq_coverage_pois3/n)
 detach(data1)
 ```
 
@@ -807,13 +994,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_pois4, warning=FALSE, include=FALSE}
+```{r pre_acc_pois4, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_pois4 <- predict.confidence(poisson4, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois4 <- sum(`Cumulative cases` >= conf.df_pois4[, 2] & `Cumulative cases` <= conf.df_pois4[, 3])
-freq_coverage_pois4 <- freq_coverage_pois4/n
+paste("Frequency of coverage:", freq_coverage_pois4 <- freq_coverage_pois4/n)
 detach(data1)
 ```
 
@@ -869,13 +1056,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_pois4bis, warning=FALSE, include=FALSE}
+```{r pre_acc_pois4bis, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_pois4bis <- predict.confidence(poisson4bis, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_pois4bis <- sum(`New cases/day` >= conf.df_pois4bis[, 2] & `New cases/day` <= conf.df_pois4bis[, 3])
-freq_coverage_pois4bis <- freq_coverage_pois4bis/n
+paste("Frequency of coverage:", freq_coverage_pois4bis <- freq_coverage_pois4bis/n)
 detach(data1)
 ```
 
@@ -909,7 +1096,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Poisson with `Elapsed time`, `Age` and `Departments` as predictors
+### Poisson with `Elapsed time`, `Elapsed time`^2, `Age` and `Departments` as predictors
 
 ```{r pois5, results = "hold", echo=TRUE, warning=FALSE}
 poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
@@ -929,13 +1116,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
 
-```{r pre_acc_pois5, warning=FALSE, include=FALSE}
+```{r pre_acc_pois5, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_pois5 <- predict.confidence(poisson5, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois5 <- sum(`Cumulative cases` >= conf.df_pois5[, 2] & `Cumulative cases` <= conf.df_pois5[, 3])
-freq_coverage_pois5 <- freq_coverage_pois5/n
+paste("Frequency of coverage:", freq_coverage_pois5 <- freq_coverage_pois5/n)
 detach(data1)
 ```
 
@@ -1061,13 +1248,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_qpois, warning=FALSE, include=FALSE}
+```{r pre_acc_qpois, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_qpois <- predict.confidence(poisson1quasi, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_qpois <- sum(`Cumulative cases` >= conf.df_qpois[, 2] & `Cumulative cases` <= conf.df_qpois[, 3])
-freq_coverage_qpois <- freq_coverage_qpois/n
+paste("Frequency of coverage:", freq_coverage_qpois <- freq_coverage_qpois/n)
 detach(data1)
 ```
 
@@ -1123,13 +1310,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_qpois2, warning=FALSE, include=FALSE}
+```{r pre_acc_qpois2, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_qpois2 <- predict.confidence(poisson2quasi, newdata = data1[1:120, ])
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_qpois2 <- sum(`Cumulative cases` >= conf.df_qpois2[, 2] & `Cumulative cases` <= conf.df_qpois2[, 3])
-freq_coverage_qpois2 <- freq_coverage_qpois2/n
+paste("Frequency of coverage:", freq_coverage_qpois2 <- freq_coverage_qpois2/n)
 detach(data1)
 ```
 
@@ -1186,13 +1373,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_nb1, warning=FALSE, include=FALSE}
+```{r pre_acc_nb1, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_nb1 <- predict.confidence(nb1, newdata = data1[1:120, ])
 #conf.df_nb1 <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_nb1 <- sum(`Cumulative cases` >= conf.df_nb1[, 2] & `Cumulative cases` <= conf.df_nb1[, 3])
-freq_coverage_nb1 <- freq_coverage_nb1/n
+paste("Frequency of coverage:", freq_coverage_nb1 <- freq_coverage_nb1/n)
 detach(data1)
 ```
 
@@ -1242,13 +1429,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_nb2, warning=FALSE, include=FALSE}
+```{r pre_acc_nb2, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_nb2 <- predict.confidence(nb2, newdata = data1[1:120, ])
 #conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_nb2 <- sum(`Cumulative cases` >= conf.df_nb2[, 2] & `Cumulative cases` <= conf.df_nb2[, 3])
-freq_coverage_nb2 <- freq_coverage_nb2/n
+paste("Frequency of coverage:", freq_coverage_nb2 <- freq_coverage_nb2/n)
 detach(data1)
 ```
 
@@ -1298,13 +1485,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_nb3, warning=FALSE, include=FALSE}
+```{r pre_acc_nb3, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_nb3 <- predict.confidence(nb3, newdata = data1[1:120, ])
 #conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_nb3 <- sum(`Cumulative cases` >= conf.df_nb3[, 2] & `Cumulative cases` <= conf.df_nb3[, 3])
-freq_coverage_nb3 <- freq_coverage_nb3/n
+paste("Frequency of coverage:", freq_coverage_nb3 <- freq_coverage_nb3/n)
 detach(data1)
 ```
 
@@ -1370,13 +1557,13 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_nb4, warning=FALSE, include=FALSE}
+```{r pre_acc_nb4, echo=FALSE, warning=FALSE}
 attach(data1)
 conf.df_nb4 <- predict.confidence(nb4, newdata = data1[1:120, ])
 #conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_nb4 <- sum(`Cumulative cases` >= conf.df_nb4[, 2] & `Cumulative cases` <= conf.df_nb4[, 3])
-freq_coverage_nb4 <- freq_coverage_nb4/n
+paste("Frequency of coverage:", freq_coverage_nb4 <- freq_coverage_nb4/n)
 detach(data1)
 ```
 
@@ -1429,25 +1616,25 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 Predicting with a $95\%$ confidence interval
 
-```{r pre_acc_nb5bis, warning=FALSE, include=FALSE}
+```{r pre_acc_nb5bis, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_nb2 <- predict.confidence(nb5bis, newdata = data1[1:120, ])
+conf.df_nb5bis <- predict.confidence(nb5bis, newdata = data1[1:120, ])
 #conf.df_nb2 <- predict.glm(nb5, newdata = data1[1:120, ], interval = 'confidence')
 n <- 120
-freq_coverage_nb2 <- sum(`New cases/day` >= conf.df_nb2[, 2] & `New cases/day` <= conf.df_nb2[, 3])
-freq_coverage_nb2 <- freq_coverage_nb2/n
+freq_coverage_nb5bis <- sum(`New cases/day` >= conf.df_nb5bis[, 2] & `New cases/day` <= conf.df_nb5bis[, 3])
+paste("Frequency of coverage:", freq_coverage_nb5bis <- freq_coverage_nb5bis/n)
 detach(data1)
 ```
 
 ```{r precc_acc_nb5bis_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[1:120], ymax = conf.df_nb2$upr[1:120]),
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb5bis$lwr[1:120], ymax = conf.df_nb5bis$upr[1:120]),
               data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[120:126], ymax = conf.df_nb2$upr[120:126]),
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb5bis$lwr[120:126], ymax = conf.df_nb5bis$upr[120:126]),
               data = data1[120:126, ],
               fill = color_scheme_get("red")[[2]]) +
-  geom_line(aes(x = `Elapsed time`, y = conf.df_nb2$fit[1:120]),
+  geom_line(aes(x = `Elapsed time`, y = conf.df_nb5bis$fit[1:120]),
               data = data1[1:120, ],
               color = color_scheme_get("blue")[[4]], 
               size = 1.1) +
