@@ -625,20 +625,20 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
 
 ```{r pois_time2, results = "hold", echo=TRUE, warning=FALSE}
-poisson1 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
-pred.pois <- poisson1$fitted.values
+poisson1c <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
+pred.pois <- poisson1c$fitted.values
 res.st <- (cases$`Cumulative cases`[1:120] - pred.pois)/sqrt(pred.pois)
 #n=120, k=2, n-k=118
 print(paste("Estimated overdispersion", sum(res.st^2)/118))
-poisson1.pred <- predict(poisson1, newdata = cases[120:126, ], type="response")
+poisson1.pred <- predict(poisson1c, newdata = cases[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson1.pred - cases$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
 #print(sprintf("MSE: %0.2f", sum(poisson1$residuals^2)/poisson1$df.residual))
 #print(sprintf("MSE: %0.2f", anova(poisson1)['Residuals', 'Mean Sq']))
-paste("AIC:", poisson1$aic)
+paste("AIC:", poisson1c$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
-       round(c(poisson1$null.deviance, deviance(poisson1)), 2))
-plot(poisson1, which=1)
+       round(c(poisson1c$null.deviance, deviance(poisson1c)), 2))
+plot(poisson1c, which=1)
 ```
 
 ### Poisson with `Elapsed time` plus `Sexo`
@@ -724,10 +724,73 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson5$null.deviance, deviance(poisson5)), 2))
 ```
 
+## Autocorrelation to compare Poisson models
+
+We generated 1000 samples from each of the four Poisson models and calculated the autocorrelation and compared against the autocorrelation of our original sample.
+
+```{r Autocorrelation, echo=TRUE, warning=FALSE}
+#Poisson1
+rpois1 <- simulate(poisson1,nsim=10000)
+matrix1 <- data.matrix(rpois1)
+
+acf1 <- lapply(split(matrix1,col(matrix1)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_1 <- c()
+for(i in 1:10000){ Poisson_1 <- c(Poisson_1, acf1[[c(i,1,2)]])}
+
+#Poisson2
+rpois2 <- simulate(poisson2,nsim=10000)
+matrix2 <- data.matrix(rpois2)
+
+acf2 <- lapply(split(matrix2,col(matrix2)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_2 <- c()
+for(i in 1:10000){ Poisson_2 <- c(Poisson_2, acf2[[c(i,1,2)]])}
+
+
+#Poisson3
+rpois3 <- simulate(poisson3,nsim=10000)
+matrix3 <- data.matrix(rpois3)
+
+acf3 <- lapply(split(matrix3,col(matrix3)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_3 <- c()
+for(i in 1:10000){ Poisson_3 <- c(Poisson_3, acf3[[c(i,1,2)]])}
+
+
+#Poisson4
+rpois4 <- simulate(poisson4,nsim=10000)
+matrix4 <- data.matrix(rpois4)
+
+acf4 <- lapply(split(matrix4,col(matrix4)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_4 <- c()
+for(i in 1:10000){ Poisson_4 <- c(Poisson_4, acf4[[c(i,1,2)]])}
+
+#autocorrelation dataframe
+autocor <- data.frame(Poisson_1,Poisson_2,Poisson_3,Poisson_4)
+library(reshape2)
+x1 <- melt(autocor)
+
+#autocorrelation of original sample
+tmp <- acf(data1$`Cumulative cases`,lag.max=1,plot=F)
+hline1 <- as.numeric((unlist(tmp[1]))[1])
+
+#boxplot
+theme_set(theme_gray())
+p<-ggplot(x1, aes(x=variable, y=value, fill=variable)) +
+  geom_boxplot()+
+  labs(title="Sample Autocorrelation", x="Models", y="Autocorrelation",fill='Models')+
+  scale_fill_manual(values=c("#FFFF00", "#FF66FF", "#00CCFF", "green"))
+p + geom_hline(aes(yintercept=hline1,linetype="Autocorrelation"),color="red",size=1)+
+  scale_linetype_manual(name = "Original sample",values = c(1, 1))
+```
+
+
 ## ANOVA to compare the Poisson models
 
 ```{r Angela11, echo=TRUE, warning=FALSE}
-anova(poisson1, poisson3, poisson4, test="Chisq")
+anova(poisson1, poisson2, poisson3, poisson4, test="Chisq")
 ```
 
 ### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -975,17 +1038,17 @@ paste(c("Null deviance: ", "Residual deviance:"),
 ## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
 ```{r nb5, results = "hold", echo=TRUE, warning=FALSE}
-nb5 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
-plot(nb5, which=1)
+nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+plot(nb4, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
-stdres <- rstandard(nb5)
+stdres <- rstandard(nb4)
 print(paste("Estimated overdispersion", sum(stdres^2)/101))
-nb5.pred <- predict(nb5, newdata = data1[120:126, ], type = "response")
-paste("RMSE:", sqrt(mean((nb5.pred - data1$`Cumulative cases`[120:126])^2)))
+nb4.pred <- predict(nb4, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", sqrt(mean((nb4.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb5$residuals^2))
-paste("AIC:", nb5$aic)
+paste("AIC:", nb4$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
-       round(c(nb5$null.deviance, deviance(nb5)), 2))
+       round(c(nb4$null.deviance, deviance(nb4)), 2))
 ```
 
 ## Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
@@ -1004,13 +1067,72 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb5bis$null.deviance, deviance(nb5bis)), 2))
 ```
 
-### Applying ANOVA to compare the negative binomial models
+## Autocorrelation to compare Negative Binomial models
 
-We decided to compare `nb1`, `nb2`, `nb5`, because they are nested and we are more interested in seeing if the fifth model is in fact better than the first model.
+We generated 1000 samples from each of the four Negative Binomial models and calculated the autocorrelation and compared against the autocorrelation of our original sample.
+
+```{r Autocorrelation2, echo=TRUE, warning=FALSE}
+#nb1
+rnb1 <- simulate(nb1,nsim=10000)
+mat1 <- data.matrix(rnb1)
+
+acfnb1 <- lapply(split(mat1,col(mat1)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Neg.Bin_1 <- c()
+for(i in 1:10000){ Neg.Bin_1 <- c(Neg.Bin_1, acfnb1[[c(i,1,2)]])}
+
+#nb2
+rnb2 <- simulate(nb2,nsim=10000)
+mat2 <- data.matrix(rnb2)
+
+acfnb2 <- lapply(split(mat2,col(mat2)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Neg.Bin_2 <- c()
+for(i in 1:10000){ Neg.Bin_2 <- c(Neg.Bin_2, acfnb2[[c(i,1,2)]])}
+
+
+#nb3
+rnb3 <- simulate(nb3,nsim=10000)
+mat3 <- data.matrix(rnb3)
+
+acfnb3 <- lapply(split(mat3,col(mat3)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Neg.Bin_3 <- c()
+for(i in 1:10000){ Neg.Bin_3 <- c(Neg.Bin_3, acfnb3[[c(i,1,2)]])}
+
+
+#nb4
+rnb4 <- simulate(nb4,nsim=10000)
+mat4 <- data.matrix(rnb4)
+
+acfnb4 <- lapply(split(mat4,col(mat4)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Neg.Bin_4 <- c()
+for(i in 1:10000){ Neg.Bin_4 <- c(Neg.Bin_4, acfnb4[[c(i,1,2)]])}
+
+#autocorrelation dataframe
+autocor <- data.frame(Neg.Bin_1,Neg.Bin_2,Neg.Bin_3,Neg.Bin_4)
+x1 <- melt(autocor)
+
+#autocorrelation of original sample
+#tmp <- acf(data1$`Cumulative cases`,lag.max=1,plot=F)
+#hline1 <- as.numeric((unlist(tmp[1]))[1])
+
+#boxplot
+theme_set(theme_gray())
+q<-ggplot(x1, aes(x=variable, y=value, fill=variable)) +
+  geom_boxplot()+
+  labs(title="Sample Autocorrelation", x="Models", y="Autocorrelation",fill='Models')+
+  scale_fill_manual(values=c("#FFFF00", "#FF66FF", "#00CCFF", "green"))
+q + geom_hline(aes(yintercept=hline1,linetype="Autocorrelation"),color="red",size=1)+
+  scale_linetype_manual(name = "Original sample",values = c(1, 1))
+```
+
+### Applying ANOVA to compare the negative binomial models
 
 ```{r anova_nb, echo=TRUE, warning=FALSE}
 #Applying ANOVA to compare the negative binomial models
-anova(nb1, nb2, nb5)
+anova(nb1, nb2, nb3, nb4)
 ```
 
 ## Predictive accuracy of the Negative Binomial model
@@ -1019,7 +1141,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_nb, warning=FALSE, include=FALSE}
 attach(data1)
-conf.df_nb <- predict.confidence(nb5, newdata = data1[1:120, ])
+conf.df_nb <- predict.confidence(nb4, newdata = data1[1:120, ])
 #conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_nb <- sum(`Cumulative cases` >= conf.df_nb[, 2] & `Cumulative cases` <= conf.df_nb[, 3])
@@ -1039,7 +1161,7 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               data = data1[1:120, ],
               color = color_scheme_get("blue")[[4]], 
               size = 1.1) +
-  geom_line(aes(x= `Elapsed time`, y = nb5.pred),
+  geom_line(aes(x= `Elapsed time`, y = nb4.pred),
               data = data1[120:126, ],
               color = color_scheme_get("red")[[4]],
               size = 1.1) +
