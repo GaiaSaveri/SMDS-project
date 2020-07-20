@@ -583,6 +583,68 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
 }
 ```
 
+# Correlation between the categorical variables
+
+We used Cramer's V to calculate the correlation between our categorical variables. 
+
+```{r cramer, echo=TRUE, warning=FALSE}
+library(data.table) # data mgmt
+library(gtools) # combination
+library(plotly) # interactive graphics
+cramervdata <- colombia_covid %>% select(`Ciudad de ubicación`,`Departamento o Distrito`,Atención,Sexo,Tipo,`País de procedencia`,`Grupo de edad`)
+cramervdata[] <- lapply(cramervdata, factor)
+cramervdata <- as.data.table(cramervdata)
+cat_var <- colnames(cramervdata)
+
+# Function to compute Cramer's V
+# https://www.r-bloggers.com/example-8-39-calculating-cramers-v/
+cv.test = function(x,y) {
+  CV = sqrt(chisq.test(x, y, correct=FALSE)$statistic /
+              (length(x)[1] * (min(length(unique(x))[1],length(unique(y))[1]) - 1)))
+  return(as.numeric(CV))
+}
+
+# Apply the function to the combination of categorical variable
+v_cramer_all <- function(cat_var, df){
+  cat_var_grid <- data.table(combinations(n = length(cat_var), r = 2, v = cat_var, repeats.allowed = FALSE))
+  
+  do.call(rbind,
+          apply(cat_var_grid, 1, function(x){
+            tmp <- as.character(x)
+            vec1 <- unlist(df[,tmp[1], with = FALSE])
+            vec2 <- unlist(df[,tmp[2], with = FALSE])
+            
+            data.table(
+              variable_x = tmp[1],
+              variable_y = tmp[2],
+              chi2 = chisq.test(x = vec1, vec2, correct=FALSE)$p.value,
+              v_cramer = cv.test(x = vec1, y = vec2)
+            )
+          }))
+  
+}
+
+results <- v_cramer_all(cat_var = cat_var, df = cramervdata)
+
+#Reducing number of decimals of variable v_cramer
+results <- results %>% 
+  mutate_if(is.numeric, round, digits = 2)
+
+# Heatmap vizualisation with ggplot2  -------------------------------------
+
+g <- ggplot(results, aes(variable_x, variable_y)) +
+  geom_tile(aes(fill = v_cramer), colour = "black") +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  theme_bw() + xlab(NULL) + ylab(NULL) +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0)) +
+  ggtitle("Cramer's V heatmap")+
+  geom_text(aes(label=v_cramer))
+g
+
+#ggplotly(g)
+```
+
 # The frequentist approach
 
 ## Train/test split
@@ -794,8 +856,8 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 poisson1C <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
 pred.pois1C <- poisson1C$fitted.values
 res.st1C <- (cases$`Cumulative cases`[1:120] - pred.pois1C)/sqrt(pred.pois1C)
-#n=120, k=2, n-k=118
-print(paste("Estimated overdispersion", sum(res.st1C^2)/118))
+#n=120, k=3, n-k=117
+print(paste("Estimated overdispersion", sum(res.st1C^2)/117))
 poisson1C.pred <- predict(poisson1C, newdata = cases[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson1C.pred - cases$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson1$residuals^2))
@@ -1042,8 +1104,8 @@ poisson4bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `G
 plot(poisson4bis, which=1)
 pred.pois4bis <- poisson4bis$fitted.values
 res.st4bis <- (data1$`Cumulative cases` - pred.pois4bis)/sqrt(pred.pois4bis)
-#n=120, k=19, n-k=101
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4bis^2)/101))
+#n=120, k=18, n-k=102
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4bis^2)/102))
 poisson4bis.pred <- predict(poisson4bis, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson4bis.pred - data1$`New cases/day`[120:126])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
@@ -1103,8 +1165,8 @@ poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) + `Gru
 plot(poisson5, which=1)
 pred.pois5 <- poisson5$fitted.values
 res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
-#n=120, k=18, n-k=102
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st5^2)/102))
+#n=120, k=19, n-k=101
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st5^2)/101))
 poisson5.pred <- predict(poisson5, newdata = data1[120:126, ], type="response")
 #paste("Real: ", data1$`Cumulative cases`[120:126], "Predict: ", poisson5.pred)
 paste("RMSE:", sqrt(mean((poisson5.pred - data1$`Cumulative cases`[120:126])^2)))
@@ -1161,7 +1223,9 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 
 We generated 1000 samples from each of the four Poisson models and calculated the autocorrelation and compared against the autocorrelation of our original sample.
 
-```{r Autocorrelation, echo=FALSE, warning=FALSE}
+#### Autocorrelation for the models when the response variable is `Cumulative Cases`
+
+```{r Autocorrelation, echo=TRUE, warning=FALSE}
 #Poisson1
 rpois1 <- simulate(poisson1,nsim=10000)
 matrix1 <- data.matrix(rpois1)
@@ -1170,6 +1234,17 @@ acf1 <- lapply(split(matrix1,col(matrix1)), function(ts) acf(ts, lag.max=1,plot=
 
 Poisson_1 <- c()
 for(i in 1:10000){ Poisson_1 <- c(Poisson_1, acf1[[c(i,1,2)]])}
+
+#Poisson1b -> this is the model poisson1C with elapsed time squared. Let's call it Poisson1b to keep an order in the autocorrelation plot
+
+rpois1b <- simulate(poisson1C,nsim=10000)
+matrix1b <- data.matrix(rpois1b)
+
+acf1b <- lapply(split(matrix1b,col(matrix1b)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_1b <- c()
+for(i in 1:10000){ Poisson_1b <- c(Poisson_1b, acf1b[[c(i,1,2)]])}
+
 
 #Poisson2
 rpois2 <- simulate(poisson2,nsim=10000)
@@ -1200,8 +1275,18 @@ acf4 <- lapply(split(matrix4,col(matrix4)), function(ts) acf(ts, lag.max=1,plot=
 Poisson_4 <- c()
 for(i in 1:10000){ Poisson_4 <- c(Poisson_4, acf4[[c(i,1,2)]])}
 
+#Poisson4b -> this is the model poisson5 with elapsed time squared. Let's call it Poisson4b to keep a pattern in the autocorrelation plot
+
+rpois4b <- simulate(poisson5,nsim=10000)
+matrix4b <- data.matrix(rpois4b)
+
+acf4b <- lapply(split(matrix4b,col(matrix4b)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_4b <- c()
+for(i in 1:10000){ Poisson_4b <- c(Poisson_4b, acf4b[[c(i,1,2)]])}
+
 #autocorrelation dataframe
-autocor <- data.frame(Poisson_1,Poisson_2,Poisson_3,Poisson_4)
+autocor <- data.frame(Poisson_1,Poisson_1b,Poisson_2,Poisson_3,Poisson_4,Poisson_4b)
 library(reshape2)
 x1 <- melt(autocor)
 
@@ -1214,8 +1299,79 @@ theme_set(theme_gray())
 p<-ggplot(x1, aes(x=variable, y=value, fill=variable)) +
   geom_boxplot()+
   labs(title="Sample Autocorrelation", x="Models", y="Autocorrelation",fill='Models')+
-  scale_fill_manual(values=c("#FFFF00", "#FF66FF", "#00CCFF", "green"))
+  scale_fill_manual(values=c("#FF66FF", "#FFFF00", "#00CCFF", "green", "#6633CC", "#FF6633"))
 p + geom_hline(aes(yintercept=hline1,linetype="Autocorrelation"),color="red",size=1)+
+  scale_linetype_manual(name = "Original sample",values = c(1, 1))
+```
+
+#### Autocorrelation for the models when the response variable is `New cases/day`
+
+```{r Autocorrelation2, echo=TRUE, warning=FALSE}
+#PoissonA -> This is the model poisson1B. The predictor is Elapsed time.  I am changing the name to make easier to understand the presentation
+rpoisA <- simulate(poisson1B,nsim=10000)
+matrixA <- data.matrix(rpoisA)
+
+acfA <- lapply(split(matrixA,col(matrixA)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_A <- c()
+for(i in 1:10000){ Poisson_A <- c(Poisson_A, acfA[[c(i,1,2)]])}
+
+#PoissonB <- This is the model poisson4bis. The predictors are elapsed time, age and departments. I am changing the name to make easier to understand the presentation.
+rpoisB <- simulate(poisson4bis,nsim=10000)
+matrixB <- data.matrix(rpoisB)
+
+acfB <- lapply(split(matrixB,col(matrixB)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_B <- c()
+for(i in 1:10000){ Poisson_B <- c(Poisson_B, acfB[[c(i,1,2)]])}
+
+#autocorrelation dataframe
+autocor <- data.frame(Poisson_A,Poisson_B)
+library(reshape2)
+x1 <- melt(autocor)
+
+#autocorrelation of original sample
+tmp2 <- acf(cases$`New cases/day`,lag.max=1,plot=F)
+hline2 <- as.numeric((unlist(tmp[1]))[1])
+
+#boxplot
+theme_set(theme_gray())
+p<-ggplot(x1, aes(x=variable, y=value, fill=variable)) +
+  geom_boxplot()+
+  labs(title="Sample Autocorrelation", x="Models", y="Autocorrelation",fill='Models')+
+  scale_fill_manual(values=c("#00CCFF", "green"))
+p + geom_hline(aes(yintercept=hline2,linetype="Autocorrelation"),color="red",size=1)+
+  scale_linetype_manual(name = "Original sample",values = c(1, 1))
+```
+
+#### Autocorrelation for the model when the response variable is `Cumulative cases/Department`
+
+```{r Autocorrelation3, echo=TRUE, warning=FALSE}
+#Poisson Cumulative cases/Department -> This is the model poisson1A. The predictor is Elapsed time.  I am changing the name to make easier to understand the presentation
+rpoisd <- simulate(poisson1A,nsim=10000)
+matrixd <- data.matrix(rpoisd)
+
+acfd <- lapply(split(matrixd,col(matrixd)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_Cumulative_Cases_Per_Department <- c()
+for(i in 1:10000){ Poisson_Cumulative_Cases_Per_Department <- c(Poisson_Cumulative_Cases_Per_Department, acfd[[c(i,1,2)]])}
+
+#autocorrelation dataframe
+autocor <- data.frame(Poisson_Cumulative_Cases_Per_Department)
+library(reshape2)
+x1 <- melt(autocor)
+
+#autocorrelation of original sample
+tmp3 <- acf(cases_relev_dep$`Cumulative cases/Department`,lag.max=1,plot=F)
+hline3 <- as.numeric((unlist(tmp[1]))[1])
+
+#boxplot
+theme_set(theme_gray())
+p<-ggplot(x1, aes(x=variable, y=value, fill=variable)) +
+  geom_boxplot()+
+  labs(title="Sample Autocorrelation", x="Models", y="Autocorrelation",fill='Models')+
+  scale_fill_manual(values=c("green"))
+p + geom_hline(aes(yintercept=hline3,linetype="Autocorrelation"),color="red",size=1)+
   scale_linetype_manual(name = "Original sample",values = c(1, 1))
 ```
 
@@ -1659,7 +1815,9 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 
 We generated 1000 samples from each of the four Negative Binomial models and calculated the autocorrelation and compared against the autocorrelation of our original sample.
 
-```{r Autocorrelation2, echo=FALSE, warning=FALSE}
+#### Autocorrelation for the models when the response variable is `Cumulative Cases`
+
+```{r Autocorrelation4, echo=TRUE, warning=FALSE}
 #nb1
 rnb1 <- simulate(nb1,nsim=10000)
 mat1 <- data.matrix(rnb1)
@@ -1713,6 +1871,37 @@ q<-ggplot(x1, aes(x=variable, y=value, fill=variable)) +
   labs(title="Sample Autocorrelation", x="Models", y="Autocorrelation",fill='Models')+
   scale_fill_manual(values=c("#FFFF00", "#FF66FF", "#00CCFF", "green"))
 q + geom_hline(aes(yintercept=hline1,linetype="Autocorrelation"),color="red",size=1)+
+  scale_linetype_manual(name = "Original sample",values = c(1, 1))
+```
+
+#### Autocorrelation for the model when the response variable is `New cases/day`
+
+```{r Autocorrelation5, echo=TRUE, warning=FALSE}
+#Neg.Bin_A -> This is the model nb5bis.  I am changing the name to make easier to understand the presentation
+rnbA <- simulate(nb5bis,nsim=10000)
+matrixnbA <- data.matrix(rnbA)
+
+acfnbA <- lapply(split(matrixnbA,col(matrixnbA)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Neg.Bin_A <- c()
+for(i in 1:10000){ Neg.Bin_A <- c(Neg.Bin_A, acfnbA[[c(i,1,2)]])}
+
+#autocorrelation dataframe
+autocor <- data.frame(Neg.Bin_A)
+library(reshape2)
+x1 <- melt(autocor)
+
+#autocorrelation of original sample
+tmp2 <- acf(cases$`New cases/day`,lag.max=1,plot=F)
+hline2 <- as.numeric((unlist(tmp[1]))[1])
+
+#boxplot
+theme_set(theme_gray())
+p<-ggplot(x1, aes(x=variable, y=value, fill=variable)) +
+  geom_boxplot()+
+  labs(title="Sample Autocorrelation", x="Models", y="Autocorrelation",fill='Models')+
+  scale_fill_manual(values=c("green"))
+p + geom_hline(aes(yintercept=hline2,linetype="Autocorrelation"),color="red",size=1)+
   scale_linetype_manual(name = "Original sample",values = c(1, 1))
 ```
 
