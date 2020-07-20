@@ -356,6 +356,50 @@ Scattered infos about pandemic in Colombia (https://en.wikipedia.org/wiki/COVID-
   
   * on March the 26th there was a damage in the machine that prepared the samples for processing and subsequent diagnosis of COVID-19, which affected the speed at which results were being produced. This could explain the very low number of confirmed cases.
 
+```{r cases_dep, echo=FALSE, warning=FALSE}
+#group, count, sort and rename
+df1 <- colombia_covid %>% group_by(`Departamento o Distrito`) %>% count()%>%arrange(n)%>%rename(`Number of cases`=n)
+#Convert x variable into a factor
+df1$`Departamento o Distrito` <- factor(df1$`Departamento o Distrito`, levels = df1$`Departamento o Distrito`)
+
+#plotting
+theme_set(theme_bw())
+plot1 <- ggplot(df1, aes(x=`Departamento o Distrito`, y=`Number of cases`)) + 
+  geom_bar(stat="identity", width=.5, fill="tomato3") + 
+  labs(title="Number of cases per department") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+plot1
+#scale_fill_gradient(low = "white", high = "steelblue")
+
+
+```
+
+```{r donut, echo=FALSE, warning=FALSE}
+#group, count, sort and rename
+#df1 <- colombia_covid %>% group_by(`Departamento o Distrito`) %>% count()%>%arrange(n)%>%rename(`Number of cases`=n)
+#Convert x variable into a factor
+#df1$`Departamento o Distrito` <- factor(df1$`Departamento o Distrito`, levels = df1$`Departamento o Distrito`)
+ 
+# Compute percentages
+df1$fraction <- df1$`Number of cases` / sum(df1$`Number of cases`)
+
+# Compute the cumulative percentages (top of each rectangle)
+df1$ymax <- cumsum(df1$fraction)
+
+# Compute the bottom of each rectangle
+df1$ymin <- c(0, head(df1$ymax, n=-1))
+ 
+# Make the plot
+plot2 <- ggplot(df1, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=`Departamento o Distrito`)) +
+     geom_rect() +
+     coord_polar(theta="y") + 
+     xlim(c(2, 4))+
+  scale_fill_brewer(palette="Set3")+
+  labs(title="Number of cases per department")
+plot2
+
+```
+
 <!-- Number of cases confirmed day by day -->
 
 ```{r barplot, echo=FALSE, warning=FALSE, fig.pos='htb!'}
