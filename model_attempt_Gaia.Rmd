@@ -71,6 +71,7 @@ ggplot(df, aes(x = date, y = n)) +
   facet_wrap(~dep, scales = "free_y", ncol = 4, labeller = label_both) + 
   scale_y_continuous(name = "", limits = range(df$n)) + 
   scale_linetype_discrete(name = "")
+df
 ```
 
 Please ignore tha fact that the picture is horrible, I'm starting convincing myself that we should include only the departments that have a "significant" number of cases.. maybe more than 30 cases is enough.

@@ -71,7 +71,7 @@ library(ggthemes)
 library(ggrepel)
 library(RColorBrewer)
 library(leaflet)
-library(geojsonio)
+#library(geojsonio)
 library(htmltools)
 library(htmlwidgets)
 library(rstan)
@@ -1117,9 +1117,13 @@ y_i \sim \mathcal{Poisson}(\lambda_i) \\
 \beta \sim \mathcal{N}(0.25,1)
 $$
 
-with $i = 1,\dots,134$, being $134$ the number of rows of our dataset, and $y_i$ represents the number of cases.
+with $i = 1,\dots,134$, being $357$ the number of rows of our dataset, and $y_i$ represents the number of cases.
 
 For what concerns the `stan` program, we used the function `poisson_log_rng` to describe the distribution of $y_i$, namely the number of cases each day and the function `poisson_log_lpmf` to specify the likelihood.
+
+```{r fix data, echo=FALSE, eval=FALSE, warning=FALSE}
+cases_dep<-cases_dep[order(cases_dep$Department),]
+```
 
 ```{r stan_poisson_regression, warning=FALSE, include=FALSE, eval=FALSE}
 model.data <- list(
@@ -1129,21 +1133,27 @@ model.data <- list(
 )
 
 fit1 <- stan("stan/poisson_regression.stan", data=model.data, chains = 4, iter = 2000)
+
 ```
 
-## Posterior predictive check
+## Posterior predictive check - Poisson cumulative
 
 ```{r poisson_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
 y_rep <- as.matrix(fit1, pars="y_rep")
-ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) + 
-  coord_cartesian(xlim = c(-1, 7000))
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,])
 ```
 
-<img src="stan_figs/poisson_posterior-1_new.png" alt="poisson_posterior-1_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/poisson_cumulative.png" alt="poisson_cumulative" style="zoom:100%;" class="center"/>
+
+```{r poisson_posterior_ecdf, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(model.data$cases, y_rep[1:200,])
+```
+
+<img src="stan_figs/poisson_cumulative_ecdf.png" alt="poisson_cumulative_ecdf" style="zoom:100%;" class="center"/>
 
 The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis.
 
-## Residual check
+## Residual check - Poisson cumulative number of cases
 
 ```{r first_residual, echo=TRUE, warning=FALSE, eval=FALSE}
 #in this way we check the standardized residuals
@@ -1152,20 +1162,115 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep)
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/first_residual-1_new.png" alt="first_residual-1_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/poisson_cumulative_res.png" alt="poisson_cumulative_res" style="zoom:100%;" class="center"/>
 
 The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at $+2$ and $-2$ indicates approximate $95\%$ error bounds). 
 
 The plot of the standardized residuals indicates a large amount of overdispersion. 
 
-Classically the problem of having overdispersed data is solved using the negative binomial model instead of the Poisson's one.
+## Intervals - Poisson cumulative
+
+```{r Poisson_intervals, echo=FALSE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`Cumulative cases/Department`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/poisson_cumulative_intervals.png" alt="poisson_cumulative_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy - Poisson cumulative
+
+```{r Poisson_accuracy, echo=FALSE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = model.data$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "mean",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/poisson_cumulative_acc.png" alt="poisson_cumulative_acc" style="zoom:100%;" class="center"/>
 
 ```{r Poisson_looic, echo=FALSE, warning=FALSE, eval=FALSE}
 loo.model.Poisson <- loo(fit1)$estimates
 ```
 
+## Poisson model for the number of new cases
 
-## Negative Binomial model {.smaller}
+Same model, but now $y_i$ represents `New cases/day`.
+
+```{r stan_poisson_new_cases, warning=FALSE, include=FALSE, eval=FALSE}
+model.data.cases <- list(
+  N = nrow(cases_dep),
+  cases = cases_dep$`New cases/day`,
+  time = cases_dep$`Elapsed time`
+)
+
+fit1.1 <- stan("stan/poisson_regression.stan", data=model.data.cases, chains = 4, iter = 2000)
+```
+
+## Posterioir predictive check - Poisson new cases/day
+
+```{r poisson_posterior_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+y_rep <- as.matrix(fit1.1, pars="y_rep")
+ppc_dens_overlay(y = model.data.cases$cases, y_rep[1:200,]) 
+```
+
+<img src="stan_figs/poisson_cases.png" alt="poisson_cases" style="zoom:100%;" class="center"/>
+
+```{r poisson_posterior_cases_ecdf, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(model.data.cases$cases, y_rep[1:200,])
+```
+
+<img src="stan_figs/poisson_cases_ecdf.png" alt="poisson_cases_ecdf" style="zoom:100%;" class="center"/>
+
+## Residual check - Poisson new cases/day
+
+```{r first_residual, echo=TRUE, warning=FALSE, eval=FALSE}
+#in this way we check the standardized residuals
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (model.data.cases$cases - mean_y_rep) / sqrt(mean_y_rep)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/poisson_cases_res.png" alt="poisson_cases_res" style="zoom:100%;" class="center"/>
+
+## Intervals - Poisson new cases/day 
+
+```{r Poisson_intervals, echo=FALSE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`New cases/day`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/poisson_cases_intervals.png" alt="poisson_cases_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy - Poisson cumulative
+
+```{r Poisson_accuracy, echo=FALSE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = model.data.cases$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "mean",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/poisson_cases_acc.png" alt="poisson_cases_acc" style="zoom:100%;" class="center"/>
+
+```{r looic_poisson_cases}
+loo.model.Poisson.cases <- loo(fit1.1)$estimates
+```
+
+## Negative Binomial model - cumulative number of cases
 
 We try to improve the previous model using the Negative Binomial model:
 
@@ -1198,13 +1303,18 @@ fit2 <- sampling(model.NB, data=model.data)
 ```{r NB_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
 samples_NB <- rstan::extract(fit2)
 y_rep <- samples_NB$y_rep
-ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) + 
-  coord_cartesian(xlim = c(-1, 6000))
+ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) 
 ```
 
-<img src="stan_figs/NB_posterior-1_new.png" alt="NB_posterior-1_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative.png" alt="NB_cumulative" style="zoom:100%;" class="center"/>
 
-## Residual check
+```{r NB_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(model.data$cases, y_rep)
+```
+
+<img src="stan_figs/NB_cumulative_ecdf.png" alt="NB_cumulative_ecdf" style="zoom:100%;" class="center"/>
+
+## Residual check - Negative binomial cumulative
 
 ```{r looic_NB, eval=FALSE, warning=FALSE, include=FALSE}
 loo.model.NB <- loo(fit2)$estimates
@@ -1217,9 +1327,22 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/NB_residuals_new.png" alt="NB_residuals_new.png" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative_res.png" alt="NB_cumulative_res" style="zoom:100%;" class="center"/>
 
 The situation is better now, but still we have too many residuals outside the $95\%$ interval.
+
+## Intervals - NB cumulative
+
+```{r intervals_NB, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`Cumulative cases/Department`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/NB_cumulative_intervals.png" alt="NB_cumulative_intervals" style="zoom:100%;" class="center"/>
 
 ## Accuracy across departments
 
@@ -1233,7 +1356,7 @@ ppc_stat_grouped(
 )
 ```
 
-<img src="stan_figs/NB_deps_new.png" alt="NB_deps_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative_acc.png" alt="NB_cumulative_acc" style="zoom:100%;" class="center"/>
 
 We should take into account the differences across departments. 
 

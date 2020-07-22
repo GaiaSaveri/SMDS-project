@@ -71,7 +71,7 @@ library(ggthemes)
 library(ggrepel)
 library(RColorBrewer)
 library(leaflet)
-library(geojsonio)
+#library(geojsonio)
 library(htmltools)
 library(htmlwidgets)
 library(rstan)
@@ -331,8 +331,9 @@ cases_dep <- cbind(cases_dep, `Mean age` = mean_age$`Mean age`)
 
 ```{r}
 head(cases_dep, 10)
+cases_dep
 #head(cases_dep[order(cases_dep$Date), ], 10)
-#cases_dep[c(1, 2, 16, 17, 18, 40, 41, 42, 54, 55), ]
+#cases_dep[c(1, 118, 243, 321, 401, 444, 526, 641, 736, 805), ]
 ```
 
 ```{r relevant_dep, include=FALSE}
@@ -406,11 +407,12 @@ plot2
 theme_set(theme_classic())
 
 colorCount<-length(unique(colombia_covid$`Departamento o Distrito`)) 
-getPalette<-colorRampPalette(brewer.pal(9, "Spectral"))(colorCount)
+getPalette<-colorRampPalette(brewer.pal(12, "Spectral"), bias=1.8)(colorCount)
 
-ggplot(colombia_covid, aes(x = `Fecha de diagnóstico`)) +
+ggplot(as.data.frame(colombia_covid), aes(x = `Fecha de diagnóstico`)) +
   scale_fill_manual(values = getPalette) +
   geom_histogram(aes(fill=`Departamento o Distrito`), width = 0.8, stat="count") + 
+  #guides(fill = guide_legend(reverse = TRUE))+
   theme(axis.text.x = element_text(angle=65, vjust=0.6),
         legend.position = "right") +
   labs(title = "Daily number of confirmed cases", 
@@ -1959,8 +1961,7 @@ anova(nb1, nb2, nb3, nb4)
 
 # The Bayesian approach
 
-## Poisson regression
-
+## Poisson regression for response variable `Cumulative cases/Department`
 As a first attempt, we fit a simple Poisson regression:
 
 $$
@@ -1984,19 +1985,25 @@ model.data <- list(
 fit1 <- stan("stan/poisson_regression.stan", data=model.data, chains = 4, iter = 2000)
 ```
 
-## Posterior predictive check
+## Posterior predictive check - Poisson `Cumulative cases/Department`
 
 ```{r poisson_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
 y_rep <- as.matrix(fit1, pars="y_rep")
-ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) + 
+ppc_dens_overlay(y = model.data$cases, y_rep[1:400,]) + 
   coord_cartesian(xlim = c(-1, 7000))
 ```
 
-<img src="stan_figs/poisson_posterior-1_new.png" alt="poisson_posterior-1_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/poisson_cumulative.png" alt="poisson_cumulative" style="zoom:100%;" class="center"/>
 
 The fit is not satisfactory, it is probably due to overdispersion, we can check the residuals to confirm this hypothesis.
 
-## Residual check
+```{r poisson_posterior_ecdf, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(model.data$cases, y_rep[1:200,])
+```
+
+<img src="stan_figs/poisson_cumulative_ecdf.png" alt="poisson_cumulative_ecdf" style="zoom:100%;" class="center"/>
+
+## Residual check - Poisson `Cumulative cases/Department`
 
 ```{r first_residual, echo=TRUE, warning=FALSE, eval=FALSE}
 #in this way we check the standardized residuals
@@ -2005,20 +2012,116 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep)
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/first_residual-1_new.png" alt="first_residual-1_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/poisson_cumulative_res.png" alt="poisson_cumulative_res" style="zoom:100%;" class="center"/>
 
 The variance of the residuals increases as the predicted value increase. The standardized residuals should have mean 0 and standard deviation 1 (hence the lines at $+2$ and $-2$ indicates approximate $95\%$ error bounds). 
 
 The plot of the standardized residuals indicates a large amount of overdispersion. 
 
-Classically the problem of having overdispersed data is solved using the negative binomial model instead of the Poisson's one.
+## Intervals - Poisson `Cumulative cases/Department`
+
+```{r Poisson_intervals, echo=FALSE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`Cumulative cases/Department`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/poisson_cumulative_intervals.png" alt="poisson_cumulative_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy - Poisson `Cumulative cases/Department`
+
+```{r Poisson_accuracy, echo=FALSE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = model.data$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "median",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/poisson_cumulative_acc.png" alt="poisson_cumulative_acc" style="zoom:100%;" class="center"/>
 
 ```{r Poisson_looic, echo=FALSE, warning=FALSE, eval=FALSE}
 loo.model.Poisson <- loo(fit1)$estimates
 ```
 
+## Poisson model for `new cases/day`
 
-## Negative Binomial model {.smaller}
+Same model, but now $y_i$ represents `New cases/day`.
+
+```{r stan_poisson_new_cases, warning=FALSE, include=FALSE, eval=FALSE}
+model.data.cases <- list(
+  N = nrow(cases_dep),
+  cases = cases_dep$`New cases/day`,
+  time = cases_dep$`Elapsed time`
+)
+
+fit1.1 <- stan("stan/poisson_regression.stan", data=model.data.cases, chains = 4, iter = 2000)
+```
+
+## Posterioir predictive check - Poisson `new cases/day`
+
+```{r poisson_posterior_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+y_rep <- as.matrix(fit1.1, pars="y_rep")
+ppc_dens_overlay(y = model.data.cases$cases, y_rep[1:200,]) + 
+  coord_cartesian(xlim = c(-1, 1500))
+```
+
+<img src="stan_figs/poisson_cases.png" alt="poisson_cases" style="zoom:100%;" class="center"/>
+
+```{r poisson_posterior_cases_ecdf, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(model.data.cases$cases, y_rep[1:200,])
+```
+
+<img src="stan_figs/poisson_cases_ecdf.png" alt="poisson_cases_ecdf" style="zoom:100%;" class="center"/>
+
+## Residual check - Poisson `new cases/day`
+
+```{r first_residual_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+#in this way we check the standardized residuals
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (model.data.cases$cases - mean_y_rep) / sqrt(mean_y_rep)
+qplot(mean_y_rep, std_residual, ylim=c(-5, 10)) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/poisson_cases_res.png" alt="poisson_cases_res" style="zoom:100%;" class="center"/>
+
+## Intervals - Poisson `new cases/day`
+
+```{r Poisson_intervals_cases, echo=FALSE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`New cases/day`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/poisson_cases_intervals.png" alt="poisson_cases_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy - Poisson `new cases/day`
+
+```{r Poisson_accuracy_cases, echo=FALSE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = model.data.cases$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "median",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/poisson_cases_acc.png" alt="poisson_cases_acc" style="zoom:100%;" class="center"/>
+
+```{r looic_poisson_cases}
+loo.model.Poisson.cases <- loo(fit1.1)$estimates
+```
+
+## Negative Binomial model - `Cumulative cases /Department`
 
 We try to improve the previous model using the Negative Binomial model:
 
@@ -2046,7 +2149,7 @@ model.NB <- stan_model("stan/negative_binomial.stan")
 fit2 <- sampling(model.NB, data=model.data)
 ```
 
-## Posterior predictive check
+## Posterior predictive check - NB `Cumulative cases /Department`
 
 ```{r NB_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
 samples_NB <- rstan::extract(fit2)
@@ -2055,9 +2158,15 @@ ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) +
   coord_cartesian(xlim = c(-1, 6000))
 ```
 
-<img src="stan_figs/NB_posterior-1_new.png" alt="NB_posterior-1_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumualtive.png" alt="NB_cumulative" style="zoom:100%;" class="center"/>
 
-## Residual check
+```{r NB_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(model.data$cases, y_rep)
+```
+
+<img src="stan_figs/NB_cumualtive_ecdf.png" alt="NB_cumulative_ecdf" style="zoom:100%;" class="center"/>
+
+## Residual check - NB `Cumulative cases /Department`
 
 ```{r looic_NB, eval=FALSE, warning=FALSE, include=FALSE}
 loo.model.NB <- loo(fit2)$estimates
@@ -2070,27 +2179,108 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/NB_residuals_new.png" alt="NB_residuals_new.png" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumualtive_res.png" alt="NB_cumulative_res" style="zoom:100%;" class="center"/>
 
 The situation is better now, but still we have too many residuals outside the $95\%$ interval.
 
-## Accuracy across departments
+## Intervals - NB `Cumulative cases /Department`
+
+```{r intervals_NB, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`Cumulative cases/Department`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/NB_cumualtive_intervals.png" alt="NB_cumulative_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy across departments - NB `Cumulative cases /Department`
 
 ```{r NB_deps, echo=TRUE, warning=FALSE, eval=FALSE}
 ppc_stat_grouped(
   y = model.data$cases,
   yrep = y_rep,
   group = cases_dep$Department,
-  stat = "mean",
+  stat = "median",
   binwidth = 0.2
 )
 ```
 
-<img src="stan_figs/NB_deps_new.png" alt="NB_deps_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative_acc" alt="NB_cumulative_acc" style="zoom:100%;" class="center"/>
 
 We should take into account the differences across departments. 
 
-## Multilevel Negative Binomial regression
+## Negative binomial for `New cases/day`
+
+```{r NB1_cases, echo=FALSE, warning=FALSE, eval=FALSE}
+#fit
+fit2.1 <- sampling(model.NB, data=model.data.cases)
+```
+
+## Posterior predictive check - NB `New cases/day`
+
+```{r NB_posterior_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+samples_NB <- rstan::extract(fit2.1)
+y_rep <- samples_NB$y_rep
+ppc_dens_overlay(y = model.data.cases$cases, y_rep[1:200,]) + 
+  coord_cartesian(xlim = c(-1, 1000))
+```
+
+<img src="stan_figs/NB_cases.png" alt="NB_cases" style="zoom:100%;" class="center"/>
+
+```{r NB_posterior_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(model.data.cases$cases, y_rep)
+```
+
+<img src="stan_figs/NB_cases_ecdf.png" alt="NB_cases_ecdf" style="zoom:100%;" class="center"/>
+
+## Residual check - NB `New cases/day`
+
+```{r looic_NB_cases, eval=FALSE, warning=FALSE, include=FALSE}
+loo.model.NB.cases <- loo(fit2.1)$estimates
+```
+
+```{r residuals_NB_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+mean_inv_phi <- mean(samples_NB$inv_phi)
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (model.data.cases$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/NB_cases_res.png" alt="NB_cases_res" style="zoom:100%;" class="center"/>
+
+The situation is better now, but still we have too many residuals outside the $95\%$ interval.
+
+## Intervals - NB ``New cases/day`
+
+```{r intervals_NB_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`New cases/day`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/NB_cases_intervals.png" alt="NB_cases_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy across departments - NB `New cases/day`
+
+```{r NB_deps_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = model.data.cases$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "median",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/NB_cases_acc" alt="NB_cases_acc" style="zoom:100%;" class="center"/>
+
+## Multilevel Negative Binomial regression for `Cumulative/Department`
 
 We try to fit the following model, which also includes `Age` as covariat:
 
@@ -2116,7 +2306,7 @@ model.data2<-list(
 fit3<-sampling(model2.NB, model.data2)
 ```
 
-## Posterior predictive check
+## Posterior predictive check - multi NB `Cumulative/Department`
 
 ```{r NB2_posterior_check, echo=TRUE, warning=FALSE, eval=FALSE}
 samples_NB2 <- rstan::extract(fit3)
@@ -2125,13 +2315,19 @@ ppc_dens_overlay(y = model.data2$cases, y_rep[1:200,]) +
   coord_cartesian(xlim = c(-1, 6000))
 ```
 
-<img src="stan_figs/NB2_posterior_new.png" alt="NB2_posterior_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB2_cumulative.png" alt="NB2_cumulative" style="zoom:100%;" class="center"/>
+
+```{r NB2_cum_ecdf, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(cases_dep$`Cumulative cases/Department`, y_rep)
+```
+
+<img src="stan_figs/NB2_cumulative_ecdf.png" alt="NB2_cumulative_ecdf" style="zoom:100%;" class="center"/>
 
 ```{r looic_NB2, echo=FALSE, warning=FALSE, eval=FALSE}
 loo.model.NB2 <- loo(fit3)$estimates
 ```
 
-## Residual check
+## Residual check - multi NB `Cumulative/Department`
 
 ```{r residuals_NB2, echo=TRUE, warning=FALSE, eval=FALSE}
 mean_inv_phi <- mean(samples_NB2$inv_phi)
@@ -2140,23 +2336,109 @@ std_residual <- (model.data2$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/NB2_res_new.png" alt="NB2_res_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB2_cumulative_res.png" alt="NB2_cumulative_res" style="zoom:100%;" class="center"/>
 
-## Accuracy across departments
+## Intervals - - multi NB `Cumulative/Department`
 
-```{r deps_NB2, eval=FALSE, warning=FALSE, include=FALSE}
+```{r intervals_NB2, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`Cumulative cases/Department`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/NB2_cumulative_intervals.png" alt="NB2_cumulative_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy across departments - multi NB `Cumulative/Department`
+
+```{r deps_NB2, echo=TRUE, warning=FALSE, eval=FALSE}
 ppc_stat_grouped(
   y = model.data2$cases,
   yrep = y_rep,
   group = cases_dep$Department,
-  stat = "mean",
+  stat = "median",
   binwidth = 0.2
 )
 ```
 
-<img src="stan_figs/NB2_dep_new.png" alt="NB2_dep_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB2_cumulative_acc.png" alt="NB2_cumulative_acc" style="zoom:100%;" class="center"/>
 
-## Hierarchical model {.smaller}
+## Multilevel Negative Binomial Regression for `New cases/day`
+
+```{r NB2_fit_cases, echo=FALSE, warning=FALSE, eval=FALSE}
+#arrange data
+model.data2.cases<-list(
+  N = nrow(cases_dep),
+  cases = cases_dep$`New cases/day`,
+  time = cases_dep$`Elapsed time`,
+  age = cases_dep$`Mean age`
+)
+#fit
+fit3.1<-sampling(model2.NB, model.data2.cases)
+```
+
+## Posterior predictive check - multi NB `New cases/day`
+
+```{r NB2_posterior_check_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+samples_NB2 <- rstan::extract(fit3.1)
+y_rep <- samples_NB2$y_rep
+ppc_dens_overlay(y = model.data2.cases$cases, y_rep[1:200,]) + 
+  coord_cartesian(xlim = c(-1, 750))
+```
+
+<img src="stan_figs/NB2_cases.png" alt="NB2_cases" style="zoom:100%;" class="center"/>
+
+```{r NB2_cum_ecdf_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(cases_dep$`New cases/day`, y_rep)
+```
+
+<img src="stan_figs/NB2_cases_ecdf.png" alt="NB2_cases_ecdf" style="zoom:100%;" class="center"/>
+
+```{r looic_NB2_cases, echo=FALSE, warning=FALSE, eval=FALSE}
+loo.model.NB2.cases <- loo(fit3.1)$estimates
+```
+
+## Residual check - multi NB `New cases/day`
+
+```{r residuals_NB2_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+mean_inv_phi <- mean(samples_NB2$inv_phi)
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (model.data2.cases$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/NB2_cases_res.png" alt="NB2_cases_res" style="zoom:100%;" class="center"/>
+
+## Intervals - multi NB `New cases/day`
+
+```{r intervals_NB2_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`New cases/day`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/NB2_cases_intervals.png" alt="NB2_cases_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy across departments - multi NB `New cases/day`
+
+```{r deps_NB2_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = model.data2.cases$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "median",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/NB2_cases_acc.png" alt="NB2_cases_acc" style="zoom:100%;" class="center"/>
+
+## Hierarchical model for `Cumulative/Department`
 
 In order to improve the fit, we fit a model with department-specific intercept term.
 
@@ -2273,7 +2555,7 @@ data.hier.NB.complete<-
 fit.4 <- sampling(model3.NB, data.hier.NB.complete)
 ```
   
-## Posterior predictive check
+## Posterior predictive check - hierarchical NB `Cumulative/Department`
 
 ```{r hier_posterior_check, echo=TRUE, warning=FALSE, eval=FALSE}
 samples_hier <- rstan::extract(fit.4)
@@ -2282,9 +2564,15 @@ ppc_dens_overlay(y = data.hier.NB.complete$cases, y_rep[1:200,]) +
   coord_cartesian(xlim = c(-1, 6000))
 ```
 
-<img src="stan_figs/hier_posterior_new.png" alt="hier_posterior_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/hier_cumulative.png" alt="hier_cumulative" style="zoom:100%;" class="center"/>
 
-## Residual check
+```{r hier_cum_ecdf, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(cases_dep$`Cumulative cases/Department`, y_rep)
+```
+
+<img src="stan_figs/hier_cumulative_ecdf.png" alt="hier_cumulative_ecdf" style="zoom:100%;" class="center"/>
+
+## Residual check - hierarchical NB `Cumulative/Department`
 
 ```{r residuals_hier, echo=TRUE, warning=FALSE, eval=FALSE}
 mean_inv_phi <- mean(samples_hier$inv_phi)
@@ -2293,33 +2581,128 @@ std_residual <- (data.hier.NB.complete$cases - mean_y_rep) / sqrt(mean_y_rep + m
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/hier_residual_new.png" alt="hier_residual_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/hier_cumulative_res.png" alt="hier_cumulative_res" style="zoom:100%;" class="center"/>
 
 Very few points are now outside the $95\%$ confidence interval.
 
-## Accuracy across departments
+## Intervals - hierarchical NB `Cumulative/Department`
+
+```{r intervals_hier, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`Cumulative cases/Department`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/hier_cumulative_intervals.png" alt="hier_cumulative_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy across departments - hierarchical NB `Cumulative/Department`
 
 ```{r deps_hier, echo=TRUE, warning=FALSE, eval=FALSE}
 ppc_stat_grouped(
   y = data.hier.NB.complete$cases,
   yrep = y_rep,
   group = cases_dep$Department,
-  stat = "mean",
+  stat = "median",
   binwidth = 0.2
 )
 ```
 
-<img src="stan_figs/hier_deps_new.png" alt="hier_deps_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/hier_cumulative_acc.png" alt="hier_cumulative_acc" style="zoom:100%;" class="center"/>
 
 We can clearly see that the accuracy across the departments has significantly increased with respect to the previous models.
 
 ```{r eval=FALSE, include=FALSE}
 #looic has decreased significantly
 loo.model.NB.hier<-loo(fit.4)$estimates 
-loo.model.NB.hier
 ```
 
+## Hierarchical model for `New cases/day`
 
+```{r hierarchical_complete_data_cases, eval=FALSE, warning=FALSE, include=FALSE}
+#prepare the new data
+data.hier.NB.complete.cases<-
+  with(cases_dep,
+       list(N = nrow(cases_dep),
+            cases = cases_dep$`New cases/day`,
+            time = cases_dep$`Elapsed time`,
+            age = cases_dep$`Mean age`,
+            K = 3, 
+            J = 12, #13,
+            dep_id = cases_dep$`Department ID`,
+            dep_data = dep_data.complete
+       )
+  )
+
+#fit the model 
+fit.4.1 <- sampling(model3.NB, data.hier.NB.complete.cases)
+```
+  
+## Posterior predictive check - hierarchical NB `New cases/day`
+
+```{r hier_posterior_check_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+samples_hier <- rstan::extract(fit.4.1)
+y_rep <- samples_hier$y_rep
+ppc_dens_overlay(y = data.hier.NB.complete.cases$cases, y_rep[1:200,]) + 
+  coord_cartesian(xlim = c(-1, 500))
+```
+
+<img src="stan_figs/hier_cases.png" alt="hier_cases" style="zoom:100%;" class="center"/>
+
+```{r hier_cum_ecdf_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_ecdf_overlay(cases_dep$`New cases/day`, y_rep)
+```
+
+<img src="stan_figs/hier_cases_ecdf.png" alt="hier_cases_ecdf" style="zoom:100%;" class="center"/>
+
+## Residual check - hierarchical NB `New cases/day`
+
+```{r residuals_hier_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+mean_inv_phi <- mean(samples_hier$inv_phi)
+mean_y_rep <- colMeans(y_rep)
+std_residual <- (data.hier.NB.complete.cases$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2*mean_inv_phi)
+qplot(mean_y_rep, std_residual, ylim = c(-3, 4)) + hline_at(2) + hline_at(-2)
+```
+
+<img src="stan_figs/hier_cases_res.png" alt="hier_cases_res" style="zoom:100%;" class="center"/>
+
+Very few points are now outside the $95\%$ confidence interval.
+
+## Intervals - hierarchical NB `New cases/day`
+
+```{r intervals_hier_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_intervals(
+  y = cases_dep$`New cases/day`, 
+  yrep = y_rep,
+  x = cases_dep$`Elapsed time`
+) + 
+  labs(x = "Days", y = "Cases")
+```
+
+<img src="stan_figs/hier_cases_intervals.png" alt="hier_cases_intervals" style="zoom:100%;" class="center"/>
+
+## Accuracy across departments - hierarchical NB `New cases/day`
+
+```{r deps_hier_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+ppc_stat_grouped(
+  y = data.hier.NB.complete.cases$cases,
+  yrep = y_rep,
+  group = cases_dep$Department,
+  stat = "median",
+  binwidth = 0.2
+)
+```
+
+<img src="stan_figs/hier_cases_acc.png" alt="hier_cases_acc" style="zoom:100%;" class="center"/>
+
+We can clearly see that the accuracy across the departments has significantly increased with respect to the previous models.
+
+```{r eval=FALSE, include=FALSE}
+#looic has decreased significantly
+loo.model.NB.hier.cases<-loo(fit.4.1)$estimates 
+```
 
 ## LOOIC
 
@@ -2328,7 +2711,7 @@ The Leave-One-Out cross validation is a method for estimating pointwise out-of-s
 Plot the `looic` to compare models:
 
 ```{r bayesian_model_comparison, echo=TRUE, warning=FALSE, eval=FALSE}
-loo.all.deps<-c(loo.model.Poisson[3], loo.model.NB[3], loo.model.NB2[3], loo.model.NB.hier[3])
+loo.all.deps<-c(loo.model.Poisson.cases[3], loo.model.NB.cases[3], loo.model.NB2.cases[3], loo.model.NB.hier.cases[3])
 
 sort.loo.all.deps<- sort.int(loo.all.deps, index.return = TRUE)$x
 
@@ -2341,4 +2724,4 @@ axis(1, c(1:4), c("Poisson", "NB-sl", "NB-ml",
                     las=2)
 ```
 
-<img src="stan_figs/looic_new.png" alt="looic_new" style="zoom:100%;" class="center"/>
+<img src="stan_figs/looic.png" alt="looic" style="zoom:100%;" class="center"/>
