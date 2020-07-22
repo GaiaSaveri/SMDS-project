@@ -71,7 +71,7 @@ library(ggthemes)
 library(ggrepel)
 library(RColorBrewer)
 library(leaflet)
-#library(geojsonio)
+library(geojsonio)
 library(htmltools)
 library(htmlwidgets)
 library(rstan)
@@ -102,6 +102,7 @@ central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boy
 central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
 colombia_covid <- colombia_covid[central.colombia.rows, ]
 colombia_covid <- colombia_covid[-which(colombia_covid$`Fecha de diagnóstico`== "-"), ]
+colombia_covid
 ```
  
 ## Description of variables
@@ -132,31 +133,31 @@ Here we can see our selected cities. The color of the pins is related with the n
 #lat-long
 #bogota<c(4.592164298, -74.072166378, 542)
 valle_de_cauca<-c("Valle del Cauca", 3.4372200, -76.5225000, 150)
-cauca<-c("Cauca", 2.43823, -76.6131592, 12) 
-antioquia<-c("Antioquia",6.2518400, -75.5635900, 127)
+cauca<-c("Cauca", 2.43823, -76.6131592, 763) 
+antioquia<-c("Antioquia",6.2518400, -75.5635900, 9042)
 cartagena<-c("Cartagena D.T. y C", 10.39972, -75.51444, 39)
 huila<-c("Huila", 2.9273, -75.2818909, 30)
-meta<-c("Meta", 4.1420000, -73.6266400, 12)
-risaralda<-c("Risaralda", 4.8133302, -75.6961136, 35)
+meta<-c("Meta", 4.1420000, -73.6266400, 1584)
+risaralda<-c("Risaralda", 4.8133302, -75.6961136, 742)
 norte_santander<-c("Norte de Santander", 7.8939100, -72.5078200, 21)
-caldas<-c("Caldas", 5.0688900, -75.5173800, 16)
-cudinamarca<-c("Cundinamarca", 4.862437, -74.058655, 42)
+caldas<-c("Caldas", 5.0688900, -75.5173800, 302)
+cudinamarca<-c("Cundinamarca", 4.862437, -74.058655, 4071)
 barraquilla<-c("Barranquilla D.E.", 10.9685400, -74.7813200, 35) #atlantico
-santader<-c("Santander", 7.1253900, -73.1198000, 12)
-quindio<-c("Quindío", 4.535000, -75.675690, 23)
-tolima<-c("Tolima", 4.43889, -75.2322235, 14)
+santader<-c("Santander", 7.1253900, -73.1198000, 1301)
+quindio<-c("Quindío", 4.535000, -75.675690, 194)
+tolima<-c("Tolima", 4.43889, -75.2322235, 174)
 santa_marta<-c("Santa Marta D.T. y C.", 11.24079, -74.19904, 12)
 cesar<-c("Cesar", 10.4631400, -73.2532200, 16)
 san_andres<-c("San Andrés", 12.5847197, -81.7005615, 2)
-casanare<-c("Casanare", 5.3377500, -72.3958600, 2)
+casanare<-c("Casanare", 5.3377500, -72.3958600, 118)
 narino<-c("Nariño", 1.2136100, -77.2811100, 6)
-boyaca<-c("Boyacá", 5.767222, -72.940651, 6)
+boyaca<-c("Boyacá", 5.767222, -72.940651, 485)
 cordoba<-c("Córdoba", 8.7479800, -75.8814300, 2)
 bolivar<-c("Bolívar", 10.3997200, -75.5144400, 3)
 sucre<-c("Sucre", 9.3047199, -75.3977814, 1)
 guajira<-c("La Guajira", 11.5444400, -72.9072200, 1)
 
-gis_data<-data.frame(name="Bogotá D.C.", latitude=4.624335, longitude=-74.063644, cases=542) #bogotà
+gis_data<-data.frame(name="Bogotá D.C.", latitude=4.624335, longitude=-74.063644, cases=49605) #bogotà
 gis_data$name<-as.character(gis_data$name)
 gis_data<-rbind(gis_data, cauca)
 gis_data<-rbind(gis_data, valle_de_cauca)
@@ -200,9 +201,9 @@ central.dept<-dept[which(dept@data$NOMBRE_DPT %in% central_dept),]
 ```{r our_map, echo=TRUE, warning=FALSE, include=FALSE}
 getColor <- function(central_gis_data) {
   sapply(central_gis_data$cases, function(cases) {
-  if(cases <= 10) {
+  if(cases <= 500) {
     "green"
-  } else if(cases <= 100) {
+  } else if(cases>501 & cases <= 5000) {
     "orange"
   } else {
     "red"
@@ -296,6 +297,7 @@ cases <- cases[, c(1,4,2,3)]
 
 ```{r cases_head, echo=FALSE}
 head(cases, 10)
+cases
 ```
 
 ## New dataset II
