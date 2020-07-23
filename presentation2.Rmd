@@ -737,7 +737,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_pois1, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_pois1 <- predict.confidence(poisson1, newdata = data1[1:120, ])
+conf.df_pois1 <- predict.confidence(poisson1, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois1 <- sum(`Cumulative cases` >= conf.df_pois1[, 2] & `Cumulative cases` <= conf.df_pois1[, 3])
@@ -747,8 +747,8 @@ detach(data1)
 
 ```{r precc_acc_pois1_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1$lwr[1:122], ymax = conf.df_pois1$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1$lwr[1:120], ymax = conf.df_pois1$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1$lwr[120:126],
               ymax = conf.df_pois1$upr[120:126]),
@@ -811,8 +811,8 @@ detach(data1)
 
 ```{r precc_acc_pois1A_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1A$lwr[1:122], ymax = conf.df_pois1A$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1A$lwr[1:120], ymax = conf.df_pois1A$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1A$lwr[120:126],
               ymax = conf.df_pois1A$upr[120:126]),
@@ -860,7 +860,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_pois1B, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_pois1B <- predict.confidence(poisson1B, newdata = data1[1:120, ])
+conf.df_pois1B <- predict.confidence(poisson1B, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_pois1B <- sum(`New cases/day` >= conf.df_pois1B[, 2] & `New cases/day` <= conf.df_pois1B[, 3])
@@ -923,7 +923,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_pois1C, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_pois1C <- predict.confidence(poisson1C, newdata = data1[1:120, ])
+conf.df_pois1C <- predict.confidence(poisson1C, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois1C <- sum(`Cumulative cases` >= conf.df_pois1C[, 2] & `Cumulative cases` <= conf.df_pois1C[, 3])
@@ -933,8 +933,8 @@ detach(data1)
 
 ```{r precc_acc_pois1C_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1C$lwr[1:122], ymax = conf.df_pois1C$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1C$lwr[1:120], ymax = conf.df_pois1C$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1C$lwr[120:126],
               ymax = conf.df_pois1C$upr[120:126]),
@@ -981,7 +981,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_pois2, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_pois2 <- predict.confidence(poisson2, newdata = data1[1:120, ])
+conf.df_pois2 <- predict.confidence(poisson2, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois2 <- sum(`Cumulative cases` >= conf.df_pois2[, 2] & `Cumulative cases` <= conf.df_pois2[, 3])
@@ -991,8 +991,8 @@ detach(data1)
 
 ```{r precc_acc_pois2_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:122], ymax = conf.df_pois2$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[1:120], ymax = conf.df_pois2$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[120:126],
               ymax = conf.df_pois2$upr[120:126]),
@@ -1043,7 +1043,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_pois3, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_pois3 <- predict.confidence(poisson3, newdata = data1[1:120, ])
+conf.df_pois3 <- predict.confidence(poisson3, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois3 <- sum(`Cumulative cases` >= conf.df_pois3[, 2] & `Cumulative cases` <= conf.df_pois3[, 3])
@@ -1053,8 +1053,8 @@ detach(data1)
 
 ```{r precc_acc_pois3_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois3$lwr[1:122], ymax = conf.df_pois3$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois3$lwr[1:120], ymax = conf.df_pois3$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois3$lwr[120:126],
               ymax = conf.df_pois3$upr[120:126]),
@@ -1106,7 +1106,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_pois4, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_pois4 <- predict.confidence(poisson4, newdata = data1[1:120, ])
+conf.df_pois4 <- predict.confidence(poisson4, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois4 <- sum(`Cumulative cases` >= conf.df_pois4[, 2] & `Cumulative cases` <= conf.df_pois4[, 3])
@@ -1116,8 +1116,8 @@ detach(data1)
 
 ```{r precc_acc_pois4_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4$lwr[1:122], ymax = conf.df_pois4$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4$lwr[1:120], ymax = conf.df_pois4$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4$lwr[120:126],
               ymax = conf.df_pois4$upr[120:126]),
@@ -1168,7 +1168,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_pois4bis, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_pois4bis <- predict.confidence(poisson4bis, newdata = data1[1:120, ])
+conf.df_pois4bis <- predict.confidence(poisson4bis, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_pois4bis <- sum(`New cases/day` >= conf.df_pois4bis[, 2] & `New cases/day` <= conf.df_pois4bis[, 3])
@@ -1228,7 +1228,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
 
 ```{r pre_acc_pois5, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_pois5 <- predict.confidence(poisson5, newdata = data1[1:120, ])
+conf.df_pois5 <- predict.confidence(poisson5, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_pois5 <- sum(`Cumulative cases` >= conf.df_pois5[, 2] & `Cumulative cases` <= conf.df_pois5[, 3])
@@ -1238,8 +1238,8 @@ detach(data1)
 
 ```{r precc_acc_pois5_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois5$lwr[1:122], ymax = conf.df_pois5$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois5$lwr[1:120], ymax = conf.df_pois5$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois5$lwr[120:126],
               ymax = conf.df_pois5$upr[120:126]),
@@ -1454,7 +1454,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_qpois, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_qpois <- predict.confidence(poisson1quasi, newdata = data1[1:120, ])
+conf.df_qpois <- predict.confidence(poisson1quasi, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_qpois <- sum(`Cumulative cases` >= conf.df_qpois[, 2] & `Cumulative cases` <= conf.df_qpois[, 3])
@@ -1464,8 +1464,8 @@ detach(data1)
 
 ```{r precc_acc_qpois_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois$lwr[1:122], ymax = conf.df_qpois$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois$lwr[1:120], ymax = conf.df_qpois$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois$lwr[120:126],
               ymax = conf.df_qpois$upr[120:126]),
@@ -1516,7 +1516,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_qpois2, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_qpois2 <- predict.confidence(poisson2quasi, newdata = data1[1:120, ])
+conf.df_qpois2 <- predict.confidence(poisson2quasi, newdata = data1)
 #conf.df_pois <- predict.glm(poisson4, newdata = data1, interval = "confidence", type="response")
 n <- 120
 freq_coverage_qpois2 <- sum(`Cumulative cases` >= conf.df_qpois2[, 2] & `Cumulative cases` <= conf.df_qpois2[, 3])
@@ -1526,8 +1526,8 @@ detach(data1)
 
 ```{r precc_acc_qpois2_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
-  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois2$lwr[1:122], ymax = conf.df_qpois2$upr[1:122]),
-              data = data1[1:122, ],
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois2$lwr[1:120], ymax = conf.df_qpois2$upr[1:120]),
+              data = data1[1:120, ],
               fill = color_scheme_get("blue")[[2]]) + 
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois2$lwr[120:126],
               ymax = conf.df_qpois2$upr[120:126]),
@@ -1579,7 +1579,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_nb1, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_nb1 <- predict.confidence(nb1, newdata = data1[1:120, ])
+conf.df_nb1 <- predict.confidence(nb1, newdata = data1)
 #conf.df_nb1 <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_nb1 <- sum(`Cumulative cases` >= conf.df_nb1[, 2] & `Cumulative cases` <= conf.df_nb1[, 3])
@@ -1635,7 +1635,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_nb2, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_nb2 <- predict.confidence(nb2, newdata = data1[1:120, ])
+conf.df_nb2 <- predict.confidence(nb2, newdata = data1)
 #conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_nb2 <- sum(`Cumulative cases` >= conf.df_nb2[, 2] & `Cumulative cases` <= conf.df_nb2[, 3])
@@ -1691,7 +1691,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pre_acc_nb3, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_nb3 <- predict.confidence(nb3, newdata = data1[1:120, ])
+conf.df_nb3 <- predict.confidence(nb3, newdata = data1)
 #conf.df_nb <- predict.glm(nb5, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
 n <- 120
 freq_coverage_nb3 <- sum(`Cumulative cases` >= conf.df_nb3[, 2] & `Cumulative cases` <= conf.df_nb3[, 3])
