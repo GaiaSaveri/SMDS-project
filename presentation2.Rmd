@@ -102,7 +102,7 @@ central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boy
 central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
 colombia_covid <- colombia_covid[central.colombia.rows, ]
 colombia_covid <- colombia_covid[-which(colombia_covid$`Fecha de diagnóstico`== "-"), ]
-colombia_covid
+head(colombia_covid, 5)
 ```
  
 ## Description of variables
@@ -274,7 +274,7 @@ We had to clean the dataset:
 <!-- - we transformed the variables `Grupo de edad`, `Departamento o Distrito`, `Ciudad de ubicación`, `Sexo`, `Atención`, `Tipo` into factors, -->
 
 ```{r display}
-head(colombia_covid, 3)
+head(colombia_covid, 10)
 ```
 
 ## New dataset I
@@ -297,7 +297,6 @@ cases <- cases[, c(1,4,2,3)]
 
 ```{r cases_head, echo=FALSE}
 head(cases, 10)
-cases
 ```
 
 ## New dataset II
@@ -333,7 +332,6 @@ cases_dep <- cbind(cases_dep, `Mean age` = mean_age$`Mean age`)
 
 ```{r}
 head(cases_dep, 10)
-cases_dep
 #head(cases_dep[order(cases_dep$Date), ], 10)
 #cases_dep[c(1, 118, 243, 321, 401, 444, 526, 641, 736, 805), ]
 ```
@@ -373,8 +371,6 @@ plot1 <- ggplot(df1, aes(x=`Departamento o Distrito`, y=`Number of cases`)) +
   theme(axis.text.x = element_text(angle=65, vjust=0.6))
 plot1
 #scale_fill_gradient(low = "white", high = "steelblue")
-
-
 ```
 
 ```{r donut, echo=FALSE, warning=FALSE}
@@ -393,14 +389,12 @@ df1$ymax <- cumsum(df1$fraction)
 df1$ymin <- c(0, head(df1$ymax, n=-1))
  
 # Make the plot
-plot2 <- ggplot(df1, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=`Departamento o Distrito`)) +
-     geom_rect() +
-     coord_polar(theta="y") + 
-     xlim(c(2, 4))+
+ggplot(df1, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=`Departamento o Distrito`)) +
+  geom_rect() +
+  coord_polar(theta = "y") + 
+  xlim(c(2, 4)) +
   scale_fill_brewer(palette="Set3")+
   labs(title="Number of cases per department")
-plot2
-
 ```
 
 <!-- Number of cases confirmed day by day -->
@@ -635,7 +629,7 @@ predict.confidence <- function(object, newdata, level = 0.95, ...) {
 
 We used Cramer's V to calculate the correlation between our categorical variables. 
 
-```{r cramer, echo=TRUE, warning=FALSE}
+```{r cramer, echo=FALSE, warning=FALSE}
 library(data.table) # data mgmt
 library(gtools) # combination
 library(plotly) # interactive graphics
@@ -764,9 +758,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="Cumulative cases ~ Elapsed time") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -776,7 +771,7 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Using `cases_relev_dep`
+### Poisson with `Elapsed time` as predictor for `cases_relev_dep`
 
 ```{r pois_time/dep, results = "hold", echo=TRUE, warning=FALSE}
 poisson1A <- glm(`Cumulative cases/Department` ~ `Elapsed time`, data=cases_relev_dep, family=poisson)
@@ -828,9 +823,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="Cumulative cases/Department ~ Elapsed time") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -840,7 +836,7 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Using `New cases/day`
+### Poisson with `Elapsed time` as predictor for `New cases/day`
 
 ```{r pois1B, results = "hold", echo=TRUE, warning=FALSE}
 poisson1B <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
@@ -887,8 +883,10 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
-  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="New cases/day ~ Elapsed time") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -950,9 +948,9 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Elapsed time^2") + xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1008,9 +1006,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Sex") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1070,9 +1069,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Age group") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1133,9 +1133,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Age group + Department") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1176,7 +1177,7 @@ paste("Frequency of coverage:", freq_coverage_pois4bis <- freq_coverage_pois4bis
 detach(data1)
 ```
 
-```{r precc_acc_pois_new_plot, echo=FALSE, warning=FALSE}
+```{r precc_acc_pois4bis_new_plot, echo=FALSE, warning=FALSE}
 ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
   geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4bis$lwr[1:120], ymax = conf.df_pois4bis$upr[1:120]),
               data = data1[1:120, ],
@@ -1195,8 +1196,10 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
-  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="New cases/day ~ Elapsed time + Age gruop + Department") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1255,9 +1258,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Elapsed time^2 + Age group + Department") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1273,9 +1277,9 @@ We generated 1000 samples from each of the four Poisson models and calculated th
 
 #### Autocorrelation for the models when the response variable is `Cumulative Cases`
 
-```{r Autocorrelation, echo=TRUE, warning=FALSE}
+```{r Autocorrelation, echo=FALSE, warning=FALSE}
 #Poisson1
-rpois1 <- simulate(poisson1,nsim=10000)
+rpois1 <- simulate(poisson1, nsim=10000)
 matrix1 <- data.matrix(rpois1)
 
 acf1 <- lapply(split(matrix1,col(matrix1)), function(ts) acf(ts, lag.max=1,plot=F))
@@ -1333,8 +1337,17 @@ acf4b <- lapply(split(matrix4b,col(matrix4b)), function(ts) acf(ts, lag.max=1,pl
 Poisson_4b <- c()
 for(i in 1:10000){ Poisson_4b <- c(Poisson_4b, acf4b[[c(i,1,2)]])}
 
+#Poisson5
+rpois5 <- simulate(poisson5,nsim=10000)
+matrix5 <- data.matrix(rpois5)
+
+acf5 <- lapply(split(matrix5,col(matrix5)), function(ts) acf(ts, lag.max=1,plot=F))
+
+Poisson_5 <- c()
+for(i in 1:10000){ Poisson_5 <- c(Poisson_5, acf5[[c(i,1,2)]])}
+
 #autocorrelation dataframe
-autocor <- data.frame(Poisson_1,Poisson_1b,Poisson_2,Poisson_3,Poisson_4,Poisson_4b)
+autocor <- data.frame(Poisson_1,Poisson_1b,Poisson_2,Poisson_3,Poisson_4,Poisson_4b,Poisson_5)
 library(reshape2)
 x1 <- melt(autocor)
 
@@ -1347,14 +1360,14 @@ theme_set(theme_gray())
 p<-ggplot(x1, aes(x=variable, y=value, fill=variable)) +
   geom_boxplot()+
   labs(title="Sample Autocorrelation", x="Models", y="Autocorrelation",fill='Models')+
-  scale_fill_manual(values=c("#FF66FF", "#FFFF00", "#00CCFF", "green", "#6633CC", "#FF6633"))
+  scale_fill_manual(values=c("darkorchid", "#FFFF00", "#00CCFF", "green", "#6633CC", "#FF6633", "deeppink")) #
 p + geom_hline(aes(yintercept=hline1,linetype="Autocorrelation"),color="red",size=1)+
   scale_linetype_manual(name = "Original sample",values = c(1, 1))
 ```
 
 #### Autocorrelation for the models when the response variable is `New cases/day`
 
-```{r Autocorrelation2, echo=TRUE, warning=FALSE}
+```{r Autocorrelation2, echo=FALSE, warning=FALSE}
 #PoissonA -> This is the model poisson1B. The predictor is Elapsed time.  I am changing the name to make easier to understand the presentation
 rpoisA <- simulate(poisson1B,nsim=10000)
 matrixA <- data.matrix(rpoisA)
@@ -1394,7 +1407,7 @@ p + geom_hline(aes(yintercept=hline2,linetype="Autocorrelation"),color="red",siz
 
 #### Autocorrelation for the model when the response variable is `Cumulative cases/Department`
 
-```{r Autocorrelation3, echo=TRUE, warning=FALSE}
+```{r Autocorrelation3, echo=FALSE, warning=FALSE}
 #Poisson Cumulative cases/Department -> This is the model poisson1A. The predictor is Elapsed time.  I am changing the name to make easier to understand the presentation
 rpoisd <- simulate(poisson1A,nsim=10000)
 matrixd <- data.matrix(rpoisd)
@@ -1481,9 +1494,73 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Age group + Department") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Quasi Poisson with `Elapsed time` as predictors for `New cases/day`
+
+```{r pois1qbisday, results = "hold", echo=TRUE, warning=FALSE}
+poisson1quasibis <- glm(`New cases/day` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
+plot(poisson1quasibis, which=1)
+pred.pois1quasibis <- poisson1quasibis$fitted.values
+res.st1quasibis <- (data1$`Cumulative cases` - pred.pois1quasibis)/sqrt(pred.pois1quasibis)
+#n=120, k=18, n-k=102
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st1quasibis^2)/102))
+poisson1quasibis.pred <- predict(poisson1quasibis, newdata = data1[120:126, ], type="response")
+paste("RMSE:", sqrt(mean((poisson1quasibis.pred - data1$`New cases/day`[120:126])^2)))
+#paste("MSE:", mean(poisson1quasibis$residuals^2))
+paste("AIC:", poisson1quasibis$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(poisson1quasibis$null.deviance, deviance(poisson1quasibis)), 2))
+```
+
+#### Predictive accuracy of the Quasi Poisson model for `New cases/day`
+
+Predicting with a $95\%$ confidence interval
+
+```{r pre_acc_pois1qbis, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_pois1qbis <- predict.confidence(poisson1quasibis, newdata = data1)
+#conf.df_pois <- predict.glm(poisson4, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_pois1qbis <- sum(`New cases/day` >= conf.df_pois1qbis[, 2] & `New cases/day` <= conf.df_pois1qbis[, 3])
+paste("Frequency of coverage:", freq_coverage_pois1qbis <- freq_coverage_pois1qbis/n)
+detach(data1)
+```
+
+```{r precc_acc_pois1qbis_new_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1qbis$lwr[1:120], ymax = conf.df_pois1qbis$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1qbis$lwr[120:126],
+              ymax = conf.df_pois4bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_pois1qbis$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = poisson1quasibis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 28) +
+  ggtitle("Quasi Poisson regression", subtitle="New cases/day ~ Elapsed time") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1543,9 +1620,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27),
-  #              labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Quasi Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Age group") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1605,8 +1683,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Negative Binomial regression", subtitle="Cumulative cases ~ Elapsed time") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap(~"Department", scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1661,8 +1741,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Negative Binomial regression", subtitle="Cumulative cases ~ Elapsed time + Age group") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap(~"Department", scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1717,8 +1799,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Negative Binomial regression", subtitle="Cumulative cases ~ Elapsed time + Department") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap(~"Department", scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1789,8 +1873,10 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 28) +
-  ggtitle("Central Colombia") + xlab("Days") + ylab("Total cases") +
-  #scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  ggtitle("Negative Binomial regression", subtitle="Cumulative cases ~ Elapsed time + Age group + Department") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap(~"Department", scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1800,7 +1886,7 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
+### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors  for `New cases/day`
 
 ```{r nb5bis, results = "hold", echo=TRUE, warning=FALSE}
 nb5bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
@@ -1849,7 +1935,8 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
   geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
   expand_limits(x = 28) +
   ggtitle("Central Colombia") + xlab("Days") + ylab("Daily cases") +
-  scale_x_discrete(limit = c(0, 7, 12, 17, 22, 27), labels = c("3-06", "3-13", "3-18", "3-23", "3-28", "4-02")) +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 120, 126),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
   # facet_wrap('reg', scales ='free') +
   theme(strip.text.x = element_text(size = 12, colour = "black"),
         axis.text.x = element_text(face = "bold",
@@ -1865,7 +1952,7 @@ We generated 1000 samples from each of the four Negative Binomial models and cal
 
 #### Autocorrelation for the models when the response variable is `Cumulative Cases`
 
-```{r Autocorrelation4, echo=TRUE, warning=FALSE}
+```{r Autocorrelation4, echo=FALSE, warning=FALSE}
 #nb1
 rnb1 <- simulate(nb1,nsim=10000)
 mat1 <- data.matrix(rnb1)
@@ -1924,7 +2011,7 @@ q + geom_hline(aes(yintercept=hline1,linetype="Autocorrelation"),color="red",siz
 
 #### Autocorrelation for the model when the response variable is `New cases/day`
 
-```{r Autocorrelation5, echo=TRUE, warning=FALSE}
+```{r Autocorrelation5, echo=FALSE, warning=FALSE}
 #Neg.Bin_A -> This is the model nb5bis.  I am changing the name to make easier to understand the presentation
 rnbA <- simulate(nb5bis,nsim=10000)
 matrixnbA <- data.matrix(rnbA)
@@ -2092,7 +2179,7 @@ qplot(mean_y_rep, std_residual, ylim=c(-5, 10)) + hline_at(2) + hline_at(-2)
 
 <img src="stan_figs/poisson_cases_res.png" alt="poisson_cases_res" style="zoom:100%;" class="center"/>
 
-## Intervals - Poisson `new cases/day`
+## Intervals - Poisson `New cases/day`
 
 ```{r Poisson_intervals_cases, echo=FALSE, warning=FALSE, eval=FALSE}
 ppc_intervals(
@@ -2105,7 +2192,7 @@ ppc_intervals(
 
 <img src="stan_figs/poisson_cases_intervals.png" alt="poisson_cases_intervals" style="zoom:100%;" class="center"/>
 
-## Accuracy - Poisson `new cases/day`
+## Accuracy - Poisson `New cases/day`
 
 ```{r Poisson_accuracy_cases, echo=FALSE, warning=FALSE, eval=FALSE}
 ppc_stat_grouped(
@@ -2119,7 +2206,7 @@ ppc_stat_grouped(
 
 <img src="stan_figs/poisson_cases_acc.png" alt="poisson_cases_acc" style="zoom:100%;" class="center"/>
 
-```{r looic_poisson_cases}
+```{r looic_poisson_cases, eval=FALSE, include=FALSE}
 loo.model.Poisson.cases <- loo(fit1.1)$estimates
 ```
 
@@ -2160,13 +2247,13 @@ ppc_dens_overlay(y = model.data$cases, y_rep[1:200,]) +
   coord_cartesian(xlim = c(-1, 6000))
 ```
 
-<img src="stan_figs/NB_cumualtive.png" alt="NB_cumulative" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative.png" alt="NB_cumulative" style="zoom:100%;" class="center"/>
 
-```{r NB_posterior, echo=TRUE, warning=FALSE, eval=FALSE}
+```{r NB_posterior_2, echo=TRUE, warning=FALSE, eval=FALSE}
 ppc_ecdf_overlay(model.data$cases, y_rep)
 ```
 
-<img src="stan_figs/NB_cumualtive_ecdf.png" alt="NB_cumulative_ecdf" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative_ecdf.png" alt="NB_cumulative_ecdf" style="zoom:100%;" class="center"/>
 
 ## Residual check - NB `Cumulative cases /Department`
 
@@ -2181,7 +2268,7 @@ std_residual <- (model.data$cases - mean_y_rep) / sqrt(mean_y_rep + mean_y_rep^2
 qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 ```
 
-<img src="stan_figs/NB_cumualtive_res.png" alt="NB_cumulative_res" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative_res.png" alt="NB_cumulative_res" style="zoom:100%;" class="center"/>
 
 The situation is better now, but still we have too many residuals outside the $95\%$ interval.
 
@@ -2196,7 +2283,7 @@ ppc_intervals(
   labs(x = "Days", y = "Cases")
 ```
 
-<img src="stan_figs/NB_cumualtive_intervals.png" alt="NB_cumulative_intervals" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative_intervals.png" alt="NB_cumulative_intervals" style="zoom:100%;" class="center"/>
 
 ## Accuracy across departments - NB `Cumulative cases /Department`
 
@@ -2210,7 +2297,7 @@ ppc_stat_grouped(
 )
 ```
 
-<img src="stan_figs/NB_cumulative_acc" alt="NB_cumulative_acc" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cumulative_acc.png" alt="NB_cumulative_acc" style="zoom:100%;" class="center"/>
 
 We should take into account the differences across departments. 
 
@@ -2232,7 +2319,7 @@ ppc_dens_overlay(y = model.data.cases$cases, y_rep[1:200,]) +
 
 <img src="stan_figs/NB_cases.png" alt="NB_cases" style="zoom:100%;" class="center"/>
 
-```{r NB_posterior_cases, echo=TRUE, warning=FALSE, eval=FALSE}
+```{r NB_posterior_cases2, echo=TRUE, warning=FALSE, eval=FALSE}
 ppc_ecdf_overlay(model.data.cases$cases, y_rep)
 ```
 
@@ -2255,7 +2342,7 @@ qplot(mean_y_rep, std_residual) + hline_at(2) + hline_at(-2)
 
 The situation is better now, but still we have too many residuals outside the $95\%$ interval.
 
-## Intervals - NB ``New cases/day`
+## Intervals - NB `New cases/day`
 
 ```{r intervals_NB_cases, echo=TRUE, warning=FALSE, eval=FALSE}
 ppc_intervals(
@@ -2280,7 +2367,7 @@ ppc_stat_grouped(
 )
 ```
 
-<img src="stan_figs/NB_cases_acc" alt="NB_cases_acc" style="zoom:100%;" class="center"/>
+<img src="stan_figs/NB_cases_acc.png" alt="NB_cases_acc" style="zoom:100%;" class="center"/>
 
 ## Multilevel Negative Binomial regression for `Cumulative/Department`
 
