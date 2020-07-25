@@ -2554,7 +2554,6 @@ ggplot(x1, aes(x=variable, y=value, fill=variable)) +
 anova(nb1, nb2, nb3, nb4)
 ```
 
-
 # The Bayesian approach
 
 ## Poisson regression for response variable `Cumulative cases/Department`
