@@ -1526,6 +1526,46 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 
 Same obs as before.. there is something strange in the function when the model overestimates the predictions
 
+## Summary table - Poisson models for `Cumulative cases`
+
+```{r summary_poisson_cumulative, echo=TRUE, warning=FALSE}
+library(kableExtra)
+poisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = 21915, RMSE = 1760)
+poisson1C.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", 12062, 6940)
+poisson2.summary<-c("Cumulative cases ~ Elapsed time + Sex", 20887, 3852)
+poisson3.summary<-c("Cumulative cases ~ Elapsed time + Age group", 20650, 3249)
+poisson4.summary<-c("Cumulative cases ~ Elapsed time + Department", 19275, 3328)
+poisson5.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", 18085, 8243)
+poisson6.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", 8781, 8441)
+
+poisson.cumulative.summary$Model<-as.character(poisson.cumulative.summary$Model)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson1C.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson2.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson3.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson4.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson5.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson6.summary)
+
+kable(poisson.cumulative.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+
+```
+
+## Summary table - Poisson models for `New cases/day`
+
+```{r summary_poisson_cases, echo=TRUE, warning=FALSE}
+poisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = 8427, RMSE = 58642)
+poisson5bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", 2860, 1225)
+
+poisson.cases.summary$Model<-as.character(poisson.cases.summary$Model)
+poisson.cases.summary<-rbind(poisson.cases.summary, poisson5bis.summary)
+
+
+kable(poisson.cases.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+
+```
+
 ### Autocorrelation to compare Poisson models
 
 We generated 1000 samples from each of the four Poisson models and calculated the autocorrelation and compared against the autocorrelation of our original sample.
@@ -1926,6 +1966,36 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 Almost like the previous one.. but maybe even here it is not necessary
+
+## Summary table - Quasi Poisson models for `Cumulative cases`
+
+```{r summary_quasi_poisson_cumulative, echo=TRUE, warning=FALSE}
+quasipoisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", RMSE = 1760)
+poisson2quasi.summary<-c("Cumulative cases ~ Elapsed time + Age group", 3249)
+
+quasipoisson.cumulative.summary$Model<-as.character(quasipoisson.cumulative.summary$Model)
+quasipoisson.cumulative.summary<-rbind(quasipoisson.cumulative.summary, poisson2quasi.summary)
+
+
+kable(quasipoisson.cumulative.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+
+```
+
+## Summary table - Quasi Poisson models for `New cases/day`
+
+```{r summary_quasi_poisson_cases, echo=TRUE, warning=FALSE}
+quasipoisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", RMSE = 753)
+
+
+quasipoisson.cases.summary$Model<-as.character(quasipoisson.cases.summary$Model)
+
+
+
+kable(quasipoisson.cases.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+
+```
 
 ## Negative Binomial
 
@@ -2356,6 +2426,41 @@ test_data1 %>%
 ```
 
 One word.. horrible!
+
+## Summary table - Negative Binomial models for `Cumulative cases`
+
+```{r summary_nb_cumulative, echo=TRUE, warning=FALSE}
+nb.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = 21911, RMSE = 1765)
+nb2.summary<-c("Cumulative cases ~ Elapsed time + Age group", 20645, 3253)
+nb3.summary<-c("Cumulative cases ~ Elapsed time + Department", 19270, 3335)
+nb4.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", 1808, 8253)
+
+nb.cumulative.summary$Model<-as.character(nb.cumulative.summary$Model)
+nb.cumulative.summary<-rbind(nb.cumulative.summary, nb2.summary)
+nb.cumulative.summary<-rbind(nb.cumulative.summary, nb3.summary)
+nb.cumulative.summary<-rbind(nb.cumulative.summary, nb4.summary)
+
+
+kable(nb.cumulative.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+
+```
+
+
+## Summary table - Negative Binomial models for `New cases/day`
+
+```{r summary_nb_cases, echo=TRUE, warning=FALSE}
+nb.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time + Age group + Department", AIC = 1435, RMSE = 1379)
+
+
+nb.cases.summary$Model<-as.character(nb.cases.summary$Model)
+
+
+
+kable(nb.cases.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+
+```
 
 ### Autocorrelation to compare Negative Binomial models
 
