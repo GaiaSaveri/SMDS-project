@@ -396,9 +396,9 @@ ggplot(df1, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=`Departamento o Distr
   xlim(c(2, 4)) +
   scale_fill_brewer(palette="Set3") +
   labs(title="Number of cases per department")
-  theme(#axis.line = element_blank(),
-        panel.grid  = element_blank(),
-        panel.background  = element_blank())
+  theme(panel.grid  = element_blank(),
+        panel.background  = element_blank(),
+        axis.line = element_line())
 ```
 
 <!-- Number of cases confirmed day by day -->
@@ -713,7 +713,8 @@ data1 <- bind_cols(cases, group_dummy)
 ### Poisson with `Elapsed time` as predictor
 
 ```{r pois1, results = "hold", echo=TRUE, warning=FALSE}
-poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=poisson)
+poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`,
+                data=data1[1:120, ], family=poisson)
 plot(poisson1, which=1)
 pred.pois1 <- poisson1$fitted.values
 res.st1 <- (data1$`Cumulative cases`[1:120] - pred.pois1)/sqrt(pred.pois1)
@@ -873,7 +874,8 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 ### Poisson with `Elapsed time` as predictor for `New cases/day`
 
 ```{r pois1bis, results = "hold", echo=TRUE, warning=FALSE}
-poisson1bis <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
+poisson1bis <- glm(`New cases/day` ~ `Elapsed time`,
+                   data=data1[1:120, ], family=poisson)
 plot(poisson1bis, which=1)
 pred.pois1bis <- poisson1bis$fitted.values
 res.st1bis <- (data1$`New cases/day`[1:120] - pred.pois1bis)/sqrt(pred.pois1bis)
@@ -961,7 +963,9 @@ test_cases %>%
 ### Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
 
 ```{r pois1.5, results = "hold", echo=TRUE, warning=FALSE}
-poisson1.5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
+poisson1.5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2),
+                  data=cases[1:120, ], family=poisson)
+plot(poisson1.5, which=1)
 pred.pois1.5 <- poisson1.5$fitted.values
 res.st1.5 <- (cases$`Cumulative cases`[1:120] - pred.pois1.5)/sqrt(pred.pois1.5)
 #n=120, k=3, n-k=117
@@ -974,7 +978,6 @@ paste("RMSE:", sqrt(mean((poisson1.5.pred - cases$`Cumulative cases`[120:126])^2
 paste("AIC:", poisson1.5$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1.5$null.deviance, deviance(poisson1.5)), 2))
-plot(poisson1.5, which=1)
 ```
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -1052,14 +1055,15 @@ test_cases %>%
 ### Poisson with `Elapsed time` plus `Sexo`
 
 ```{r pois2, results = "hold", echo=TRUE, warning=FALSE}
-poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1[1:120, ], family=poisson)
+poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M,
+                data=data1[1:120, ], family=poisson)
+plot(poisson2, which=1)
 poisson2.pred <- predict(poisson2, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson2$residuals^2))
 paste("AIC:", poisson2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson2$null.deviance, deviance(poisson2)), 2))
-plot(poisson2, which=1)
 ```
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -1137,7 +1141,11 @@ test_data1 %>%
 ### Poisson with `Elapsed time` plus `Group de edad`
 
 ```{r pois3, results = "hold", echo=TRUE, warning=FALSE}
-poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=poisson)
+poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                  `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                  `Grupo de edad_60_75` + `Grupo de edad_76+`,
+                data=data1[1:120, ], family=poisson)
+plot(poisson3, which=1)
 pred.pois3 <- poisson3$fitted.values
 res.st3 <- (data1$`Cumulative cases` - pred.pois3)/sqrt(pred.pois3)
 #n=120, k=7, n-k=113
@@ -1148,7 +1156,6 @@ paste("RMSE:", sqrt(mean((poisson3.pred - data1$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson3$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson3$null.deviance, deviance(poisson3)), 2))
-plot(poisson3, which=1)
 ```
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -1225,7 +1232,14 @@ test_data1 %>%
 ### Poisson with `Elapsed time` plus `Department`
 
 ```{r pois4, results = "hold", echo=TRUE, warning=FALSE}
-poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` +
+                  `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                  `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                  `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                  `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                  `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                data=data1[1:120, ], family=poisson)
+plot(poisson3, which=1)
 pred.pois4 <- poisson4$fitted.values
 res.st4 <- (data1$`Cumulative cases` - pred.pois4)/sqrt(pred.pois4)
 #n=120, k=7, n-k=113
@@ -1236,7 +1250,6 @@ paste("RMSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson4$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson4$null.deviance, deviance(poisson4)), 2))
-plot(poisson3, which=1)
 ```
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -1313,7 +1326,14 @@ test_data1 %>%
 ### Poisson with `Elapsed time`, `Age` and `Departments` as predictors
 
 ```{r pois5, results = "hold", echo=TRUE, warning=FALSE}
-poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` +
+                  `Grupo de edad_46_60` + `Grupo de edad_60_75` +`Grupo de edad_76+` +
+                  `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` +
+                  `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` +
+                  `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` +
+                  `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` +
+                  `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` +
+                  `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
 plot(poisson5, which=1)
 pred.pois5 <- poisson5$fitted.values
 res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
@@ -1402,7 +1422,15 @@ test_data1 %>%
 ### Poisson with `Elapsed time`, `Age` and `Departments` as predictors for `New cases/day`
 
 ```{r pois5bis, results = "hold", echo=TRUE, warning=FALSE}
-poisson5bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+poisson5bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                     `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` +
+                     `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` +
+                     `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                     `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                     `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                     `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                     `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                   data=data1[1:120, ], family=poisson)
 plot(poisson5bis, which=1)
 pred.pois5bis <- poisson5bis$fitted.values
 res.st5bis <- (data1$`Cumulative cases` - pred.pois5bis)/sqrt(pred.pois5bis)
@@ -1469,7 +1497,15 @@ Work in progress.. the plot came out very strange, if we don't plan to include i
 ### Poisson with `Elapsed time`, `Elapsed time`^2, `Age` and `Departments` as predictors
 
 ```{r pois6, results = "hold", echo=TRUE, warning=FALSE}
-poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) +
+                  `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                  `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` +
+                  `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                  `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                  `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                  `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                  `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                data=data1[1:120, ], family=poisson)
 plot(poisson6, which=1)
 pred.pois6 <- poisson6$fitted.values
 res.st6 <- (data1$`Cumulative cases` - pred.pois6)/sqrt(pred.pois6)
@@ -1564,7 +1600,6 @@ poisson5bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", 
 
 poisson.cases.summary$Model<-as.character(poisson.cases.summary$Model)
 poisson.cases.summary<-rbind(poisson.cases.summary, poisson5bis.summary)
-
 
 kable(poisson.cases.summary) %>%
   kable_styling(bootstrap_options = "striped")
@@ -1754,8 +1789,9 @@ anova(poisson1, poisson2, poisson3, poisson4, poisson5, test="Chisq")
 
 ### Quasi Poisson with `Elapsed time` as predictor
 
-```{r quasi_pois_time, results = "hold", echo=TRUE, warning=FALSE}
-poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
+```{r quasi_pois1, results = "hold", echo=TRUE, warning=FALSE}
+poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`,
+                     data=data1[1:120, ], family=quasipoisson)
 plot(poisson1quasi, which=1)
 pred.poisq <- poisson1quasi$fitted.values
 res.stq <- (data1$`Cumulative cases` - pred.poisq)/sqrt(summary(poisson1quasi)$dispersion*pred.poisq)
@@ -1816,8 +1852,9 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 
 ### Quasi Poisson with `Elapsed time` as predictors for `New cases/day`
 
-```{r pois1qbisday, results = "hold", echo=TRUE, warning=FALSE}
-poisson1quasibis <- glm(`New cases/day` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
+```{r pois1qbis, results = "hold", echo=TRUE, warning=FALSE}
+poisson1quasibis <- glm(`New cases/day` ~ `Elapsed time`,
+                        data=data1[1:120, ], family=quasipoisson)
 plot(poisson1quasibis, which=1)
 pred.pois1quasibis <- poisson1quasibis$fitted.values
 res.st1quasibis <- (data1$`Cumulative cases` - pred.pois1quasibis)/sqrt(pred.pois1quasibis)
@@ -1906,8 +1943,11 @@ quite horrible.. maybe unnecessary since the previous plot is good!
 
 ### Quasi Poisson with `Elapsed time` and `Age` as predictor
 
-```{r quasi_pois, results = "hold", echo=TRUE, warning=FALSE}
-poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=quasipoisson)
+```{r quasi_pois2, results = "hold", echo=TRUE, warning=FALSE}
+poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                       `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                       `Grupo de edad_60_75` + `Grupo de edad_76+`,
+                     data=data1[1:120, ], family=quasipoisson)
 plot(poisson1quasi, which=1)
 pred.poisq2 <- poisson2quasi$fitted.values
 res.stq2 <- (data1$`Cumulative cases` - pred.poisq2)/sqrt(summary(poisson2quasi)$dispersion*pred.poisq2)
@@ -1999,7 +2039,8 @@ kable(quasipoisson.cases.summary) %>%
 ### Negative Binomial with `Elapsed time` as predictor
 
 ```{r nb1, results = "hold", echo=TRUE, warning=FALSE}
-nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ])
+nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`,
+              data=data1[1:120, ])
 plot(nb1, which=1)
 #n=120, k=2, n-k=118
 stdres <- rstandard(nb1)
@@ -2085,7 +2126,10 @@ test_data1 %>%
 ### Negative Binomial with `Elapsed time` plus `Age` as predictors
 
 ```{r nb2, results = "hold", echo=TRUE, warning=FALSE}
-nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ])
+nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30`+
+                `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                `Grupo de edad_60_75` + `Grupo de edad_76+`,
+              data=data1[1:120, ])
 plot(nb2, which=1)
 nb2.pred <- predict(nb2, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[120:126])^2)))
@@ -2167,7 +2211,13 @@ test_data1 %>%
 ### Negative Binomial with `Elapsed time` plus `Department` as predictors
 
 ```{r nb3, results = "hold", echo=TRUE, warning=FALSE}
-nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` +
+                `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas`+
+                `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+              data=data1[1:120, ])
 plot(nb3, which=1)
 nb3.pred <- predict(nb3, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb3.pred - data1$`Cumulative cases`[120:126])^2)))
@@ -2260,7 +2310,14 @@ test_data1 %>%
 ### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
 ```{r nb4, results = "hold", echo=TRUE, warning=FALSE}
-nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` +
+                `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` +
+                `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` +
+                `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` +
+                `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` +
+                `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` +
+                `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` +
+                `Departamento o Distrito_Tolima`, data=data1[1:120, ])
 plot(nb4, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
 stdres <- rstandard(nb4)
@@ -2343,7 +2400,14 @@ test_data1 %>%
 ### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors  for `New cases/day`
 
 ```{r nb4bis, results = "hold", echo=TRUE, warning=FALSE}
-nb4bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+nb4bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` +
+                   `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` +
+                   `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` +
+                   `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` +
+                   `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` +
+                   `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` +
+                   `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` +
+                   `Departamento o Distrito_Tolima`, data=data1[1:120, ])
 plot(nb4bis, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
 stdres2 <- rstandard(nb4bis)
@@ -2552,6 +2616,480 @@ ggplot(x1, aes(x=variable, y=value, fill=variable)) +
 ```{r anova_nb, echo=TRUE, warning=FALSE}
 #Applying ANOVA to compare the negative binomial models
 anova(nb1, nb2, nb3, nb4)
+```
+
+# GAM 
+
+```{r fix_data_for_GAM, echo=TRUE, warning=FALSE}
+library(mgcv)
+library(purrr)
+library(stringr)
+df <- data1 %>% 
+  set_names( ~ str_replace_all(names(data1)," ", "_"))
+df <- df %>% 
+  set_names( ~ str_replace_all(names(df),"/", "_"))
+names(df)[names(df) == "Grupo_de_edad_76+"] <- "Grupo_de_edad_76"
+```
+
+### Gam with `Elapsed time` as covariate for `Cumulative cases`
+
+```{r gam1, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam1 <- gam(Cumulative_cases~s(Elapsed_time), family = poisson, data = df[1:120,])
+gam1.pred<-predict(gam1, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam1.pred - df$Cumulative_cases[120:126])^2)))
+paste("AIC:", AIC(gam1))
+#intervals
+se.gam1.train<-predict(gam1, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam1<-gam1$fitted.values - 1.96 * se.gam1.train
+train.upr.gam1<-gam1$fitted.values + 1.96 * se.gam1.train
+
+se.gam1.test<-predict(gam1, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam1<-gam1.pred - 1.96*se.gam1.test
+test.upr.gam1<-gam1.pred + 1.96*se.gam1.test
+
+ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam1, ymax = train.upr.gam1),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam1, ymax = test.upr.gam1),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam1$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam1.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = Cumulative_cases)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="Cumulative cases ~ Elapsed time") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Gam with `Elapsed time` as covariate for `New cases/day`
+
+```{r gam1B, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam1B <- gam(New_cases_day~s(Elapsed_time), family = poisson, data = df[1:120,])
+gam1B.pred<-predict(gam1B, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam1B.pred - df$New_cases_day[120:126])^2)))
+paste("AIC:", AIC(gam1B))
+#intervals
+se.gam1B.train<-predict(gam1B, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam1B<-gam1B$fitted.values - 1.96 * se.gam1B.train
+train.upr.gam1B<-gam1B$fitted.values + 1.96 * se.gam1B.train
+
+se.gam1B.test<-predict(gam1B, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam1B<-gam1B.pred - 1.96*se.gam1B.test
+test.upr.gam1B<-gam1B.pred + 1.96*se.gam1B.test
+
+ggplot(df, aes(Elapsed_time, New_cases_day)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam1B, ymax = train.upr.gam1B),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam1B, ymax = test.upr.gam1B),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam1B$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam1B.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = New_cases_day)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Gam with `Elapsed time` and `Elapsed time^2` as covariate for `Cumulative cases`
+
+```{r gam1C, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam1C <- gam(Cumulative_cases~s(Elapsed_time)+s(I(Elapsed_time^2)), family = poisson, data = df[1:120,])
+gam1C.pred<-predict(gam1C, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam1C.pred - df$Cumulative_cases[120:126])^2)))
+paste("AIC:", AIC(gam1C))
+#intervals
+se.gam1C.train<-predict(gam1C, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam1C<-gam1C$fitted.values - 1.96 * se.gam1C.train
+train.upr.gam1C<-gam1C$fitted.values + 1.96 * se.gam1C.train
+
+se.gam1C.test<-predict(gam1C, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam1C<-gam1C.pred - 1.96*se.gam1C.test
+test.upr.gam1C<-gam1C.pred + 1.96*se.gam1C.test
+
+ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam1C, ymax = train.upr.gam1C),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam1C, ymax = test.upr.gam1C),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam1C$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam1C.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = Cumulative_cases)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="Cumulative cases ~ Elapsed time + Elapsed time^2") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Gam with `Elapsed time` and `Sex` as covariate for `Cumulative cases`
+
+```{r gam2, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam2 <- gam(Cumulative_cases~s(Elapsed_time)+s(Sexo_M), family = poisson(), data = df[1:120,])
+gam2.pred<-predict(gam2, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam2.pred - df$Cumulative_cases[120:126])^2)))
+paste("AIC:", AIC(gam2))
+#intervals
+se.gam2.train<-predict(gam2, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam2<-gam2$fitted.values - 1.96 * se.gam2.train
+train.upr.gam2<-gam2$fitted.values + 1.96 * se.gam2.train
+
+se.gam2.test<-predict(gam2, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam2<-gam2.pred - 1.96*se.gam2.test
+test.upr.gam2<-gam2.pred + 1.96*se.gam2.test
+
+ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam2, ymax = train.upr.gam2),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam2, ymax = test.upr.gam2),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam2$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam2.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = Cumulative_cases)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="Cumulative cases ~ Elapsed time + Sex") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+
+### Gam with `Elapsed time` and `Age` as covariate for `Cumulative cases`
+
+```{r gam3, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam3 <- gam(Cumulative_cases~s(Elapsed_time)+s(Sexo_M)+Grupo_de_edad_19_30 + Grupo_de_edad_31_45 + Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76, family = poisson(), data = df[1:120,])
+gam3.pred<-predict(gam3, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam3.pred - df$Cumulative_cases[120:126])^2)))
+paste("AIC:", AIC(gam3))
+#intervals
+se.gam3.train<-predict(gam3, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam3<-gam3$fitted.values - 1.96 * se.gam3.train
+train.upr.gam3<-gam3$fitted.values + 1.96 * se.gam3.train
+
+se.gam3.test<-predict(gam3, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam3<-gam3.pred - 1.96*se.gam3.test
+test.upr.gam3<-gam3.pred + 1.96*se.gam3.test
+
+ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam3, ymax = train.upr.gam3),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam3, ymax = test.upr.gam3),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam3$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam3.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = Cumulative_cases)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="Cumulative cases ~ Elapsed time + Age group") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Gam with `Elapsed time` and `Department` as covariate for `Cumulative cases`
+
+```{r gam4, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam4 <- gam(Cumulative_cases~s(Elapsed_time)+s(Sexo_M)+Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca + Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta + Departamento_o_Distrito_Quindío + Departamento_o_Distrito_Risaralda + Departamento_o_Distrito_Santander + Departamento_o_Distrito_Tolima, family = poisson(), data = df[1:120,])
+gam4.pred<-predict(gam4, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam4.pred - df$Cumulative_cases[120:126])^2)))
+paste("AIC:", AIC(gam4))
+#intervals
+se.gam4.train<-predict(gam4, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam4<-gam4$fitted.values - 1.96 * se.gam4.train
+train.upr.gam4<-gam4$fitted.values + 1.96 * se.gam4.train
+
+se.gam4.test<-predict(gam4, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam4<-gam4.pred - 1.96*se.gam4.test
+test.upr.gam4<-gam4.pred + 1.96*se.gam4.test
+
+ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam4, ymax = train.upr.gam4),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam4, ymax = test.upr.gam4),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam4$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam4.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = Cumulative_cases)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="Cumulative cases ~ Elapsed time + Department") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Gam with `Elapsed time` and `Department` and `Age` as covariate for `Cumulative cases`
+
+```{r gam5, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam5 <- gam(Cumulative_cases~s(Elapsed_time)+Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca + Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta + Departamento_o_Distrito_Quindío + Departamento_o_Distrito_Risaralda + Departamento_o_Distrito_Santander + Departamento_o_Distrito_Tolima + Grupo_de_edad_19_30 + Grupo_de_edad_31_45 + Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76, family = poisson(), data = df[1:120,])
+gam5.pred<-predict(gam5, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam5.pred - df$Cumulative_cases[120:126])^2)))
+paste("AIC:", AIC(gam5))
+#intervals
+se.gam5.train<-predict(gam5, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam5<-gam5$fitted.values - 1.96 * se.gam5.train
+train.upr.gam5<-gam5$fitted.values + 1.96 * se.gam5.train
+
+se.gam5.test<-predict(gam5, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam5<-gam5.pred - 1.96*se.gam5.test
+test.upr.gam5<-gam5.pred + 1.96*se.gam5.test
+
+ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam5, ymax = train.upr.gam5),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam5, ymax = test.upr.gam5),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam5$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam5.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = Cumulative_cases)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="Cumulative cases ~ Elapsed time + Department + Age group") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Gam with `Elapsed time` and `Department` and `Age` as covariate for `New cases/day`
+
+```{r gam5bis, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam5bis <- gam(New_cases_day~s(Elapsed_time)+s(Sexo_M)+Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca + Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta + Departamento_o_Distrito_Quindío + Departamento_o_Distrito_Risaralda + Departamento_o_Distrito_Santander + Departamento_o_Distrito_Tolima + Grupo_de_edad_19_30 + Grupo_de_edad_31_45 + Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76, family = poisson(), data = df[1:120,])
+gam5bis.pred<-predict(gam5bis, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam5bis.pred - df$New_cases_day[120:126])^2)))
+paste("AIC:", AIC(gam5bis))
+#intervals
+se.gam5bis.train<-predict(gam5bis, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam5bis<-gam5bis$fitted.values - 1.96 * se.gam5bis.train
+train.upr.gam5bis<-gam5bis$fitted.values + 1.96 * se.gam5bis.train
+
+se.gam5bis.test<-predict(gam5bis, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam5bis<-gam5bis.pred - 1.96*se.gam5bis.test
+test.upr.gam5bis<-gam5bis.pred + 1.96*se.gam5bis.test
+
+ggplot(df, aes(Elapsed_time, New_cases_day)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam5bis, ymax = train.upr.gam5bis),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam5bis, ymax = test.upr.gam5bis),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam5bis$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam5bis.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = New_cases_day)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Department + Age group") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Gam with `Elapsed time` and `Elapsed time^2` and `Department` and `Age` as covariate for `Cumulative cases`
+
+```{r gam6, echo=TRUE, warning=FALSE}
+#fit, predict, intervals
+gam6 <- gam(Cumulative_cases~s(Elapsed_time)+s(I(Elapsed_time^2))+Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca + Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta + Departamento_o_Distrito_Quindío + Departamento_o_Distrito_Risaralda + Departamento_o_Distrito_Santander + Departamento_o_Distrito_Tolima + Grupo_de_edad_19_30 + Grupo_de_edad_31_45 + Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76, family = poisson(), data = df[1:120,])
+gam6.pred<-predict(gam6, newdata=df[120:126,], type="response")
+paste("RMSE:", sqrt(mean((gam6.pred - df$Cumulative_cases[120:126])^2)))
+paste("AIC:", AIC(gam6))
+#intervals
+se.gam6.train<-predict(gam6, se=TRUE, df[1:120,])$se.fit
+train.lwr.gam6<-gam6$fitted.values - 1.96 * se.gam6.train
+train.upr.gam6<-gam6$fitted.values + 1.96 * se.gam6.train
+
+se.gam6.test<-predict(gam6, se=TRUE, df[120:126,])$se.fit
+test.lwr.gam6<-gam6.pred - 1.96*se.gam6.test
+test.upr.gam6<-gam6.pred + 1.96*se.gam6.test
+
+ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam6, ymax = train.upr.gam6),
+              data = df[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam6, ymax = test.upr.gam6),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = Elapsed_time, y = gam6$fitted.values),
+              data = df[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= Elapsed_time, y = gam6.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = Cumulative_cases)) +
+  expand_limits(x = 28) +
+  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Elapsed time^2 + Department + Age") +
+  xlab("Days") + ylab("Total cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap(~"Department", scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Summary table - GAM models for `Cumulative cases`
+
+```{r summary_gam_cumulative, echo=FALSE, warning=FALSE}
+gam.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = 1587, RMSE = 1282)
+gam1.5.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", 1373, 7633)
+gam2.summary<-c("Cumulative cases ~ Elapsed time + Sex", 1525, 2301)
+gam3.summary<-c("Cumulative cases ~ Elapsed time + Age group", 1519, 3874)
+gam4.summary<-c("Cumulative cases ~ Elapsed time + Department", 1486, 1808)
+gam5.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", 1486, 1038)
+gam6.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", 1337, 4599)
+
+gam.cumulative.summary$Model<-as.character(gam.cumulative.summary$Model)
+gam.cumulative.summary<-rbind(gam.cumulative.summary, gam1.5.summary)
+gam.cumulative.summary<-rbind(gam.cumulative.summary, gam2.summary)
+gam.cumulative.summary<-rbind(gam.cumulative.summary, gam3.summary)
+gam.cumulative.summary<-rbind(gam.cumulative.summary, gam4.summary)
+gam.cumulative.summary<-rbind(gam.cumulative.summary, gam5.summary)
+gam.cumulative.summary<-rbind(gam.cumulative.summary, gam6.summary)
+
+kable(gam.cumulative.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+```
+
+### Summary table - GAM models for `New cases/day`
+
+```{r summary_gam_cases, echo=FALSE, warning=FALSE}
+gam.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = 6361, RMSE = 1121)
+gam5bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", 1078, 2868)
+
+gam.cases.summary$Model<-as.character(gam.cases.summary$Model)
+gam.cases.summary<-rbind(gam.cases.summary, gam5bis.summary)
+
+
+kable(gam.cases.summary) %>%
+  kable_styling(bootstrap_options = "striped")
 ```
 
 # The Bayesian approach
