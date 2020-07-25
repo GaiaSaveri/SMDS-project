@@ -396,9 +396,9 @@ ggplot(df1, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=`Departamento o Distr
   xlim(c(2, 4)) +
   scale_fill_brewer(palette="Set3") +
   labs(title="Number of cases per department")
-  theme(#axis.line = element_blank(),
-        panel.grid  = element_blank(),
-        panel.background  = element_blank())
+  theme(panel.grid  = element_blank(),
+        panel.background  = element_blank(),
+        axis.line = element_line())
 ```
 
 <!-- Number of cases confirmed day by day -->
@@ -713,7 +713,8 @@ data1 <- bind_cols(cases, group_dummy)
 ### Poisson with `Elapsed time` as predictor
 
 ```{r pois1, results = "hold", echo=TRUE, warning=FALSE}
-poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=poisson)
+poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`,
+                data=data1[1:120, ], family=poisson)
 plot(poisson1, which=1)
 pred.pois1 <- poisson1$fitted.values
 res.st1 <- (data1$`Cumulative cases`[1:120] - pred.pois1)/sqrt(pred.pois1)
@@ -873,7 +874,8 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 ### Poisson with `Elapsed time` as predictor for `New cases/day`
 
 ```{r pois1bis, results = "hold", echo=TRUE, warning=FALSE}
-poisson1bis <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
+poisson1bis <- glm(`New cases/day` ~ `Elapsed time`,
+                   data=data1[1:120, ], family=poisson)
 plot(poisson1bis, which=1)
 pred.pois1bis <- poisson1bis$fitted.values
 res.st1bis <- (data1$`New cases/day`[1:120] - pred.pois1bis)/sqrt(pred.pois1bis)
@@ -961,7 +963,9 @@ test_cases %>%
 ### Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
 
 ```{r pois1.5, results = "hold", echo=TRUE, warning=FALSE}
-poisson1.5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
+poisson1.5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2),
+                  data=cases[1:120, ], family=poisson)
+plot(poisson1.5, which=1)
 pred.pois1.5 <- poisson1.5$fitted.values
 res.st1.5 <- (cases$`Cumulative cases`[1:120] - pred.pois1.5)/sqrt(pred.pois1.5)
 #n=120, k=3, n-k=117
@@ -974,7 +978,6 @@ paste("RMSE:", sqrt(mean((poisson1.5.pred - cases$`Cumulative cases`[120:126])^2
 paste("AIC:", poisson1.5$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson1.5$null.deviance, deviance(poisson1.5)), 2))
-plot(poisson1.5, which=1)
 ```
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -1052,14 +1055,15 @@ test_cases %>%
 ### Poisson with `Elapsed time` plus `Sexo`
 
 ```{r pois2, results = "hold", echo=TRUE, warning=FALSE}
-poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1[1:120, ], family=poisson)
+poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M,
+                data=data1[1:120, ], family=poisson)
+plot(poisson2, which=1)
 poisson2.pred <- predict(poisson2, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson2$residuals^2))
 paste("AIC:", poisson2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson2$null.deviance, deviance(poisson2)), 2))
-plot(poisson2, which=1)
 ```
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -1137,7 +1141,11 @@ test_data1 %>%
 ### Poisson with `Elapsed time` plus `Group de edad`
 
 ```{r pois3, results = "hold", echo=TRUE, warning=FALSE}
-poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=poisson)
+poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                  `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                  `Grupo de edad_60_75` + `Grupo de edad_76+`,
+                data=data1[1:120, ], family=poisson)
+plot(poisson3, which=1)
 pred.pois3 <- poisson3$fitted.values
 res.st3 <- (data1$`Cumulative cases` - pred.pois3)/sqrt(pred.pois3)
 #n=120, k=7, n-k=113
@@ -1148,7 +1156,6 @@ paste("RMSE:", sqrt(mean((poisson3.pred - data1$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson3$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson3$null.deviance, deviance(poisson3)), 2))
-plot(poisson3, which=1)
 ```
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -1225,7 +1232,14 @@ test_data1 %>%
 ### Poisson with `Elapsed time` plus `Department`
 
 ```{r pois4, results = "hold", echo=TRUE, warning=FALSE}
-poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` +
+                  `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                  `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                  `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                  `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                  `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                data=data1[1:120, ], family=poisson)
+plot(poisson3, which=1)
 pred.pois4 <- poisson4$fitted.values
 res.st4 <- (data1$`Cumulative cases` - pred.pois4)/sqrt(pred.pois4)
 #n=120, k=7, n-k=113
@@ -1236,7 +1250,6 @@ paste("RMSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[120:126])^2))
 paste("AIC:", poisson4$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(poisson4$null.deviance, deviance(poisson4)), 2))
-plot(poisson3, which=1)
 ```
 
 #### Predictive accuracy of the Poisson model for `Cumulative cases`
@@ -1313,7 +1326,14 @@ test_data1 %>%
 ### Poisson with `Elapsed time`, `Age` and `Departments` as predictors
 
 ```{r pois5, results = "hold", echo=TRUE, warning=FALSE}
-poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` +
+                  `Grupo de edad_46_60` + `Grupo de edad_60_75` +`Grupo de edad_76+` +
+                  `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` +
+                  `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` +
+                  `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` +
+                  `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` +
+                  `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` +
+                  `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
 plot(poisson5, which=1)
 pred.pois5 <- poisson5$fitted.values
 res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
@@ -1402,7 +1422,15 @@ test_data1 %>%
 ### Poisson with `Elapsed time`, `Age` and `Departments` as predictors for `New cases/day`
 
 ```{r pois5bis, results = "hold", echo=TRUE, warning=FALSE}
-poisson5bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+poisson5bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                     `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` +
+                     `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` +
+                     `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                     `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                     `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                     `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                     `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                   data=data1[1:120, ], family=poisson)
 plot(poisson5bis, which=1)
 pred.pois5bis <- poisson5bis$fitted.values
 res.st5bis <- (data1$`Cumulative cases` - pred.pois5bis)/sqrt(pred.pois5bis)
@@ -1469,7 +1497,15 @@ Work in progress.. the plot came out very strange, if we don't plan to include i
 ### Poisson with `Elapsed time`, `Elapsed time`^2, `Age` and `Departments` as predictors
 
 ```{r pois6, results = "hold", echo=TRUE, warning=FALSE}
-poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) +
+                  `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                  `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` +
+                  `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                  `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                  `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                  `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                  `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                data=data1[1:120, ], family=poisson)
 plot(poisson6, which=1)
 pred.pois6 <- poisson6$fitted.values
 res.st6 <- (data1$`Cumulative cases` - pred.pois6)/sqrt(pred.pois6)
@@ -1564,7 +1600,6 @@ poisson5bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", 
 
 poisson.cases.summary$Model<-as.character(poisson.cases.summary$Model)
 poisson.cases.summary<-rbind(poisson.cases.summary, poisson5bis.summary)
-
 
 kable(poisson.cases.summary) %>%
   kable_styling(bootstrap_options = "striped")
@@ -1754,8 +1789,9 @@ anova(poisson1, poisson2, poisson3, poisson4, poisson5, test="Chisq")
 
 ### Quasi Poisson with `Elapsed time` as predictor
 
-```{r quasi_pois_time, results = "hold", echo=TRUE, warning=FALSE}
-poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
+```{r quasi_pois1, results = "hold", echo=TRUE, warning=FALSE}
+poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`,
+                     data=data1[1:120, ], family=quasipoisson)
 plot(poisson1quasi, which=1)
 pred.poisq <- poisson1quasi$fitted.values
 res.stq <- (data1$`Cumulative cases` - pred.poisq)/sqrt(summary(poisson1quasi)$dispersion*pred.poisq)
@@ -1816,8 +1852,9 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 
 ### Quasi Poisson with `Elapsed time` as predictors for `New cases/day`
 
-```{r pois1qbisday, results = "hold", echo=TRUE, warning=FALSE}
-poisson1quasibis <- glm(`New cases/day` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
+```{r pois1qbis, results = "hold", echo=TRUE, warning=FALSE}
+poisson1quasibis <- glm(`New cases/day` ~ `Elapsed time`,
+                        data=data1[1:120, ], family=quasipoisson)
 plot(poisson1quasibis, which=1)
 pred.pois1quasibis <- poisson1quasibis$fitted.values
 res.st1quasibis <- (data1$`Cumulative cases` - pred.pois1quasibis)/sqrt(pred.pois1quasibis)
@@ -1906,8 +1943,11 @@ quite horrible.. maybe unnecessary since the previous plot is good!
 
 ### Quasi Poisson with `Elapsed time` and `Age` as predictor
 
-```{r quasi_pois, results = "hold", echo=TRUE, warning=FALSE}
-poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=quasipoisson)
+```{r quasi_pois2, results = "hold", echo=TRUE, warning=FALSE}
+poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                       `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                       `Grupo de edad_60_75` + `Grupo de edad_76+`,
+                     data=data1[1:120, ], family=quasipoisson)
 plot(poisson1quasi, which=1)
 pred.poisq2 <- poisson2quasi$fitted.values
 res.stq2 <- (data1$`Cumulative cases` - pred.poisq2)/sqrt(summary(poisson2quasi)$dispersion*pred.poisq2)
@@ -1999,7 +2039,8 @@ kable(quasipoisson.cases.summary) %>%
 ### Negative Binomial with `Elapsed time` as predictor
 
 ```{r nb1, results = "hold", echo=TRUE, warning=FALSE}
-nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ])
+nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`,
+              data=data1[1:120, ])
 plot(nb1, which=1)
 #n=120, k=2, n-k=118
 stdres <- rstandard(nb1)
@@ -2085,7 +2126,10 @@ test_data1 %>%
 ### Negative Binomial with `Elapsed time` plus `Age` as predictors
 
 ```{r nb2, results = "hold", echo=TRUE, warning=FALSE}
-nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ])
+nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30`+
+                `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                `Grupo de edad_60_75` + `Grupo de edad_76+`,
+              data=data1[1:120, ])
 plot(nb2, which=1)
 nb2.pred <- predict(nb2, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[120:126])^2)))
@@ -2167,7 +2211,13 @@ test_data1 %>%
 ### Negative Binomial with `Elapsed time` plus `Department` as predictors
 
 ```{r nb3, results = "hold", echo=TRUE, warning=FALSE}
-nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` +
+                `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas`+
+                `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+              data=data1[1:120, ])
 plot(nb3, which=1)
 nb3.pred <- predict(nb3, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb3.pred - data1$`Cumulative cases`[120:126])^2)))
@@ -2260,7 +2310,14 @@ test_data1 %>%
 ### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
 
 ```{r nb4, results = "hold", echo=TRUE, warning=FALSE}
-nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` +
+                `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` +
+                `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` +
+                `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` +
+                `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` +
+                `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` +
+                `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` +
+                `Departamento o Distrito_Tolima`, data=data1[1:120, ])
 plot(nb4, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
 stdres <- rstandard(nb4)
@@ -2343,7 +2400,14 @@ test_data1 %>%
 ### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors  for `New cases/day`
 
 ```{r nb4bis, results = "hold", echo=TRUE, warning=FALSE}
-nb4bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+nb4bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` +
+                   `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` +
+                   `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` +
+                   `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` +
+                   `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` +
+                   `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` +
+                   `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` +
+                   `Departamento o Distrito_Tolima`, data=data1[1:120, ])
 plot(nb4bis, which=1)
 # Calculating overdispersion n=120 k=19 n-k=101
 stdres2 <- rstandard(nb4bis)
