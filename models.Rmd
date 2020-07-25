@@ -1,0 +1,379 @@
+---
+title: "Colombia COVID-19 - Central region"
+author: "Angela Carraro, Giullia Monteiro Milano Oliveira, Gaia Saveri"
+date: "28/07/2020"
+output:
+  rmdformats::readthedown:
+  html_document:
+    highlight: kate
+    lightbox: true
+    gallery: true
+    toc: yes
+    toc_depth: 3
+  include: null
+  ioslides_presentation:
+    # “default”, “cerulean”, “journal”, “flatly”, “darkly”, “readable”, “spacelab”, “united”, “cosmo”, “lumen”, “paper”, “sandstone”, “simplex”, “yeti”
+    highlight: kate
+    theme: "sandstone"
+    colortheme: "sandstone"
+    lightbox: true
+    widescreen: true
+    smaller: true
+    logo: Logo_units_blu.png #logo_dssc_alt.png
+  pdf_document:
+    highlight: kate
+    keep_tex: yes
+    toc: yes
+  slidy_presentation:
+    fig.height: 3
+    fig.width: 4
+    highlight: kate
+  beamer_presentation:
+    highlight: tango
+    theme: "metropolis"
+    colortheme: "metropolis"
+    fonttheme: "structurebold"
+    #always_allow_html: true
+  slide_level: 2
+header-includes:
+- \usepackage{color}
+- \definecolor{Purple}{HTML}{911146}
+- \definecolor{Orange}{HTML}{CF4A30}
+- \setbeamercolor{alerted text}{fg=Orange}
+- \setbeamercolor{frametitle}{bg=Purple}
+institute: University of Trieste
+graphics: yes
+fontsize: 8pt
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align = 'center', warning=FALSE, message=FALSE, fig.asp=0.625, dev='png', global.par = TRUE, dev.args=list(pointsize=10), fig.path = 'figs/')
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+local({
+  hook_plot = knit_hooks$get('plot')
+  knit_hooks$set(plot = function(x, options) {
+    paste0('\n\n----\n\n', hook_plot(x, options))
+  })
+})
+knitr::opts_chunk$set(echo = FALSE)#, tidy = TRUE)
+```
+
+```{r message=FALSE, include=FALSE}
+library(MASS)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(bayesplot)
+library(ggthemes)
+library(ggrepel)
+library(RColorBrewer)
+library(leaflet)
+library(geojsonio)
+library(htmltools)
+library(htmlwidgets)
+library(rstan)
+library(lubridate)
+library(ciTools)
+```
+
+# Models
+
+```{r loading, echo=TRUE}
+colombia_covid <- as.data.frame(read_csv("data/covid19co.csv"))
+cols <- colnames(colombia_covid)[c(1, 4, 5, 6, 7, 8, 9, 11, 14)]
+colombia_covid <- colombia_covid[cols]
+colombia_covid <- colombia_covid[, c(1, 9, 2, 3, 4, 5, 6, 7, 8)]
+colnames(colombia_covid) <- c("ID de caso", "Fecha de diagnóstico", "Ciudad de ubicación", "Departamento o Distrito", "Atención", "Edad" , "Sexo", "Tipo", "País de procedencia")
+#colombia_covid$`Departamento o Distrito`[which(colombia_covid$`Departamento o Distrito` == "Valle Del Cauca")] <- "Valle del Cauca"
+central.colombia.dep <- c("Bogotá D.C.", "Tolima", "Cundinamarca", "Meta", "Boyacá", "Quindío", "Cauca",
+    "Valle del Cauca", "Risaralda", "Caldas", "Boyacá", "Antioquia", "Santander", "Casanare")
+central.colombia.rows <- which(colombia_covid$`Departamento o Distrito` %in% central.colombia.dep)
+colombia_covid <- colombia_covid[central.colombia.rows, ]
+colombia_covid <- colombia_covid[-which(colombia_covid$`Fecha de diagnóstico`== "-"), ]
+head(colombia_covid, 5)
+```
+
+```{r types, include=FALSE}
+## day column in "international" format (so that R can fix the sorting properly)
+colombia_covid$`Fecha de diagnóstico` <- as.Date(colombia_covid$`Fecha de diagnóstico`, format="%d/%m/%Y")
+colombia_covid <- colombia_covid[order(colombia_covid$`Fecha de diagnóstico`), ]
+# there were missing rows since we cancelled some departments
+colombia_covid$`ID de caso` <- 1:dim(colombia_covid)[1]
+colombia_covid <- colombia_covid %>% mutate("Grupo de edad" = case_when(Edad <= 18 ~ '0_18',
+                                                   Edad >= 19  & Edad <= 30 ~ '19_30',
+                                                   Edad >=  31 & Edad <= 45 ~ '31_45',
+                                                   Edad >= 46 & Edad <= 60 ~ '46_60',
+                                                   Edad >=61 & Edad <= 75 ~ '60_75',
+                                                   Edad >=76 ~ '76+'))
+```
+
+```{r cases}
+cases <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`) %>%
+  count() %>% rename("Date" = `Fecha de diagnóstico`, "New cases/day" = n)
+cases2 <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`) %>%
+  summarise(`Cumulative cases` = max(`ID de caso`))
+cases <- bind_cols(cases, cases2%>%
+  dplyr::select(-c(`Fecha de diagnóstico`)))
+cases <- as.data.frame(cases)
+cases <- cases %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
+            BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
+              cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
+cases <- cases[, c(1,4,2,3)]
+```
+
+```{r cases_per_dep}
+cases_dep <- colombia_covid %>%
+  group_by(`Fecha de diagnóstico`, `Departamento o Distrito`) %>%
+  count() %>% rename("Date" = `Fecha de diagnóstico`, "Department"=`Departamento o Distrito`, "New cases/day" = n)
+cases_dep <- cases_dep %>%
+  group_by(`Department`) %>%
+  mutate(`Cumulative cases/Department` = cumsum(`New cases/day`))
+cases_dep <- as.data.frame(cases_dep)
+cases_dep <- cases_dep %>% mutate(BETWEEN0 = as.numeric(difftime(Date, lag(Date, 1), units = "days")),
+            BETWEEN = ifelse(is.na(BETWEEN0), 0, BETWEEN0), `Elapsed time` =
+            cumsum(as.numeric(BETWEEN))) %>% dplyr::select(-c(BETWEEN0,BETWEEN))
+```
+
+```{r fix_dataset, warning=FALSE, include=FALSE}
+cases_dep <- cases_dep[order(cases_dep$Department) ,]
+cases_dep <- cases_dep %>%
+  dplyr::mutate(dep_idx = factor(Department, levels=unique(Department)),
+         `Department ID` = as.integer(dep_idx)) %>%
+  dplyr::select(-dep_idx)
+cases_dep <- cases_dep[, c(1, 5, 2, 6, 3, 4)]
+
+mean_age <- colombia_covid %>%
+  group_by(`Departamento o Distrito`, `Fecha de diagnóstico`) %>% 
+  summarise_at(vars(Edad), funs(`Mean age` = mean(., na.rm=TRUE)))
+
+cases_dep <- cbind(cases_dep, `Mean age` = mean_age$`Mean age`)
+```
+
+```{r dataset_Giullia, include=FALSE}
+covid19 <- dplyr::select(colombia_covid, -c(`Ciudad de ubicación`,`Atención`,`Tipo`))
+library(fastDummies)
+covid19_dummy <- dummy_cols(covid19, select_columns = c("Departamento o Distrito", "Grupo de edad", "Sexo", "País de procedencia"), remove_first_dummy = TRUE, ignore_na=TRUE, split="-", remove_selected_columns=TRUE)
+group_dummy <- covid19_dummy %>%
+  group_by(`Fecha de diagnóstico`) %>%
+  summarise_all(funs(sum)) %>%
+  dplyr::select(-c(`Fecha de diagnóstico`,`ID de caso`))
+data1 <- bind_cols(cases, group_dummy)
+```
+
+## Poisson
+
+### Poisson with `Elapsed time` as predictor for `Cumulative cases`
+
+```{r pois1, results = "hold", echo=TRUE, warning=FALSE}
+poisson1 <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=poisson)
+```
+
+### Poisson with `Elapsed time` as predictor for `New cases/day`
+
+```{r pois1bis, results = "hold", echo=TRUE, warning=FALSE}
+poisson1bis <- glm(`New cases/day` ~ `Elapsed time`, data=cases, family=poisson)
+```
+
+### Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor
+
+```{r pois1.5, results = "hold", echo=TRUE, warning=FALSE}
+poisson1.5 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=cases[1:120, ], family=poisson)
+```
+
+### Poisson with `Elapsed time` plus `Sexo`
+
+```{r pois2, results = "hold", echo=TRUE, warning=FALSE}
+poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=data1[1:120, ], family=poisson)
+```
+
+### Poisson with `Elapsed time` plus `Group de edad`
+
+```{r pois3, results = "hold", echo=TRUE, warning=FALSE}
+poisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=poisson)
+```
+
+### Poisson with `Elapsed time` plus `Department`
+
+```{r pois4, results = "hold", echo=TRUE, warning=FALSE}
+poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+```
+
+### Poisson with `Elapsed time`, `Age` and `Departments` as predictors
+
+```{r pois5, results = "hold", echo=TRUE, warning=FALSE}
+poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+```
+
+### Poisson with `Elapsed time`, `Age` and `Departments` as predictors for `New cases/day`
+
+```{r pois5bis, results = "hold", echo=TRUE, warning=FALSE}
+poisson5bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+```
+
+### Poisson with `Elapsed time`, `Elapsed time`^2, `Age` and `Departments` as predictors
+
+```{r pois6, results = "hold", echo=TRUE, warning=FALSE}
+poisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=data1[1:120, ], family=poisson)
+```
+
+### Summary table - Poisson models for `Cumulative cases`
+
+```{r summary_poisson_cumulative, echo=FALSE, warning=FALSE}
+library(kableExtra)
+poisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = 21915, RMSE = 1760)
+poisson1.5.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", 12062, 6940)
+poisson2.summary<-c("Cumulative cases ~ Elapsed time + Sex", 20887, 3852)
+poisson3.summary<-c("Cumulative cases ~ Elapsed time + Age group", 20650, 3249)
+poisson4.summary<-c("Cumulative cases ~ Elapsed time + Department", 19275, 3328)
+poisson5.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", 18085, 8243)
+poisson6.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", 8781, 8441)
+
+poisson.cumulative.summary$Model<-as.character(poisson.cumulative.summary$Model)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson1.5.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson2.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson3.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson4.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson5.summary)
+poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson6.summary)
+
+kable(poisson.cumulative.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+```
+
+### Summary table - Poisson models for `New cases/day`
+
+```{r summary_poisson_cases, echo=FALSE, warning=FALSE}
+poisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = 8427, RMSE = 58642)
+poisson5bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", 2860, 1225)
+
+poisson.cases.summary$Model<-as.character(poisson.cases.summary$Model)
+poisson.cases.summary<-rbind(poisson.cases.summary, poisson5bis.summary)
+
+
+kable(poisson.cases.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+```
+
+### ANOVA to compare the Poisson models
+
+```{r Angela11, echo=TRUE, warning=FALSE}
+anova(poisson1, poisson2, poisson3, poisson4, poisson5, test="Chisq")
+```
+
+
+## Quasi-Poisson
+
+### Quasi Poisson with `Elapsed time` as predictor
+
+```{r quasi_pois_time, results = "hold", echo=TRUE, warning=FALSE}
+poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
+```
+
+### Quasi Poisson with `Elapsed time` as predictors for `New cases/day`
+
+```{r pois1qbisday, results = "hold", echo=TRUE, warning=FALSE}
+poisson1quasibis <- glm(`New cases/day` ~ `Elapsed time`, data=data1[1:120, ], family=quasipoisson)
+```
+
+### Quasi Poisson with `Elapsed time` and `Age` as predictor
+
+```{r quasi_pois, results = "hold", echo=TRUE, warning=FALSE}
+poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ], family=quasipoisson)
+```
+
+### Summary table - Quasi Poisson models for `Cumulative cases`
+
+```{r summary_quasi_poisson_cumulative, echo=FALSE, warning=FALSE}
+quasipoisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", RMSE = 1760)
+poisson2quasi.summary<-c("Cumulative cases ~ Elapsed time + Age group", 3249)
+
+quasipoisson.cumulative.summary$Model<-as.character(quasipoisson.cumulative.summary$Model)
+quasipoisson.cumulative.summary<-rbind(quasipoisson.cumulative.summary, poisson2quasi.summary)
+
+kable(quasipoisson.cumulative.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+```
+
+### Summary table - Quasi Poisson models for `New cases/day`
+
+```{r summary_quasi_poisson_cases, echo=FALSE, warning=FALSE}
+quasipoisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", RMSE = 753)
+
+quasipoisson.cases.summary$Model<-as.character(quasipoisson.cases.summary$Model)
+
+kable(quasipoisson.cases.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+```
+
+
+## Negative Binomial
+
+### Negative Binomial with `Elapsed time` as predictor
+
+```{r nb1, results = "hold", echo=TRUE, warning=FALSE}
+nb1 <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=data1[1:120, ])
+```
+
+### Negative Binomial with `Elapsed time` plus `Age` as predictors
+
+```{r nb2, results = "hold", echo=TRUE, warning=FALSE}
+nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=data1[1:120, ])
+```
+
+### Negative Binomial with `Elapsed time` plus `Department` as predictors
+
+```{r nb3, results = "hold", echo=TRUE, warning=FALSE}
+nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+```
+
+### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors
+
+```{r nb4, results = "hold", echo=TRUE, warning=FALSE}
+nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+```
+
+### Negative Binomial with `Elapsed time`, `Age` and `Departments` as pedictors  for `New cases/day`
+
+```{r nb4bis, results = "hold", echo=TRUE, warning=FALSE}
+nb4bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.`+`Departamento o Distrito_Boyacá`+`Departamento o Distrito_Caldas`+`Departamento o Distrito_Casanare`+`Departamento o Distrito_Cauca`+`Departamento o Distrito_Cundinamarca`+`Departamento o Distrito_Meta`+`Departamento o Distrito_Quindío`+`Departamento o Distrito_Risaralda`+`Departamento o Distrito_Santander`+`Departamento o Distrito_Tolima`, data=data1[1:120, ])
+```
+
+### Summary table - Negative Binomial models for `Cumulative cases`
+
+```{r summary_nb_cumulative, echo=FALSE, warning=FALSE}
+nb.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = 21911, RMSE = 1765)
+nb2.summary<-c("Cumulative cases ~ Elapsed time + Age group", 20645, 3253)
+nb3.summary<-c("Cumulative cases ~ Elapsed time + Department", 19270, 3335)
+nb4.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", 1808, 8253)
+
+nb.cumulative.summary$Model<-as.character(nb.cumulative.summary$Model)
+nb.cumulative.summary<-rbind(nb.cumulative.summary, nb2.summary)
+nb.cumulative.summary<-rbind(nb.cumulative.summary, nb3.summary)
+nb.cumulative.summary<-rbind(nb.cumulative.summary, nb4.summary)
+
+kable(nb.cumulative.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+```
+
+### Summary table - Negative Binomial models for `New cases/day`
+
+```{r summary_nb_cases, echo=FALSE, warning=FALSE}
+nb.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time + Age group + Department", AIC = 1435, RMSE = 1379)
+
+nb.cases.summary$Model<-as.character(nb.cases.summary$Model)
+
+kable(nb.cases.summary) %>%
+  kable_styling(bootstrap_options = "striped")
+```
+
+### Applying ANOVA to compare the negative binomial models
+
+```{r anova_nb, echo=TRUE, warning=FALSE}
+#Applying ANOVA to compare the negative binomial models
+anova(nb1, nb2, nb3, nb4)
+```
