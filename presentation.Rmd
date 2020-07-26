@@ -287,7 +287,9 @@ We had to clean the dataset:
 head(colombia_covid, 10)
 ```
 
-## New dataset I
+## New datasets
+
+### Cases
 
 ```{r cases}
 cases <- colombia_covid %>%
@@ -309,7 +311,7 @@ cases <- cases[, c(1,4,2,3)]
 head(cases, 10)
 ```
 
-## New dataset II
+### Cases per department
 
 ```{r cases_per_dep}
 cases_dep <- colombia_covid %>%
@@ -746,8 +748,10 @@ Predicting with a $95\%$ confidence interval
 
 ```{r pois1_pred_acc, echo=FALSE, warning=FALSE}
 attach(data1)
+#conf.df_pois1 <- predict.confidence(poisson1, newdata = data1)
 conf.df_pois1 <- add_pi(data1, poisson1, names=c("lwr", "upr"))
 n <- 126
+#freq_coverage_pois1 <- sum(`Cumulative cases` >= conf.df_pois1$lwr & `Cumulative cases` <= conf.df_pois1$upr)
 freq_coverage_pois1 <- sum(`Cumulative cases` >= conf.df_pois1[, 64] & `Cumulative cases` <= conf.df_pois1[, 65])
 paste("Frequency of coverage:", freq_coverage_pois1 <- freq_coverage_pois1/n)
 detach(data1)
@@ -788,18 +792,16 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r pois1_pi, echo=FALSE, warning=FALSE}
-test_data1<-data1[120:126,]
-#unname(poisson1.pred)
-#poisson1$fitted.values
-poisson1.pi <- glm(`Cumulative cases` ~ `Elapsed time`, data=test_data1, family=poisson)
-test_data1 %>% 
-  #add_ci(poisson1.pi, names=c("lcb", "ucb")) %>%
-  add_pi(poisson1.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  #geom_ribbon(aes(ymin=lcb, ymax=ucb), fill = "royalblue1", alpha=0.3) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1$lwr[120:126],
+              ymax = conf.df_pois1$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson1.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -950,14 +952,16 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 #### Prediction interval for test set
 
 ```{r pois1bis_pi, echo=FALSE, warning=FALSE}
-test_cases<-data1[120:126,]
-poisson1bis.pi <- glm(`New cases/day` ~ `Elapsed time`, data=test_cases, family=poisson)
-test_cases %>% 
-  add_pi(poisson1bis.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois1bis$lwr[120:126],
+              ymax = conf.df_pois1bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson1bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1040,16 +1044,16 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r pois2_pi, echo=FALSE, warning=FALSE}
-test_cases<-data1[120:126,]
-poisson2.pi <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2), data=test_cases, family=poisson)
-test_cases %>% 
-  add_pi(poisson2.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson2.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson2.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson2.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2$lwr[120:126],
+              ymax = conf.df_pois2$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson2.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1135,16 +1139,16 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 #### Prediction interval for test set
 
 ```{r pois2bis_pi, echo=FALSE, warning=FALSE}
-test_cases<-data1[120:126,]
-poisson2bis.pi <- glm(`New cases/day` ~ `Elapsed time` + I(`Elapsed time`^2), data=test_cases, family=poisson)
-test_cases %>% 
-  add_pi(poisson2bis.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson2bis.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson2bis.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson2bis.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois2bis$lwr[120:126],
+              ymax = conf.df_pois2bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson2bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1224,16 +1228,16 @@ ggplot(data1, aes(x=`Elapsed time`, y=`Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r pois3_pi, echo=FALSE, warning=FALSE}
-test_cases<-data1[120:126,]
-poisson3.pi <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M, data=test_data1, family=poisson)
-test_data1 %>% 
-  add_pi(poisson3.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson3.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson3.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson3.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(x=`Elapsed time`, y=`Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois3$lwr[120:126],
+              ymax = conf.df_pois3$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson3.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1317,16 +1321,16 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 #### Prediction interval for test set
 
 ```{r pois3bis_pi, echo=FALSE, warning=FALSE}
-test_cases<-data1[120:126,]
-poisson3bis.pi <- glm(`New cases/day` ~ `Elapsed time` + Sexo_M, data=test_cases, family=poisson)
-test_cases %>%
-  add_pi(poisson3bis.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson3bis.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson3bis.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson3bis.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois3bis$lwr[120:126],
+              ymax = conf.df_pois3bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson3bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1412,18 +1416,16 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r pois4_pi, echo=FALSE, warning=FALSE}
-poisson4.pi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` +
-                  `Grupo de edad_31_45` + `Grupo de edad_46_60` +
-                  `Grupo de edad_60_75` + `Grupo de edad_76+`,
-                data=test_data1, family=poisson)
-test_data1 %>% 
-  add_pi(poisson4.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson4.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson4.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson4.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4$lwr[120:126],
+              ymax = conf.df_pois4$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson4.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1509,19 +1511,16 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 #### Prediction interval for test set
 
 ```{r pois4bis_pi, echo=FALSE, warning=FALSE}
-test_cases<-data1[120:126,]
-poisson4bis.pi <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` +
-                  `Grupo de edad_31_45` + `Grupo de edad_46_60` +
-                  `Grupo de edad_60_75` + `Grupo de edad_76+`,
-                data = test_cases, family = poisson)
-test_cases %>%
-  add_pi(poisson4bis.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson4bis.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson4bis.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson4bis.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois4bis$lwr[120:126],
+              ymax = conf.df_pois4bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson4bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1610,15 +1609,16 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r pi_poisson5, echo=FALSE, warning=FALSE}
-poisson5.pi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+`, data=test_data1, family=poisson)
-test_data1 %>% 
-  add_pi(poisson5.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson5.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson5.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson5.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois5$lwr[120:126],
+              ymax = conf.df_pois5$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson5.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1707,19 +1707,16 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 #### Prediction interval for test set
 
 ```{r pois5bis_pi, echo=FALSE, warning=FALSE}
-test_cases<-data1[120:126,]
-poisson5bis.pi <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` +
-                  `Grupo de edad_31_45` + `Grupo de edad_46_60` +
-                  `Grupo de edad_60_75` + `Grupo de edad_76+`,
-                data = test_cases, family = poisson)
-test_cases %>%
-  add_pi(poisson5bis.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson5bis.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson5bis.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson5bis.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois5bis$lwr[120:126],
+              ymax = conf.df_pois5bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson5bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1810,15 +1807,16 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r pois6_pi, echo=FALSE, warning=FALSE}
-poisson6.pi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` + `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`, data=test_data1, family=poisson)
-test_data1 %>% 
-  add_pi(poisson6.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_cases$`Elapsed time`, y=test_cases$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(poisson6.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb-(abs(lpb-unname(poisson6.pred)))-abs(lpb-upb)/2,
-                  ymax=upb-(abs(upb-unname(poisson6.pred)))+abs(upb-lpb)/2),
-              fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois6$lwr[120:126],
+              ymax = conf.df_pois6$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson6.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -1908,7 +1906,30 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 
 #### Prediction interval for test set
 
-Work in progress.. the plot came out very strange, if we don't plan to include it in the presentation it is not worth spending time in it.. also because in the previous plot the interval is strangely visible!
+```{r pois6bis_pi, echo=FALSE, warning=FALSE}
+ggplot(data1[120:126, ], aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois6bis$lwr[120:126],
+              ymax = conf.df_pois6bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson6bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  coord_cartesian(xlim = c(122, 128)) +
+  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
+                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
+  ggtitle("Prediction Interval 95%") +
+  xlab("Days") +
+  ylab("Cumulative cases") +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
 
 ### Poisson with `Elapsed time`, `Elapsed time`^2, `Age group` and `Departments` as predictors for `Cumulative cases`
 
@@ -1985,7 +2006,32 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 
 #### Prediction interval for test set
 
-Same obs as before.. there is something strange in the function when the model overestimates the predictions
+```{r pois7_pi, echo=FALSE, warning=FALSE}
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois7$lwr[120:126],
+              ymax = conf.df_pois7$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson7.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  coord_cartesian(xlim = c(122, 128)) +
+  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
+                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
+  ggtitle("Prediction Interval 95%") +
+  xlab("Days") +
+  ylab("Cumulative cases") +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+-------------------------------------------------------------------------------------------------------------------
 
 ### Poisson with `Elapsed time`, `Elapsed time`^2, `Age group` and `Departments` as predictors for `New cases/day`
 
@@ -2062,7 +2108,32 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
 
 #### Prediction interval for test set
 
-Same as before.
+```{r pois7bis_pi, echo=FALSE, warning=FALSE}
+ggplot(data1[120:126, ], aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_pois7bis$lwr[120:126],
+              ymax = conf.df_pois7bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = poisson7bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  coord_cartesian(xlim = c(122, 128)) +
+  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
+                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
+  ggtitle("Prediction Interval 95%") +
+  xlab("Days") +
+  ylab("Cumulative cases") +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+-------------------------------------------------------------------------------------------------------------------
 
 ### Summary table - Poisson models for `Cumulative cases`
 
@@ -2076,6 +2147,7 @@ poisson6.summary<-c("Cumulative cases ~ Elapsed time + Age group + Department", 
 poisson7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Age group + Department", round(poisson7$aic, 2), round(poisson7.rmse, 2))
 
 poisson.cumulative.summary$Model<-as.character(poisson.cumulative.summary$Model)
+colnames(poisson.cumulative.summary)[1] <- "Poisson models for cumulative cases"
 poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson2.summary,
                                   poisson3.summary, poisson4.summary,
                                   poisson5.summary, poisson6.summary, poisson7.summary)
@@ -2096,6 +2168,7 @@ poisson6bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", 
 poisson7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department", round(poisson7bis$aic, 2), round(poisson7bis.rmse, 2))
 
 poisson.cases.summary$Model<-as.character(poisson.cases.summary$Model)
+colnames(poisson.cases.summary)[1] <- "Poisson models for daily cases"
 poisson.cases.summary<-rbind(poisson.cases.summary,poisson2bis.summary,
                              poisson3bis.summary, poisson4bis.summary,
                              poisson5bis.summary, poisson6bis.summary, poisson7bis.summary)
@@ -2423,32 +2496,6 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-#### Prediction interval for test set
-
-```{r qpois1bis_pi, echo=FALSE, warning=FALSE}
-quasipoisson1bis.pi <- glm(`New cases/day` ~ `Elapsed time`, data=test_data1, family=quasipoisson)
-test_data1 %>% 
-  add_pi(quasipoisson1bis.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(quasipoisson1bis.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
-
-Quite horrible.. maybe unnecessary since the previous plot is good!
-
 ---------------------------------------------------------------------------------------------------------------------
 
 ### Quasi Poisson with `Elapsed time` and `Elapsed time^2` as predictor for `Cumulative cases`
@@ -2516,10 +2563,6 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
-
-### Prediction interval for the test set
-
-Not necessary also in this case!
 
 ---------------------------------------------------------------------------------------------------------------------
 
@@ -2591,31 +2634,6 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-<!-- #### Prediction interval for test set
-
-```{r qpois2bis_pi, echo=FALSE, warning=FALSE}
-quasipoisson2bis.pi <- glm(`New cases/day` ~ `Elapsed time` + I(`Elapsed time`^2),
-                           data=test_data1, family=quasipoisson)
-test_data1 %>%
-  add_pi(quasipoisson2bis.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(quasipoisson2bis.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
- -->
 ---------------------------------------------------------------------------------------------------------------------
 
 ### Quasi Poisson with `Elapsed time` and `Sex` as predictor for `Cumulative cases`
@@ -2683,10 +2701,6 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
-
-### Prediction interval for test set
-
-Not necessary!
 
 --------------------------------------------------------------------------------------------------------------------
 ### Quasi Poisson with `Elapsed time` and `Sex` as predictors for `New cases/day`
@@ -2757,31 +2771,6 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-<!-- #### Prediction interval for test set
-
-```{r qpois3bis_pi, echo=FALSE, warning=FALSE}
-quasipoisson3bis.pi <- glm(`New cases/day` ~ `Elapsed time` + Sexo_M,
-                           data=test_data1, family=quasipoisson)
-test_data1 %>%
-  add_pi(quasipoisson3bis.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(quasipoisson3bis.pred)), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
- -->
 ---------------------------------------------------------------------------------------------------------------------
 
 ### Quasi Poisson with `Elapsed time` and `Age group` as predictor for `Cumulative cases`
@@ -2851,10 +2840,6 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
-
-#### Prediction interval for test set
-
-Almost like the previous one.. but maybe even here it is not necessary
 
 ---------------------------------------------------------------------------------------------------------------------
 
@@ -3394,6 +3379,7 @@ quasipoisson6.summary<-c("Cumulative cases ~ Elapsed time + Department + Age gro
 quasipoisson7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", round(quasipoisson7.rmse, 2))
 
 quasipoisson.cumulative.summary$Model<-as.character(quasipoisson.cumulative.summary$Model)
+colnames(quasipoisson.cumulative.summary)[1] <- "Quasi Poisson models for cumulative cases"
 quasipoisson.cumulative.summary<-rbind(quasipoisson.cumulative.summary, quasipoisson2.summary, quasipoisson3.summary, quasipoisson4.summary, quasipoisson5.summary, quasipoisson6.summary, quasipoisson7.summary)
 
 kable(quasipoisson.cumulative.summary) %>%
@@ -3404,12 +3390,21 @@ kable(quasipoisson.cumulative.summary) %>%
 
 ```{r summary_quasi_poisson_cases, echo=FALSE, warning=FALSE}
 quasipoisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", RMSE = round(quasipoisson1bis.rmse, 2))
+quasipoisson2bis.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", round(quasipoisson2bis.rmse, 2))
+quasipoisson3bis.summary<-c("Cumulative cases ~ Elapsed time + Sex", round(quasipoisson3bis.rmse, 2))
+quasipoisson4bis.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(quasipoisson4bis.rmse, 2))
+quasipoisson5bis.summary<-c("Cumulative cases ~ Elapsed time + Department", round(quasipoisson5bis.rmse, 2))
+quasipoisson6bis.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", round(quasipoisson6bis.rmse, 2))
+quasipoisson7bis.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", round(quasipoisson7bis.rmse, 2))
 
 quasipoisson.cases.summary$Model<-as.character(quasipoisson.cases.summary$Model)
+colnames(quasipoisson.cases.summary)[1] <- "Quasi Poisson models for daily cases"
+quasipoisson.cases.summary<-rbind(quasipoisson.cases.summary, quasipoisson2bis.summary, quasipoisson3bis.summary, quasipoisson4bis.summary, quasipoisson5bis.summary, quasipoisson6bis.summary, quasipoisson7bis.summary)
 
 kable(quasipoisson.cases.summary) %>%
   kable_styling(bootstrap_options = "striped")
 ```
+
 
 ## Negative Binomial
 
@@ -3480,15 +3475,15 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r nb1_pi, echo=FALSE, warning=FALSE}
-nb1.pi <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=test_data1)
-test_data1 %>% 
-  add_pi(nb1.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(nb1.pred)), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb+(abs(lpb-unname(nb1.pred)))-abs(lpb-upb)/2,
-                    ymax=upb+(abs(upb-unname(nb1.pred)))+abs(upb-lpb)/2),
-                fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb1$lwr[120:126], ymax = conf.df_nb1$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = nb1.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -3502,6 +3497,8 @@ test_data1 %>%
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
+
+--------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time` as pedictor for `New cases/day`
 
@@ -3567,28 +3564,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-#### Prediction interval for test set
-
-```{r nb1bis_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb1bis, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time` and `Elapsed time`^2 as predictors for `Cumulative cases`
 
@@ -3657,15 +3633,15 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r nb2_pi, echo=FALSE, warning=FALSE}
-nb2.pi <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=test_data1)
-test_data1 %>% 
-  add_pi(nb2.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(nb2.pred)), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb+(abs(lpb-unname(nb2.pred)))-abs(lpb-upb)/2,
-                    ymax=upb+(abs(upb-unname(nb2.pred)))+abs(upb-lpb)/2),
-                fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb2$lwr[120:126], ymax = conf.df_nb2$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = nb2.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -3744,28 +3720,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-#### Prediction interval for test set
-
-```{r nb2bis_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb2bis, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time` and `Sex` as predictors for `Cumulative cases`
 
@@ -3834,15 +3789,15 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r nb3_pi, echo=FALSE, warning=FALSE}
-nb3.pi <- glm.nb(`Cumulative cases` ~ `Elapsed time`, data=test_data1)
-test_data1 %>% 
-  add_pi(nb3.pi, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(nb3.pred)), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb+(abs(lpb-unname(nb3.pred)))-abs(lpb-upb)/2,
-                    ymax=upb+(abs(upb-unname(nb3.pred)))+abs(upb-lpb)/2),
-                fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb3$lwr[120:126], ymax = conf.df_nb3$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = nb3.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -3856,6 +3811,8 @@ test_data1 %>%
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
+
+--------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time` and `Sex` as pedictors for `New cases/day`
 
@@ -3921,28 +3878,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-#### Prediction interval for test set
-
-```{r nb3bis_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb3bis, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time` plus `Age group` as predictors for `Cumulative cases`
 
@@ -4013,14 +3949,15 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r nb4_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb4, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=unname(nb4.pred)), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb+(abs(lpb-unname(nb2.pred)))-abs(lpb-upb)/2,
-                    ymax=upb+(abs(upb-unname(nb2.pred)))+abs(upb-lpb)/2),
-                fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb4$lwr[120:126], ymax = conf.df_nb4$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = nb4.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -4034,6 +3971,8 @@ test_data1 %>%
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
+
+--------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time` and `Age group` as pedictors for `New cases/day`
 
@@ -4101,28 +4040,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-#### Prediction interval for test set
-
-```{r nb4bis_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb4bis, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time` plus `Department` as predictors for `Cumulative cases`
 
@@ -4196,12 +4114,15 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r nb5_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb5, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb5$lwr[120:126], ymax = conf.df_nb5$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = nb5.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -4241,7 +4162,7 @@ paste(c("Null deviance: ", "Residual deviance:"),
        round(c(nb5bis$null.deviance, deviance(nb5bis)), 2))
 ```
 
-#### Predictive accuracy of the NB model for `New cases/day`
+#### Predictive accuracy
 
 Predicting with a $95\%$ confidence interval
 
@@ -4285,28 +4206,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-#### Prediction interval for test set
-
-```{r nb5bis_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb5bis, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time` plus `Continent of origin` as predictors
 
@@ -4320,6 +4220,8 @@ test_data1 %>%
 # paste(c("Null deviance: ", "Residual deviance:"),
 #        round(c(nb4$null.deviance, deviance(nb4)), 2))
 ```
+
+--------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time`, `Age group` and `Departments` as pedictors
 
@@ -4394,12 +4296,15 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r nb6_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb6, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb6$lwr[120:126], ymax = conf.df_nb6$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = nb6.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -4413,6 +4318,8 @@ test_data1 %>%
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
+
+--------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time`, `Age group` and `Departments` as pedictors for `New cases/day`
 
@@ -4484,30 +4391,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-#### Prediction interval for test set
-
-```{r nb6bis_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb6bis, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
-
-One word.. horrible!
+-------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time`, `Elapsed time`^2, `Age group` and `Departments` as pedictors
 
@@ -4583,12 +4467,15 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 #### Prediction interval for test set
 
 ```{r nb7_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb7, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`Cumulative cases`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
+ggplot(data1[120:126, ], aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_nb7$lwr[120:126], ymax = conf.df_nb7$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= `Elapsed time`, y = nb7.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -4602,6 +4489,8 @@ test_data1 %>%
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
+
+-------------------------------------------------------------------------------------------------------------------
 
 ### Negative Binomial with `Elapsed time`, `Elapsed time`^2, `Age group` and `Departments` as pedictors for `New cases/day`
 
@@ -4674,28 +4563,7 @@ ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
         axis.title.y = element_text(size = 18))
 ```
 
-#### Prediction interval for test set
-
-```{r nb7bis_pi, echo=FALSE, warning=FALSE}
-test_data1 %>% 
-  add_pi(nb7bis, names=c("lpb", "upb")) %>%
-  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
-  geom_point(size=2) +
-  geom_point(aes(y=pred), size=2, color="maroon") +
-    geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Summary table - Negative Binomial models for `Cumulative cases`
 
@@ -4709,13 +4577,13 @@ nb6.summary<-c("Cumulative cases ~ Elapsed time + Age group + Department", round
 nb7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Age group + Department", round(nb7$aic, 2), round(nb7.rmse, 2))
 
 nb.cumulative.summary$Model<-as.character(nb.cumulative.summary$Model)
+colnames(nb.cumulative.summary)[1] <- "Negative Binomial models for cumulative cases"
 nb.cumulative.summary<-rbind(nb.cumulative.summary, nb2.summary, nb3.summary, nb4.summary,
                              nb5.summary, nb6.summary, nb7.summary)
 
 kable(nb.cumulative.summary) %>%
   kable_styling(bootstrap_options = "striped")
 ```
-
 
 ### Summary table - Negative Binomial models for `New cases/day`
 
@@ -4729,6 +4597,7 @@ nb6bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", round
 nb7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department", round(nb7bis$aic, 2), round(nb7bis.rmse, 2))
 
 nb.cases.summary$Model<-as.character(nb.cases.summary$Model)
+colnames(nb.cases.summary)[1] <- "Negative Binomial models for daily cases"
 nb.cases.summary<-rbind(nb.cases.summary, nb2bis.summary, nb3bis.summary, nb4bis.summary,
                              nb5bis.summary, nb6bis.summary, nb7bis.summary)
 
@@ -4953,14 +4822,15 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Prediction interval for test set
 
 ```{r gam1_pred_acc, echo=FALSE, warning=FALSE}
-
-test_df<-df[120:126,]
-
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$Cumulative_cases)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam1.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam1, ymax=test.upr.gam1), fill = color_scheme_get("red")[[2]], data=test_df) +
+ggplot(df[120:126, ], aes(Elapsed_time, Cumulative_cases)) +
+  geom_ribbon(aes(x = Elapsed_time, ymin = test.lwr.gam1, ymax = test.upr.gam1),
+              data = df[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x= Elapsed_time, y = gam1.pred),
+              data = df[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = Elapsed_time, y = Cumulative_cases)) +
   coord_cartesian(xlim = c(122, 128)) +
   scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
                    labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
@@ -4975,7 +4845,7 @@ test_df %>%
         axis.title.y = element_text(size = 18))
 ```
 
-Intervals are very very very thin..
+Intervals are very very very thin, we won't include them in the following models.
 
 ### Gam with `Elapsed time` as covariate for `New cases/day`
 
@@ -5027,27 +4897,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set
-
-```{r pred_acc_gam1bis, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$New_cases_day)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam1bis.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam1bis, ymax=test.upr.gam1bis), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Elapsed time`^2 as covariate for `Cumulative cases`
 
@@ -5099,27 +4949,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set
-
-```{r pred_acc_gam2, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$Cumulative_cases)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam2.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam2, ymax=test.upr.gam2), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Cumulative cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Elapsed time^2` as covariate for `New cases/day`
 
@@ -5170,27 +5000,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set
-
-```{r pred_acc_gam2bis, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$New_cases_day)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam2bis.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam2bis, ymax=test.upr.gam2bis), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Sex` as covariate for `Cumulative cases`
 
@@ -5242,27 +5052,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set
-
-```{r pred_acc_gam3, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$Cumulative_cases)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam3.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam3, ymax=test.upr.gam3), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Cumulative cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Sex` as covariate for `New cases/day`
 
@@ -5313,27 +5103,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set
-
-```{r pred_acc_gam3bis, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$New_cases_day)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam3bis.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam3bis, ymax=test.upr.gam3bis), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Age group` as covariate for `Cumulative cases`
 
@@ -5387,27 +5157,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set 
-
-```{r pred_acc_gam4, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$Cumulative_cases)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam4.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam4, ymax=test.upr.gam4), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Cumulative cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Age group` as covariate for `New cases/day`
 
@@ -5459,27 +5209,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set 
-
-```{r pred_acc_gam4bis, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$New_cases_day)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam4bis.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam4bis, ymax=test.upr.gam4bis), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Department` as covariate for `Cumulative cases`
 
@@ -5536,27 +5266,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set 
-
-```{r pred_acc_gam5, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$Cumulative_cases)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam5.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam5, ymax=test.upr.gam5), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Cumulative cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Department` as covariate for `New cases/day`
 
@@ -5608,27 +5318,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set 
-
-```{r pred_acc_gam5bis, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$New_cases_day)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam5bis.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam5bis, ymax=test.upr.gam5bis), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time`, `Age group` and `Department` as covariate for `Cumulative cases`
 
@@ -5687,27 +5377,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set 
-
-```{r pred_acc_gam6, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$Cumulative_cases)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam6.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam6, ymax=test.upr.gam6), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Cumulative cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+--------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time` and `Department` and `Age group` as covariate for `New cases/day`
 
@@ -5759,27 +5429,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set 
-
-```{r pred_acc_gam6bis, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$New_cases_day)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam6bis.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam6bis, ymax=test.upr.gam6bis), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time`, `Elapsed time^2`, `Age group` and `Department` as covariate for `Cumulative cases`
 
@@ -5837,27 +5487,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set 
-
-```{r pred_acc_gam7, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$Cumulative_cases)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam7.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam7, ymax=test.upr.gam7), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Cumulative cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Gam with `Elapsed time`, `Elapsed time^2`, `Age group` and `Department` as covariate for `New cases/day`
 
@@ -5915,27 +5545,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
         axis.title.y = element_text(size = 18))
 ```
 
-### Prediction interval for test set 
-
-```{r pred_acc_gam7bis, echo=FALSE, warning=FALSE}
-test_df %>% 
-  ggplot(aes(x=test_df$Elapsed_time, y=test_df$New_cases_day)) +
-  geom_point(size=2) +
-  geom_point(aes(y=gam7bis.pred), size=2, color="maroon") +
-  geom_ribbon(aes(ymin=test.lwr.gam7bis, ymax=test.upr.gam7bis), fill = color_scheme_get("red")[[2]], data=test_df) +
-  coord_cartesian(xlim = c(122, 128)) +
-  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
-                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
-  ggtitle("Prediction Interval 95%") +
-  xlab("Days") +
-  ylab("Daily cases") +
-  theme(strip.text.x = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(face = "bold",
-        color = "#993333", angle = 45, size = 9),
-        plot.title = element_text(size = 22),
-        axis.title.x = element_text(size = 18), 
-        axis.title.y = element_text(size = 18))
-```
+-------------------------------------------------------------------------------------------------------------------
 
 ### Summary table - GAM models for `Cumulative cases`
 
@@ -5949,6 +5559,7 @@ gam6.summary<-c("Cumulative cases ~ Elapsed time + Age group + Department", roun
 gam7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Age group + Department", round(AIC(gam7), 2), round(gam7.rmse, 2))
 
 gam.cumulative.summary$Model<-as.character(gam.cumulative.summary$Model)
+colnames(gam.cumulative.summary)[1] <- "GAM models for daily cases"
 gam.cumulative.summary<-rbind(gam.cumulative.summary, gam2.summary, gam3.summary,
                               gam4.summary, gam5.summary, gam6.summary, gam7.summary)
 
@@ -5968,6 +5579,7 @@ gam6bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", roun
 gam7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department", round(AIC(gam7bis), 2), round(gam7bis.rmse, 2))
 
 gam.cases.summary$Model<-as.character(gam.cases.summary$Model)
+colnames(gam.cases.summary)[1] <- "GAM models for daily cases"
 gam.cases.summary<-rbind(gam.cases.summary, gam2bis.summary, gam3bis.summary, gam4bis.summary,
                          gam5bis.summary, gam6bis.summary, gam7bis.summary)
 
@@ -6740,3 +6352,13 @@ axis(1, c(1:4), c("Poisson", "NB-sl", "NB-ml",
 ```
 
 <img src="stan_figs/looic.png" alt="looic" style="zoom:100%;" class="center"/>
+
+```{r save/load, include=FALSE}
+setwd("/home/angela/Documenti/Statistical Methods for Data Science/Project/SMDS-project/")
+
+## save the workspace
+save.image("./data/data.RData")
+
+## load the workspace
+#load("./data/data.RData")
+```
