@@ -199,9 +199,8 @@ poisson1bis <- glm(`New cases/day` ~ `Elapsed time`,
 ```{r pois1bis_index, results = "hold", echo=TRUE}
 pred.pois1bis <- poisson1bis$fitted.values
 res.st1bis <- (data1$`New cases/day`[1:120] - pred.pois1bis)/sqrt(pred.pois1bis)
-#n=120, k=3, n-k=117
-#print(paste("Estimated overdispersion", sum(res.st1bis^2)/23))
-print("DO OVERDISPERSION!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+#n=120, k=2, n-k=118
+print(paste("Estimated overdispersion", sum(res.st1bis^2)/118))
 poisson1bis.pred <- predict(poisson1bis, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson1bis.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson1bis$residuals^2))
@@ -244,7 +243,6 @@ pred.pois2 <- poisson2$fitted.values
 res.st2 <- (cases$`Cumulative cases`[1:120] - pred.pois2)/sqrt(pred.pois2)
 #n=120, k=3, n-k=117
 print(paste("Estimated overdispersion", sum(res.st2^2)/117))
-print("DO OVERDISPERSION!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 poisson2.pred <- predict(poisson2, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson2.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson2$residuals^2))
@@ -290,8 +288,8 @@ poisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_B
 ```{r pois4_index, results = "hold", echo=TRUE}
 pred.pois4 <- poisson4$fitted.values
 res.st4 <- (data1$`Cumulative cases` - pred.pois4)/sqrt(pred.pois4)
-#n=120, k=7, n-k=113
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4^2)/113))
+#n=120, k=13, n-k=107
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st4^2)/107))
 poisson4.pred <- predict(poisson4, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson4.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson4$residuals^2))
@@ -316,8 +314,8 @@ poisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `G
 ```{r pois5_index, results = "hold", echo=TRUE}
 pred.pois5 <- poisson5$fitted.values
 res.st5 <- (data1$`Cumulative cases` - pred.pois5)/sqrt(pred.pois5)
-#n=120, k=17, n-k=103
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st5^2)/103))
+#n=120, k=18, n-k=102
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st5^2)/102))
 poisson5.pred <- predict(poisson5, newdata = data1[120:126, ], type="response")
 #paste("Real: ", data1$`Cumulative cases`[120:126], "Predict: ", poisson5.pred)
 paste("RMSE:", sqrt(mean((poisson5.pred - data1$`Cumulative cases`[120:126])^2)))
@@ -438,8 +436,8 @@ poisson1quasi <- glm(`Cumulative cases` ~ `Elapsed time`,
 ```{r quasi_pois_index, results = "hold", echo=TRUE}
 pred.poisq <- poisson1quasi$fitted.values
 res.stq <- (data1$`Cumulative cases` - pred.poisq)/sqrt(summary(poisson1quasi)$dispersion*pred.poisq)
-#n=120, k= ?, n-k=?
-print(paste("Estimated overdispersion", sum(res.stq^2)/23))
+#n=120, k= 2, n-k=118
+print(paste("Estimated overdispersion", sum(res.stq^2)/118))
 poisson1quasi.pred <- predict(poisson1quasi, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((poisson1quasi.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson1quasi$residuals^2))
@@ -458,8 +456,8 @@ poisson1quasibis <- glm(`New cases/day` ~ `Elapsed time`,
 ```{r pois1qbis_index, results = "hold", echo=TRUE}
 pred.pois1quasibis <- poisson1quasibis$fitted.values
 res.st1quasibis <- (data1$`Cumulative cases` - pred.pois1quasibis)/sqrt(pred.pois1quasibis)
-#n=120, k=18, n-k=102
-print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st1quasibis^2)/102))
+#n=120, k=2, n-k=118
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st1quasibis^2)/118))
 poisson1quasibis.pred <- predict(poisson1quasibis, newdata = data1[120:126, ], type="response")
 paste("RMSE:", sqrt(mean((poisson1quasibis.pred - data1$`New cases/day`[120:126])^2)))
 #paste("MSE:", mean(poisson1quasibis$residuals^2))
@@ -480,8 +478,8 @@ poisson2quasi <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30`
 ```{r quasi_pois2_index, results = "hold", echo=TRUE}
 pred.poisq2 <- poisson2quasi$fitted.values
 res.stq2 <- (data1$`Cumulative cases` - pred.poisq2)/sqrt(summary(poisson2quasi)$dispersion*pred.poisq2)
-#n=120, k= ?, n-k=?
-print(paste("Estimated overdispersion", sum(res.stq2^2)/18))
+#n=120, k= 7, n-k=113
+print(paste("Estimated overdispersion", sum(res.stq2^2)/113))
 poisson2quasi.pred <- predict(poisson2quasi, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((poisson2quasi.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(poisson2quasi$residuals^2))
@@ -546,6 +544,9 @@ nb2 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30`+
 ```
 
 ```{r nb2_index, results = "hold", echo=TRUE}
+#n=120, k=7, n-k=113
+stdres <- rstandard(nb2)
+print(paste("Estimated overdispersion", sum(stdres^2)/113))
 nb2.pred <- predict(nb2, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb2.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb2$residuals^2))
@@ -567,6 +568,9 @@ nb3 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bog
 ```
 
 ```{r nb3_index, results = "hold", echo=TRUE}
+#n=120, k=13, n-k=107
+stdres <- rstandard(nb3)
+print(paste("Estimated overdispersion", sum(stdres^2)/107))
 nb3.pred <- predict(nb3, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb3.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb3$residuals^2))
@@ -589,9 +593,9 @@ nb4 <- glm.nb(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Gru
 ```
 
 ```{r nb4_index, results = "hold", echo=TRUE}
-# Calculating overdispersion n=120 k=19 n-k=101
+# Calculating overdispersion n=120 k=18 n-k=102
 stdres <- rstandard(nb4)
-print(paste("Estimated overdispersion", sum(stdres^2)/101))
+print(paste("Estimated overdispersion", sum(stdres^2)/102))
 nb4.pred <- predict(nb4, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb4.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(nb5$residuals^2))
@@ -615,9 +619,9 @@ nb4bis <- glm.nb(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` + `Gru
 ```
 
 ```{r nb4bis_index, results = "hold", echo=TRUE}
-# Calculating overdispersion n=120 k=19 n-k=101
+# Calculating overdispersion n=120 k=18 n-k=102
 stdres2 <- rstandard(nb4bis)
-print(paste("Estimated overdispersion", sum(stdres2^2)/101))
+print(paste("Estimated overdispersion", sum(stdres2^2)/102))
 nb4bis.pred <- predict(nb4bis, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", sqrt(mean((nb4bis.pred - data1$`New cases/day`[120:126])^2)))
 #paste("MSE:", mean(nb4bis$residuals^2))
