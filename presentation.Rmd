@@ -2305,7 +2305,7 @@ print(paste("Estimated overdispersion", sum(res.stq1^2)/118))
 quasipoisson1.pred <- predict(quasipoisson1, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", quasipoisson1.rmse <- sqrt(mean((quasipoisson1.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(quasipoisson1$residuals^2))
-paste("AIC:", quasipoisson1$aic)
+#paste("AIC:", quasipoisson1$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(quasipoisson1$null.deviance, deviance(quasipoisson1)), 2))
 ```
@@ -2371,7 +2371,7 @@ print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st1bis^2)/
 quasipoisson1bis.pred <- predict(quasipoisson1bis, newdata = data1[120:126, ], type="response")
 paste("RMSE:", quasipoisson1bis.rmse <- sqrt(mean((quasipoisson1bis.pred - data1$`New cases/day`[120:126])^2)))
 #paste("MSE:", mean(quasipoisson1bis$residuals^2))
-paste("AIC:", quasipoisson1bis$aic)
+#paste("AIC:", quasipoisson1bis$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(quasipoisson1bis$null.deviance, deviance(quasipoisson1bis)), 2))
 ```
@@ -2449,25 +2449,23 @@ test_data1 %>%
 
 quite horrible.. maybe unnecessary since the previous plot is good!
 
-### Quasi Poisson with `Elapsed time` and `Age group` as predictor for `Cumulative cases`
+### Quasi Poisson with `Elapsed time` and `Elapsed time^2` as predictor for `Cumulative cases`
 
 ```{r qpois2_fit, echo=TRUE, warning=FALSE, results="hold"}
-quasipoisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` +
-                       `Grupo de edad_31_45` + `Grupo de edad_46_60` +
-                       `Grupo de edad_60_75` + `Grupo de edad_76+`,
+quasipoisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2),
                      data=data1[1:120, ], family=quasipoisson)
 ```
 
 ```{r qpois2_index, echo=FALSE, warning=FALSE, results="hold"}
 plot(quasipoisson2, which=1)
-pred.poisq2 <- quasipoisson2$fitted.values
-res.stq2 <- (data1$`Cumulative cases` - pred.poisq2)/sqrt(summary(quasipoisson2)$dispersion*pred.poisq2)
-#n=120, k= 7, n-k=113
-print(paste("Estimated overdispersion", sum(res.stq2^2)/113))
+pred.qpois2 <- quasipoisson2$fitted.values
+res.stq2 <- (data1$`Cumulative cases` - pred.qpois2)/sqrt(summary(quasipoisson2)$dispersion*pred.qpois2)
+#n=120, k= 2, n-k=118
+print(paste("Estimated overdispersion", sum(res.stq2^2)/118))
 quasipoisson2.pred <- predict(quasipoisson2, newdata = data1[120:126, ], type = "response")
 paste("RMSE:", quasipoisson2.rmse <- sqrt(mean((quasipoisson2.pred - data1$`Cumulative cases`[120:126])^2)))
 #paste("MSE:", mean(quasipoisson2$residuals^2))
-paste("AIC:", quasipoisson2$aic)
+#paste("AIC:", quasipoisson2$aic)
 paste(c("Null deviance: ", "Residual deviance:"),
        round(c(quasipoisson2$null.deviance, deviance(quasipoisson2)), 2))
 ```
@@ -2478,7 +2476,7 @@ Predicting with a $95\%$ confidence interval
 
 ```{r qpois2_pred_acc, echo=FALSE, warning=FALSE}
 attach(data1)
-conf.df_qpois2 <- add_pi(data1, quasipoisson2, names=c("lwr", "upr"))
+conf.df_qpois2 <- add_pi(data1, quasipoisson2, names=c("lwr","upr"))
 n <- 126
 freq_coverage_qpois2 <- sum(`Cumulative cases` >= conf.df_qpois2[, 64] & `Cumulative cases` <= conf.df_qpois2[, 65])
 paste("Frequency of coverage:", freq_coverage_qpois2 <- freq_coverage_qpois2/n)
@@ -2504,6 +2502,148 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
               size = 1.1) +
   geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
   expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Elapsed time^2") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Prediction interval for the test set
+
+Not necessary also in this case!
+
+### Quasi Poisson with `Elapsed time` and `Sex` as predictor for `Cumulative cases`
+
+```{r qpois3_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson3 <- glm(`Cumulative cases` ~ `Elapsed time` + Sexo_M,
+                     data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois3_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson3, which=1)
+pred.qpois3 <- quasipoisson3$fitted.values
+res.stq3 <- (data1$`Cumulative cases` - pred.qpois3)/sqrt(summary(quasipoisson3)$dispersion*pred.qpois3)
+#n=120, k= 2, n-k=118
+print(paste("Estimated overdispersion", sum(res.stq3^2)/118))
+quasipoisson3.pred <- predict(quasipoisson3, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", quasipoisson3.rmse <- sqrt(mean((quasipoisson3.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson3$residuals^2))
+#paste("AIC:", quasipoisson3$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson3$null.deviance, deviance(quasipoisson3)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois3_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois3 <- add_pi(data1, quasipoisson3, names=c("lwr","upr"))
+n <- 126
+freq_coverage_qpois3 <- sum(`Cumulative cases` >= conf.df_qpois3[, 64] & `Cumulative cases` <= conf.df_qpois3[, 65])
+paste("Frequency of coverage:", freq_coverage_qpois3 <- freq_coverage_qpois3/n)
+detach(data1)
+```
+
+```{r qpois3_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois3$lwr[1:120], ymax = conf.df_qpois3$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois3$lwr[120:126],
+              ymax = conf.df_qpois3$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois3$pred[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson3.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Sex") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Prediction interval for test set
+
+Not necessary!
+
+### Quasi Poisson with `Elapsed time` and `Age group` as predictor for `Cumulative cases`
+
+```{r qpois4_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson4 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                       `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                       `Grupo de edad_60_75` + `Grupo de edad_76+`,
+                     data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois4_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson4, which=1)
+pred.poisq4 <- quasipoisson4$fitted.values
+res.stq4 <- (data1$`Cumulative cases` - pred.poisq4)/sqrt(summary(quasipoisson4)$dispersion*pred.poisq4)
+#n=120, k= 7, n-k=113
+print(paste("Estimated overdispersion", sum(res.stq4^2)/113))
+quasipoisson4.pred <- predict(quasipoisson4, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", quasipoisson4.rmse <- sqrt(mean((quasipoisson4.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson4$residuals^2))
+#paste("AIC:", quasipoisson4$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson4$null.deviance, deviance(quasipoisson4)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois4_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois4 <- add_pi(data1, quasipoisson4, names=c("lwr", "upr"))
+n <- 126
+freq_coverage_qpois2 <- sum(`Cumulative cases` >= conf.df_qpois4[, 64] & `Cumulative cases` <= conf.df_qpois4[, 65])
+paste("Frequency of coverage:", freq_coverage_qpois2 <- freq_coverage_qpois2/n)
+detach(data1)
+```
+
+```{r qpois4_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois4$lwr[1:120], ymax = conf.df_qpois4$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois4$lwr[120:126],
+              ymax = conf.df_qpois4$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois4$pred[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson4.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 130) +
   ggtitle("Quasi Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Age group") +
   xlab("Days") + ylab("Cumulative cases") +
   scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
@@ -2521,14 +2661,236 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 
 Almost like the previous one.. but maybe even here it is not necessary
 
+### Quasi Poisson with `Elapsed time` and `Department` as predictor for `Cumulative cases`
+
+```{r qpois5_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson5 <- glm(`Cumulative cases` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` +
+                   `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                   `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                   `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                   `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                   `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                     data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois5_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson5, which=1)
+pred.qpois5 <- quasipoisson5$fitted.values
+res.stq5 <- (data1$`Cumulative cases` - pred.qpois5)/sqrt(summary(quasipoisson5)$dispersion*pred.qpois5)
+#n=120, k= 2, n-k=118
+print(paste("Estimated overdispersion", sum(res.stq5^2)/118))
+quasipoisson5.pred <- predict(quasipoisson5, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", quasipoisson5.rmse <- sqrt(mean((quasipoisson5.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson5$residuals^2))
+#paste("AIC:", quasipoisson5$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson5$null.deviance, deviance(quasipoisson5)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois5_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois5 <- add_pi(data1, quasipoisson5, names=c("lwr","upr"))
+n <- 126
+freq_coverage_qpois5 <- sum(`Cumulative cases` >= conf.df_qpois5[, 64] & `Cumulative cases` <= conf.df_qpois5[, 65])
+paste("Frequency of coverage:", freq_coverage_qpois5 <- freq_coverage_qpois5/n)
+detach(data1)
+```
+
+```{r qpois5_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois5$lwr[1:120], ymax = conf.df_qpois5$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois5$lwr[120:126],
+              ymax = conf.df_qpois5$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois5$pred[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson5.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Department") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Quasi Poisson with `Elapsed time`, `Age` and `Department` as predictor for `Cumulative cases`
+
+```{r qpois6_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson6 <- glm(`Cumulative cases` ~ `Elapsed time` + `Grupo de edad_19_30` + `Grupo de edad_31_45`
+                     + `Grupo de edad_46_60` + `Grupo de edad_60_75` + `Grupo de edad_76+` + 
+                       `Departamento o Distrito_Bogotá D.C.` + `Departamento o Distrito_Boyacá` +  
+                       `Departamento o Distrito_Caldas` +`Departamento o Distrito_Casanare` + 
+                       `Departamento o Distrito_Cauca` + `Departamento o Distrito_Cundinamarca` +
+                       `Departamento o Distrito_Meta` + `Departamento o Distrito_Quindío` + 
+                       `Departamento o Distrito_Risaralda` + `Departamento o Distrito_Santander` +
+                       `Departamento o Distrito_Tolima`,
+                     data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois6_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson6, which=1)
+pred.qpois6 <- quasipoisson6$fitted.values
+res.stq6 <- (data1$`Cumulative cases` - pred.qpois6)/sqrt(summary(quasipoisson6)$dispersion*pred.qpois6)
+#n=120, k= 2, n-k=118
+print(paste("Estimated overdispersion", sum(res.stq6^2)/118))
+quasipoisson6.pred <- predict(quasipoisson6, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", quasipoisson6.rmse <- sqrt(mean((quasipoisson6.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson6$residuals^2))
+#paste("AIC:", quasipoisson6$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson6$null.deviance, deviance(quasipoisson6)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois6_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois6 <- add_pi(data1, quasipoisson6, names=c("lwr","upr"))
+n <- 126
+freq_coverage_qpois6 <- sum(`Cumulative cases` >= conf.df_qpois6[, 64] & `Cumulative cases` <= conf.df_qpois6[, 65])
+paste("Frequency of coverage:", freq_coverage_qpois6 <- freq_coverage_qpois6/n)
+detach(data1)
+```
+
+```{r qpois6_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois6$lwr[1:120], ymax = conf.df_qpois6$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois6$lwr[120:126],
+              ymax = conf.df_qpois6$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois6$pred[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson6.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Age group + Department") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+### Quasi Poisson with `Elapsed time`, `Elapsed time^2`, `Age` and `Department` as predictor for `Cumulative cases`
+
+```{r qpois7_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson7 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2) + `Grupo de edad_19_30`
+                     + `Grupo de edad_31_45`+ `Grupo de edad_46_60` + `Grupo de edad_60_75` 
+                     + `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` +
+                   `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                   `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                   `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                   `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                   `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                     data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois7_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson7, which=1)
+pred.qpois7 <- quasipoisson7$fitted.values
+res.stq7 <- (data1$`Cumulative cases` - pred.qpois7)/sqrt(summary(quasipoisson7)$dispersion*pred.qpois7)
+#n=120, k= 2, n-k=118
+print(paste("Estimated overdispersion", sum(res.stq7^2)/118))
+quasipoisson7.pred <- predict(quasipoisson7, newdata = data1[120:126, ], type = "response")
+paste("RMSE:", quasipoisson7.rmse <- sqrt(mean((quasipoisson7.pred - data1$`Cumulative cases`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson7$residuals^2))
+#paste("AIC:", quasipoisson7$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson7$null.deviance, deviance(quasipoisson7)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois7_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois7 <- add_pi(data1, quasipoisson7, names=c("lwr","upr"))
+n <- 126
+freq_coverage_qpois7 <- sum(`Cumulative cases` >= conf.df_qpois7[, 64] & `Cumulative cases` <= conf.df_qpois7[, 65])
+paste("Frequency of coverage:", freq_coverage_qpois7 <- freq_coverage_qpois7/n)
+detach(data1)
+```
+
+```{r qpois7_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois7$lwr[1:120], ymax = conf.df_qpois7$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois7$lwr[120:126],
+              ymax = conf.df_qpois7$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois7$pred[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson7.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `Cumulative cases`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="Cumulative cases ~ Elapsed time + Elapsed time^2 + Age group + Department") +
+  xlab("Days") + ylab("Cumulative cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
 ### Summary table - Quasi Poisson models for `Cumulative cases`
 
 ```{r summary_quasi_poisson_cumulative, echo=FALSE, warning=FALSE}
 quasipoisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", RMSE = round(quasipoisson1.rmse, 2))
-quasipoisson2.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(quasipoisson2.rmse, 2))
+quasipoisson2.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", round(quasipoisson2.rmse, 2))
+quasipoisson3.summary<-c("Cumulative cases ~ Elapsed time + Sex", round(quasipoisson3.rmse, 2))
+quasipoisson4.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(quasipoisson4.rmse, 2))
+quasipoisson5.summary<-c("Cumulative cases ~ Elapsed time + Department", round(quasipoisson5.rmse, 2))
+quasipoisson6.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", round(quasipoisson6.rmse, 2))
+quasipoisson7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", round(quasipoisson7.rmse, 2))
 
 quasipoisson.cumulative.summary$Model<-as.character(quasipoisson.cumulative.summary$Model)
-quasipoisson.cumulative.summary<-rbind(quasipoisson.cumulative.summary, quasipoisson2.summary)
+quasipoisson.cumulative.summary<-rbind(quasipoisson.cumulative.summary, quasipoisson2.summary, quasipoisson3.summary, quasipoisson4.summary, quasipoisson5.summary, quasipoisson6.summary, quasipoisson7.summary)
 
 kable(quasipoisson.cumulative.summary) %>%
   kable_styling(bootstrap_options = "striped")
