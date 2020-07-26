@@ -2447,7 +2447,9 @@ test_data1 %>%
         axis.title.y = element_text(size = 18))
 ```
 
-quite horrible.. maybe unnecessary since the previous plot is good!
+Quite horrible.. maybe unnecessary since the previous plot is good!
+
+---------------------------------------------------------------------------------------------------------------------
 
 ### Quasi Poisson with `Elapsed time` and `Elapsed time^2` as predictor for `Cumulative cases`
 
@@ -2519,6 +2521,103 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 
 Not necessary also in this case!
 
+---------------------------------------------------------------------------------------------------------------------
+
+### Quasi Poisson with `Elapsed time` and `Elapsed time`^2 as predictors for `New cases/day`
+
+```{r qpois2bis_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson2bis <- glm(`New cases/day` ~ `Elapsed time` + I(`Elapsed time`^2),
+                        data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois2bis_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson2bis, which=1)
+pred.qpois2bis <- quasipoisson2bis$fitted.values
+res.st.qpois2bis <- (data1$`Cumulative cases` - pred.qpois2bis)/sqrt(pred.qpois2bis)
+#n=120, k=3, n-k=117
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st.qpois2bis^2)/117))
+quasipoisson2bis.pred <- predict(quasipoisson2bis, newdata = data1[120:126, ], type="response")
+paste("RMSE:", quasipoisson2bis.rmse <- sqrt(mean((quasipoisson2bis.pred - data1$`New cases/day`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson2bis$residuals^2))
+#paste("AIC:", quasipoisson2bis$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson2bis$null.deviance, deviance(quasipoisson2bis)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois2bis_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois2bis <- predict.confidence(quasipoisson2bis, newdata = data1)
+#conf.df_qpois2bis <- predict.glm(poisson2bis, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_qpois2bis <- sum(`New cases/day` >= conf.df_qpois2bis[, 2] & `New cases/day` <= conf.df_qpois2bis[, 3])
+paste("Frequency of coverage:", freq_coverage_qpois2bis <- freq_coverage_qpois2bis/n)
+detach(data1)
+```
+
+```{r qpois2bis_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois2bis$lwr[1:120],
+              ymax = conf.df_qpois2bis$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois2bis$lwr[120:126],
+              ymax = conf.df_qpois2bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois2bis$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson2bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="New cases/day ~ Elapsed time + Elapsed time^2") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+<!-- #### Prediction interval for test set
+
+```{r qpois2bis_pi, echo=FALSE, warning=FALSE}
+quasipoisson2bis.pi <- glm(`New cases/day` ~ `Elapsed time` + I(`Elapsed time`^2),
+                           data=test_data1, family=quasipoisson)
+test_data1 %>%
+  add_pi(quasipoisson2bis.pi, names=c("lpb", "upb")) %>%
+  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
+  geom_point(size=2) +
+  geom_point(aes(y=unname(quasipoisson2bis.pred)), size=2, color="maroon") +
+  geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
+  coord_cartesian(xlim = c(122, 128)) +
+  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
+                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
+  ggtitle("Prediction Interval 95%") +
+  xlab("Days") +
+  ylab("Daily cases") +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+ -->
+---------------------------------------------------------------------------------------------------------------------
+
 ### Quasi Poisson with `Elapsed time` and `Sex` as predictor for `Cumulative cases`
 
 ```{r qpois3_fit, echo=TRUE, warning=FALSE, results="hold"}
@@ -2588,6 +2687,102 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 ### Prediction interval for test set
 
 Not necessary!
+
+--------------------------------------------------------------------------------------------------------------------
+### Quasi Poisson with `Elapsed time` and `Sex` as predictors for `New cases/day`
+
+```{r qpois3bis_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson3bis <- glm(`New cases/day` ~ `Elapsed time` + Sexo_M,
+                        data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois3bis_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson3bis, which=1)
+pred.qpois3bis <- quasipoisson3bis$fitted.values
+res.st.qpois3bis <- (data1$`Cumulative cases` - pred.qpois3bis)/sqrt(pred.qpois3bis)
+#n=120, k=3, n-k=117
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st.qpois3bis^2)/117))
+quasipoisson3bis.pred <- predict(quasipoisson3bis, newdata = data1[120:126, ], type="response")
+paste("RMSE:", quasipoisson3bis.rmse <- sqrt(mean((quasipoisson3bis.pred - data1$`New cases/day`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson3bis$residuals^2))
+#paste("AIC:", quasipoisson3bis$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson3bis$null.deviance, deviance(quasipoisson3bis)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois3bis_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois3bis <- predict.confidence(quasipoisson3bis, newdata = data1)
+#conf.df_qpois3bis <- predict.glm(poisson3bis, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_qpois3bis <- sum(`New cases/day` >= conf.df_qpois3bis[, 2] & `New cases/day` <= conf.df_qpois3bis[, 3])
+paste("Frequency of coverage:", freq_coverage_qpois3bis <- freq_coverage_qpois3bis/n)
+detach(data1)
+```
+
+```{r qpois3bis_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois3bis$lwr[1:120],
+              ymax = conf.df_qpois3bis$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois3bis$lwr[120:126],
+              ymax = conf.df_qpois3bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois3bis$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson3bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="New cases/day ~ Elapsed time + Sex") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+<!-- #### Prediction interval for test set
+
+```{r qpois3bis_pi, echo=FALSE, warning=FALSE}
+quasipoisson3bis.pi <- glm(`New cases/day` ~ `Elapsed time` + Sexo_M,
+                           data=test_data1, family=quasipoisson)
+test_data1 %>%
+  add_pi(quasipoisson3bis.pi, names=c("lpb", "upb")) %>%
+  ggplot(aes(x=test_data1$`Elapsed time`, y=test_data1$`New cases/day`)) +
+  geom_point(size=2) +
+  geom_point(aes(y=unname(quasipoisson3bis.pred)), size=2, color="maroon") +
+  geom_ribbon(aes(ymin=lpb, ymax=upb), fill = color_scheme_get("red")[[2]], alpha=0.9) +
+  coord_cartesian(xlim = c(122, 128)) +
+  scale_x_discrete(limit = c(122, 123, 124, 125, 126, 127, 128),
+                   labels = c("06-7", "07-7", "08-7", "09-7", "10-7", "11-7", "12-7")) +
+  ggtitle("Prediction Interval 95%") +
+  xlab("Days") +
+  ylab("Daily cases") +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+ -->
+---------------------------------------------------------------------------------------------------------------------
 
 ### Quasi Poisson with `Elapsed time` and `Age group` as predictor for `Cumulative cases`
 
@@ -2661,6 +2856,80 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
 
 Almost like the previous one.. but maybe even here it is not necessary
 
+---------------------------------------------------------------------------------------------------------------------
+
+### Quasi Poisson with `Elapsed time` plus `Age group` as predictors for `New cases/day`
+
+```{r qpois4bis_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson4bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                          `Grupo de edad_31_45` + `Grupo de edad_46_60` +
+                          `Grupo de edad_60_75` + `Grupo de edad_76+`,
+                        data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois4bis_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson4bis, which=1)
+pred.qpois4bis <- quasipoisson4bis$fitted.values
+res.st.qpois4bis <- (data1$`Cumulative cases` - pred.qpois4bis)/sqrt(pred.qpois4bis)
+#n=120, k=7, n-k=113
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st.qpois4bis^2)/113))
+quasipoisson4bis.pred <- predict(quasipoisson4bis, newdata = data1[120:126, ], type="response")
+paste("RMSE:", quasipoisson4bis.rmse <- sqrt(mean((quasipoisson4bis.pred - data1$`New cases/day`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson4bis$residuals^2))
+#paste("AIC:", quasipoisson4bis$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson4bis$null.deviance, deviance(quasipoisson4bis)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois4bis_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois4bis <- predict.confidence(quasipoisson4bis, newdata = data1)
+#conf.df_qpois4bis <- predict.glm(poisson4bis, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_qpois4bis <- sum(`New cases/day` >= conf.df_qpois4bis[, 2] & `New cases/day` <= conf.df_qpois4bis[, 3])
+paste("Frequency of coverage:", freq_coverage_qpois4bis <- freq_coverage_qpois4bis/n)
+detach(data1)
+```
+
+```{r qpois4bis_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois4bis$lwr[1:120],
+              ymax = conf.df_qpois4bis$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois4bis$lwr[120:126],
+              ymax = conf.df_qpois4bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois4bis$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson4bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="New cases/day ~ Elapsed time + Age group") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+---------------------------------------------------------------------------------------------------------------------
+
 ### Quasi Poisson with `Elapsed time` and `Department` as predictor for `Cumulative cases`
 
 ```{r qpois5_fit, echo=TRUE, warning=FALSE, results="hold"}
@@ -2731,6 +3000,83 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
+
+---------------------------------------------------------------------------------------------------------------------
+
+### Quasi Poisson with `Elapsed time` plus `Department` as predictors for `New cases/day`
+
+```{r qpois5bis_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson5bis <- glm(`New cases/day` ~ `Elapsed time` + `Departamento o Distrito_Bogotá D.C.` +
+                          `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                          `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                          `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                          `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                          `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                        data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois5bis_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson5bis, which=1)
+pred.qpois5bis <- quasipoisson5bis$fitted.values
+res.st.qpois5bis <- (data1$`Cumulative cases` - pred.qpois5bis)/sqrt(pred.qpois5bis)
+#n=120, k=13, n-k=107
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st.qpois5bis^2)/107))
+quasipoisson5bis.pred <- predict(quasipoisson5bis, newdata = data1[120:126, ], type="response")
+paste("RMSE:", quasipoisson5bis.rmse <- sqrt(mean((quasipoisson5bis.pred - data1$`New cases/day`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson5bis$residuals^2))
+#paste("AIC:", quasipoisson5bis$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson5bis$null.deviance, deviance(quasipoisson5bis)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois5bis_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois5bis <- predict.confidence(quasipoisson5bis, newdata = data1)
+#conf.df_qpois5bis <- predict.glm(poisson5bis, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_qpois5bis <- sum(`New cases/day` >= conf.df_qpois5bis[, 2] & `New cases/day` <= conf.df_qpois5bis[, 3])
+paste("Frequency of coverage:", freq_coverage_qpois5bis <- freq_coverage_qpois5bis/n)
+detach(data1)
+```
+
+```{r qpois5bis_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois5bis$lwr[1:120],
+              ymax = conf.df_qpois5bis$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois5bis$lwr[120:126],
+              ymax = conf.df_qpois5bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois5bis$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson5bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="New cases/day ~ Elapsed time + Department") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+---------------------------------------------------------------------------------------------------------------------
 
 ### Quasi Poisson with `Elapsed time`, `Age` and `Department` as predictor for `Cumulative cases`
 
@@ -2805,6 +3151,85 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.y = element_text(size = 18))
 ```
 
+--------------------------------------------------------------------------------------------------------------------
+
+### Quasi Poisson with `Elapsed time`, `Age group` and `Department` as predictors for `New cases/day`
+
+```{r qpois6bis_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson6bis <- glm(`New cases/day` ~ `Elapsed time` + `Grupo de edad_19_30` +
+                          `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` +
+                          `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` +
+                          `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                          `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                          `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                          `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                          `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                        data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois6bis_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson6bis, which=1)
+pred.qpois6bis <- quasipoisson6bis$fitted.values
+res.st.qpois6bis <- (data1$`Cumulative cases` - pred.qpois6bis)/sqrt(pred.qpois6bis)
+#n=120, k=18, n-k=102
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st.qpois6bis^2)/102))
+quasipoisson6bis.pred <- predict(quasipoisson6bis, newdata = data1[120:126, ], type="response")
+paste("RMSE:", quasipoisson6bis.rmse <- sqrt(mean((quasipoisson6bis.pred - data1$`New cases/day`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson6bis$residuals^2))
+#paste("AIC:", quasipoisson6bis$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson6bis$null.deviance, deviance(quasipoisson6bis)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois6bis_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois6bis <- predict.confidence(quasipoisson6bis, newdata = data1)
+#conf.df_qpois6bis <- predict.glm(poisson6bis, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_qpois6bis <- sum(`New cases/day` >= conf.df_qpois6bis[, 2] & `New cases/day` <= conf.df_qpois6bis[, 3])
+paste("Frequency of coverage:", freq_coverage_qpois6bis <- freq_coverage_qpois6bis/n)
+detach(data1)
+```
+
+```{r qpois6bis_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois6bis$lwr[1:120],
+              ymax = conf.df_qpois6bis$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois6bis$lwr[120:126],
+              ymax = conf.df_qpois6bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois6bis$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson6bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="New cases/day ~ Elapsed time + Age group + Department") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+---------------------------------------------------------------------------------------------------------------------
+
 ### Quasi Poisson with `Elapsed time`, `Elapsed time^2`, `Age` and `Department` as predictor for `Cumulative cases`
 
 ```{r qpois7_fit, echo=TRUE, warning=FALSE, results="hold"}
@@ -2877,6 +3302,85 @@ ggplot(data1, aes(`Elapsed time`, `Cumulative cases`)) +
         axis.title.x = element_text(size = 18), 
         axis.title.y = element_text(size = 18))
 ```
+
+---------------------------------------------------------------------------------------------------------------------
+
+### Quasi Poisson with `Elapsed time`, `Elapsed time`^2, `Age group` and `Department` as predictors for `New cases/day`
+
+```{r qpois7bis_fit, echo=TRUE, warning=FALSE, results="hold"}
+quasipoisson7bis <- glm(`New cases/day` ~ `Elapsed time` + I(`Elapsed time`^2) + `Grupo de edad_19_30` +
+                          `Grupo de edad_31_45` + `Grupo de edad_46_60` + `Grupo de edad_60_75` +
+                          `Grupo de edad_76+` + `Departamento o Distrito_Bogotá D.C.` +
+                          `Departamento o Distrito_Boyacá` + `Departamento o Distrito_Caldas` +
+                          `Departamento o Distrito_Casanare` + `Departamento o Distrito_Cauca` +
+                          `Departamento o Distrito_Cundinamarca` + `Departamento o Distrito_Meta` +
+                          `Departamento o Distrito_Quindío` + `Departamento o Distrito_Risaralda` +
+                          `Departamento o Distrito_Santander` + `Departamento o Distrito_Tolima`,
+                        data=data1[1:120, ], family=quasipoisson)
+```
+
+```{r qpois7bis_index, echo=FALSE, warning=FALSE, results="hold"}
+plot(quasipoisson7bis, which=1)
+pred.qpois7bis <- quasipoisson7bis$fitted.values
+res.st.qpois7bis <- (data1$`Cumulative cases` - pred.qpois7bis)/sqrt(pred.qpois7bis)
+#n=120, k=19, n-k=101
+print(paste("Estimated overdispersion", est.overdispersion <- sum(res.st.qpois7bis^2)/101))
+quasipoisson7bis.pred <- predict(quasipoisson7bis, newdata = data1[120:126, ], type="response")
+paste("RMSE:", quasipoisson7bis.rmse <- sqrt(mean((quasipoisson7bis.pred - data1$`New cases/day`[120:126])^2)))
+#paste("MSE:", mean(quasipoisson7bis$residuals^2))
+#paste("AIC:", quasipoisson7bis$aic)
+paste(c("Null deviance: ", "Residual deviance:"),
+       round(c(quasipoisson7bis$null.deviance, deviance(quasipoisson7bis)), 2))
+```
+
+#### Predictive accuracy
+
+Predicting with a $95\%$ confidence interval
+
+```{r qpois7bis_pred_acc, echo=FALSE, warning=FALSE}
+attach(data1)
+conf.df_qpois7bis <- predict.confidence(quasipoisson7bis, newdata = data1)
+#conf.df_qpois7bis <- predict.glm(poisson7bis, newdata = as.data.frame(cbind(data1$`Elapsed time`, data1$`Cumulative cases`)), interval = 'confidence')
+n <- 120
+freq_coverage_qpois7bis <- sum(`New cases/day` >= conf.df_qpois7bis[, 2] & `New cases/day` <= conf.df_qpois7bis[, 3])
+paste("Frequency of coverage:", freq_coverage_qpois7bis <- freq_coverage_qpois7bis/n)
+detach(data1)
+```
+
+```{r qpois7bis_pred_acc_plot, echo=FALSE, warning=FALSE}
+ggplot(data1, aes(`Elapsed time`, `New cases/day`)) +
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois7bis$lwr[1:120],
+              ymax = conf.df_qpois7bis$upr[1:120]),
+              data = data1[1:120, ],
+              fill = color_scheme_get("blue")[[2]]) + 
+  geom_ribbon(aes(x = `Elapsed time`, ymin = conf.df_qpois7bis$lwr[120:126],
+              ymax = conf.df_qpois7bis$upr[120:126]),
+              data = data1[120:126, ],
+              fill = color_scheme_get("red")[[2]]) +
+  geom_line(aes(x = `Elapsed time`, y = conf.df_qpois7bis$fit[1:120]),
+              data = data1[1:120, ],
+              color = color_scheme_get("blue")[[4]], 
+              size = 1.1) +
+  geom_line(aes(x= `Elapsed time`, y = quasipoisson7bis.pred),
+              data = data1[120:126, ],
+              color = color_scheme_get("red")[[4]],
+              size = 1.1) +
+  geom_point(aes(x = `Elapsed time`, y = `New cases/day`)) +
+  expand_limits(x = 130) +
+  ggtitle("Quasi Poisson regression", subtitle="New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department") +
+  xlab("Days") + ylab("Daily cases") +
+  scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
+                labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
+  # facet_wrap('reg', scales ='free') +
+  theme(strip.text.x = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(face = "bold",
+        color = "#993333", angle = 45, size = 9),
+        plot.title = element_text(size = 22),
+        axis.title.x = element_text(size = 18), 
+        axis.title.y = element_text(size = 18))
+```
+
+---------------------------------------------------------------------------------------------------------------------
 
 ### Summary table - Quasi Poisson models for `Cumulative cases`
 
