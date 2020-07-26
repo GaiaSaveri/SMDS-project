@@ -974,7 +974,7 @@ test_cases %>%
 
 ### Poisson with `Elapsed time` plus `Elapsed time`^2 as predictor for `Cumulative cases`
 
-```{r pois2, results = "hold", echo=TRUE, warning=FALSE}
+```{r pois2, echo=FALSE, warning=FALSE, results="hold"}
 poisson2 <- glm(`Cumulative cases` ~ `Elapsed time` + I(`Elapsed time`^2),
                   data=data1[1:120, ], family=poisson)
 plot(poisson2, which=1)
@@ -2067,13 +2067,13 @@ Same as before.
 ### Summary table - Poisson models for `Cumulative cases`
 
 ```{r summary_poisson_cumulative, echo=FALSE, warning=FALSE}
-poisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = poisson1$aic, RMSE = poisson1.rmse)
-poisson2.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", poisson2$aic, poisson2.rmse)
-poisson3.summary<-c("Cumulative cases ~ Elapsed time + Sex", poisson3$aic, poisson3.rmse)
-poisson4.summary<-c("Cumulative cases ~ Elapsed time + Age group", poisson4$aic, poisson4.rmse)
-poisson5.summary<-c("Cumulative cases ~ Elapsed time + Department", poisson5$aic, poisson5.rmse)
-poisson6.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", poisson6$aic, poisson6.rmse)
-poisson7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", poisson7$aic, poisson7.rmse)
+poisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = round(poisson1$aic, 2), RMSE = round(poisson1.rmse, 2))
+poisson2.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", round(poisson2$aic, 2), round(poisson2.rmse, 2))
+poisson3.summary<-c("Cumulative cases ~ Elapsed time + Sex", round(poisson3$aic, 2), round(poisson3.rmse, 2))
+poisson4.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(poisson4$aic, 2), round(poisson4.rmse, 2))
+poisson5.summary<-c("Cumulative cases ~ Elapsed time + Department", round(poisson5$aic, 2), round(poisson5.rmse, 2))
+poisson6.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", round(poisson6$aic, 2), round(poisson6.rmse, 2))
+poisson7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", round(poisson7$aic, 2), round(poisson7.rmse, 2))
 
 poisson.cumulative.summary$Model<-as.character(poisson.cumulative.summary$Model)
 poisson.cumulative.summary<-rbind(poisson.cumulative.summary, poisson2.summary,
@@ -2087,13 +2087,13 @@ kable(poisson.cumulative.summary) %>%
 ### Summary table - Poisson models for `New cases/day`
 
 ```{r summary_poisson_cases, echo=FALSE, warning=FALSE}
-poisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = poisson1bis$aic, RMSE = poisson1bis.rmse)
-poisson2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", poisson2bis$aic, poisson2bis.rmse)
-poisson3bis.summary<-c("New cases/day ~ Elapsed time + Sex", poisson3bis$aic, poisson3bis.rmse)
-poisson4bis.summary<-c("New cases/day ~ Elapsed time + Age group", poisson4bis$aic, poisson4bis.rmse)
-poisson5bis.summary<-c("New cases/day ~ Elapsed time + Department", poisson5bis$aic, poisson5bis.rmse)
-poisson6bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", poisson6bis$aic, poisson6bis.rmse)
-poisson7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department", poisson7bis$aic, poisson7bis.rmse)
+poisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = round(poisson1bis$aic, 2), RMSE = round(poisson1bis.rmse, 2))
+poisson2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", round(poisson2bis$aic, 2), round(poisson2bis.rmse, 2))
+poisson3bis.summary<-c("New cases/day ~ Elapsed time + Sex", round(poisson3bis$aic, 2), round(poisson3bis.rmse, 2))
+poisson4bis.summary<-c("New cases/day ~ Elapsed time + Age group", round(poisson4bis$aic, 2), round(poisson4bis.rmse, 2))
+poisson5bis.summary<-c("New cases/day ~ Elapsed time + Department", round(poisson5bis$aic, 2), round(poisson5bis.rmse, 2))
+poisson6bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", round(poisson6bis$aic, 2), round(poisson6bis.rmse, 2))
+poisson7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department", round(poisson7bis$aic, 2), round(poisson7bis.rmse, 2))
 
 poisson.cases.summary$Model<-as.character(poisson.cases.summary$Model)
 poisson.cases.summary<-rbind(poisson.cases.summary,poisson2bis.summary,
@@ -2524,8 +2524,8 @@ Almost like the previous one.. but maybe even here it is not necessary
 ### Summary table - Quasi Poisson models for `Cumulative cases`
 
 ```{r summary_quasi_poisson_cumulative, echo=FALSE, warning=FALSE}
-quasipoisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", RMSE = quasipoisson1.rmse)
-quasipoisson2.summary<-c("Cumulative cases ~ Elapsed time + Age group", quasipoisson2.rmse)
+quasipoisson.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", RMSE = round(quasipoisson1.rmse, 2))
+quasipoisson2.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(quasipoisson2.rmse, 2))
 
 quasipoisson.cumulative.summary$Model<-as.character(quasipoisson.cumulative.summary$Model)
 quasipoisson.cumulative.summary<-rbind(quasipoisson.cumulative.summary, quasipoisson2.summary)
@@ -2537,7 +2537,7 @@ kable(quasipoisson.cumulative.summary) %>%
 ### Summary table - Quasi Poisson models for `New cases/day`
 
 ```{r summary_quasi_poisson_cases, echo=FALSE, warning=FALSE}
-quasipoisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", RMSE = quasipoisson1bis.rmse)
+quasipoisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", RMSE = round(quasipoisson1bis.rmse, 2))
 
 quasipoisson.cases.summary$Model<-as.character(quasipoisson.cases.summary$Model)
 
@@ -3834,13 +3834,13 @@ test_data1 %>%
 ### Summary table - Negative Binomial models for `Cumulative cases`
 
 ```{r summary_nb_cumulative, echo=FALSE, warning=FALSE}
-nb.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = nb1$aic, RMSE = nb1.rmse)
-nb2.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", nb2$aic, nb2.rmse)
-nb3.summary<-c("Cumulative cases ~ Elapsed time + Sex", nb3$aic, nb3.rmse)
-nb4.summary<-c("Cumulative cases ~ Elapsed time + Age group", nb4$aic, nb4.rmse)
-nb5.summary<-c("Cumulative cases ~ Elapsed time + Department", nb5$aic, nb5.rmse)
-nb6.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", nb6$aic, nb6.rmse)
-nb7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", nb7$aic, nb7.rmse)
+nb.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = round(nb1$aic, 2), RMSE = round(nb1.rmse, 2))
+nb2.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", round(nb2$aic, 2), round(nb2.rmse, 2))
+nb3.summary<-c("Cumulative cases ~ Elapsed time + Sex", round(nb3$aic, 2), round(nb3.rmse, 2))
+nb4.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(nb4$aic, 2), round(nb4.rmse, 2))
+nb5.summary<-c("Cumulative cases ~ Elapsed time + Department", round(nb5$aic, 2), round(nb5.rmse, 2))
+nb6.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", round(nb6$aic, 2), round(nb6.rmse, 2))
+nb7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", round(nb7$aic, 2), round(nb7.rmse, 2))
 
 nb.cumulative.summary$Model<-as.character(nb.cumulative.summary$Model)
 nb.cumulative.summary<-rbind(nb.cumulative.summary, nb2.summary, nb3.summary, nb4.summary,
@@ -3854,13 +3854,13 @@ kable(nb.cumulative.summary) %>%
 ### Summary table - Negative Binomial models for `New cases/day`
 
 ```{r summary_nb_cases, echo=FALSE, warning=FALSE}
-nb.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time + Age group + Department", AIC = nb1bis$aic, RMSE = nb1bis.rmse)
-nb2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", nb2bis$aic, nb2bis.rmse)
-nb3bis.summary<-c("New cases/day ~ Elapsed time + Sex", nb3bis$aic, nb3bis.rmse)
-nb4bis.summary<-c("New cases/day ~ Elapsed time + Age group", nb4bis$aic, nb4bis.rmse)
-nb5bis.summary<-c("New cases/day ~ Elapsed time + Department", nb5bis$aic, nb5bis.rmse)
-nb6bis.summary<-c("New cases/day ~ Elapsed time + Department + Age group", nb6bis$aic, nb6bis.rmse)
-nb7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Department + Age group", nb7bis$aic, nb7bis.rmse)
+nb.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time + Age group + Department", AIC = round(nb1bis$aic, 2), RMSE = round(nb1bis.rmse, 2))
+nb2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", round(nb2bis$aic, 2), round(nb2bis.rmse, 2))
+nb3bis.summary<-c("New cases/day ~ Elapsed time + Sex", round(nb3bis$aic, 2), round(nb3bis.rmse, 2))
+nb4bis.summary<-c("New cases/day ~ Elapsed time + Age group", round(nb4bis$aic, 2), round(nb4bis.rmse, 2))
+nb5bis.summary<-c("New cases/day ~ Elapsed time + Department", round(nb5bis$aic, 2), round(nb5bis.rmse, 2))
+nb6bis.summary<-c("New cases/day ~ Elapsed time + Department + Age group", round(nb6bis$aic, 2), round(nb6bis.rmse, 2))
+nb7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Department + Age group", round(nb7bis$aic, 2), round(nb7bis.rmse, 2))
 
 nb.cases.summary$Model<-as.character(nb.cases.summary$Model)
 nb.cases.summary<-rbind(nb.cases.summary, nb2bis.summary, nb3bis.summary, nb4bis.summary,
@@ -5074,13 +5074,13 @@ test_df %>%
 ### Summary table - GAM models for `Cumulative cases`
 
 ```{r summary_gam_cumulative, echo=FALSE, warning=FALSE}
-gam.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = AIC(gam1), RMSE = gam1.rmse)
-gam2.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", AIC(gam2), gam2.rmse)
-gam3.summary<-c("Cumulative cases ~ Elapsed time + Sex", AIC(gam3), gam3.rmse)
-gam4.summary<-c("Cumulative cases ~ Elapsed time + Age group", AIC(gam4), gam4.rmse)
-gam5.summary<-c("Cumulative cases ~ Elapsed time + Department", AIC(gam5), gam5.rmse)
-gam6.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", AIC(gam6), gam6.rmse)
-gam7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", AIC(gam7), gam7.rmse)
+gam.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = round(AIC(gam1), 2), RMSE = round(gam1.rmse, 2))
+gam2.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", round(AIC(gam2), 2), round(gam2.rmse, 2))
+gam3.summary<-c("Cumulative cases ~ Elapsed time + Sex", round(AIC(gam3), 2), round(gam3.rmse, 2))
+gam4.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(AIC(gam4), 2), round(gam4.rmse, 2))
+gam5.summary<-c("Cumulative cases ~ Elapsed time + Department", round(AIC(gam5), 2), round(gam5.rmse, 2))
+gam6.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", round(AIC(gam6), 2), round(gam6.rmse, 2))
+gam7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", round(AIC(gam7), 2), round(gam7.rmse, 2))
 
 gam.cumulative.summary$Model<-as.character(gam.cumulative.summary$Model)
 gam.cumulative.summary<-rbind(gam.cumulative.summary, gam2.summary, gam3.summary,
@@ -5093,13 +5093,13 @@ kable(gam.cumulative.summary) %>%
 ### Summary table - GAM models for `New cases/day`
 
 ```{r summary_gam_cases, echo=FALSE, warning=FALSE}
-gam.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = AIC(gam1bis), RMSE = gam1bis.rmse)
-gam2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", AIC(gam2bis), gam2bis.rmse)
-gam3bis.summary<-c("New cases/day ~ Elapsed time + Sex", AIC(gam3bis), gam3bis.rmse)
-gam4bis.summary<-c("New cases/day ~ Elapsed time + Age group", AIC(gam4bis), gam4bis.rmse)
-gam5bis.summary<-c("New cases/day ~ Elapsed time + Department", AIC(gam5bis), gam5bis.rmse)
-gam6bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", AIC(gam6bis), gam6bis.rmse)
-gam7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department", AIC(gam7bis), gam7bis.rmse)
+gam.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = round(AIC(gam1bis), 2), RMSE = round(gam1bis.rmse, 2))
+gam2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", round(AIC(gam2bis), 2), round(gam2bis.rmse, 2))
+gam3bis.summary<-c("New cases/day ~ Elapsed time + Sex", round(AIC(gam3bis), 2), round(gam3bis.rmse, 2))
+gam4bis.summary<-c("New cases/day ~ Elapsed time + Age group", round(AIC(gam4bis), 2), round(gam4bis.rmse, 2))
+gam5bis.summary<-c("New cases/day ~ Elapsed time + Department", round(AIC(gam5bis), 2), round(gam5bis.rmse, 2))
+gam6bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", round(AIC(gam6bis), 2), round(gam6bis.rmse, 2))
+gam7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department", round(AIC(gam7bis), 2), round(gam7bis.rmse, 2))
 
 gam.cases.summary$Model<-as.character(gam.cases.summary$Model)
 gam.cases.summary<-rbind(gam.cases.summary, gam2bis.summary, gam3bis.summary, gam4bis.summary,
