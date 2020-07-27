@@ -2357,12 +2357,12 @@ ggplot(x1, aes(x=variable, y=value, fill=variable)) +
 
 #### Response variable: Cumulative cases
 ```{r Angela11, echo=TRUE, warning=FALSE}
-anova(poisson1, poisson4, poisson6, test="Chisq")
+anova(poisson1, poisson4, poisson6, poisson7, test="Chisq")
 ```
 
 #### Response variable: New cases/day
 ```{r Angela11ab, echo=TRUE, warning=FALSE}
-anova(poisson1bis, poisson2bis, test="Chisq")
+anova(poisson1bis, poisson2bis, poisson7bis, test="Chisq")
 ```
 
 
@@ -4594,7 +4594,7 @@ kable(nb.cumulative.summary) %>%
 ### Summary table - Negative Binomial models for `New cases/day`
 
 ```{r summary_nb_cases, echo=FALSE, warning=FALSE}
-nb.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time + Age group + Department", AIC = round(nb1bis$aic, 2), RMSE = round(nb1bis.rmse, 2))
+nb.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = round(nb1bis$aic, 2), RMSE = round(nb1bis.rmse, 2))
 nb2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", round(nb2bis$aic, 2), round(nb2bis.rmse, 2))
 nb3bis.summary<-c("New cases/day ~ Elapsed time + Sex", round(nb3bis$aic, 2), round(nb3bis.rmse, 2))
 nb4bis.summary<-c("New cases/day ~ Elapsed time + Age group", round(nb4bis$aic, 2), round(nb4bis.rmse, 2))
@@ -4761,14 +4761,12 @@ ggplot(x1, aes(x=variable, y=value, fill=variable)) +
 #### Response variable: Cumulative cases
 
 ```{r anova_nb, echo=TRUE, warning=FALSE}
-#Applying ANOVA to compare the negative binomial models
-anova(nb1, nb5, nb6)
+anova(nb1, nb4, nb6, nb7, test="Chisq")
 ```
 
 #### Response variable: New cases/day
 ```{r anova_nba, echo=TRUE, warning=FALSE}
-#Applying ANOVA to compare the negative binomial models
-#anova()
+anova(nb1bis, nb4bis, nb6bis, nb7bis, test="Chisq")
 ```
 
 ## GAM 
@@ -5178,7 +5176,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time` and `Age group` as covariate for `New cases/day`
 
 ```{r gam4bis, echo=TRUE, warning=FALSE}
-gam4bis <- gam(New_cases_day ~ s(Elapsed_time) + Grupo_de_edad_19_30 +
+gam4bis <- gam(New_cases_day ~ s(Elapsed_time) + s(Sexo_M) + Grupo_de_edad_19_30 +
                  Grupo_de_edad_31_45 + Grupo_de_edad_46_60 +
                  Grupo_de_edad_60_75 + Grupo_de_edad_76,
                family = poisson(), data = df[1:120,])
@@ -5214,7 +5212,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
               size = 1.1) +
   geom_point(aes(x = Elapsed_time, y = New_cases_day)) +
   expand_limits(x = 130) +
-  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Age group") +
+  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Sex + Age group") +
   xlab("Days") + ylab("Daily cases") +
   scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
                 labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
@@ -5232,7 +5230,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
 ### Gam with `Elapsed time` and `Department` as covariate for `Cumulative cases`
 
 ```{r gam5_fit, echo=TRUE, warning=FALSE, results="hold"}
-gam5 <- gam(Cumulative_cases ~ s(Elapsed_time) + Departamento_o_Distrito_Bogotá_D.C. +
+gam5 <- gam(Cumulative_cases ~ s(Elapsed_time) +  Departamento_o_Distrito_Bogotá_D.C. +
               Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas +
               Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca +
               Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta +
@@ -5292,7 +5290,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time` and `Department` as covariate for `New cases/day`
 
 ```{r gam5bis, echo=TRUE, warning=FALSE}
-gam5bis <- gam(New_cases_day~s(Elapsed_time) + Departamento_o_Distrito_Bogotá_D.C. +
+gam5bis <- gam(New_cases_day~s(Elapsed_time) + s(Sexo_M) + Departamento_o_Distrito_Bogotá_D.C. +
                  Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas +
                  Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca +
                  Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta +
@@ -5334,7 +5332,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
               size = 1.1) +
   geom_point(aes(x = Elapsed_time, y = New_cases_day)) +
   expand_limits(x = 129) +
-  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Department") +
+  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Sex + Department") +
   xlab("Days") + ylab("Daily cases") +
   scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
                 labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
@@ -5410,7 +5408,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time` and `Department` and `Age group` as covariate for `New cases/day`
 
 ```{r gam6bis, echo=TRUE, warning=FALSE}
-gam6bis <- gam(New_cases_day ~ s(Elapsed_time) + Grupo_de_edad_19_30 + Grupo_de_edad_31_45 +
+gam6bis <- gam(New_cases_day ~ s(Elapsed_time) + s(Sexo_M) + Grupo_de_edad_19_30 + Grupo_de_edad_31_45 +
                  Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76 +
                  Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá +
                  Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare +
@@ -5450,7 +5448,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
               size = 1.1) +
   geom_point(aes(x = Elapsed_time, y = New_cases_day)) +
   expand_limits(x = 130) +
-  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Age group + Department") +
+  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Sex + Age group + Department") +
   xlab("Days") + ylab("Daily cases") +
   scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
                 labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
@@ -5526,7 +5524,7 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time`, `Elapsed time^2`, `Age group` and `Department` as covariate for `New cases/day`
 
 ```{r gam7bis_fit, echo=TRUE, warning=FALSE, results="hold"}
-gam7bis <- gam(New_cases_day ~ s(Elapsed_time) + s(I(Elapsed_time^2)) + Grupo_de_edad_19_30 +
+gam7bis <- gam(New_cases_day ~ s(Elapsed_time) + s(I(Elapsed_time^2)) + s(Sexo_M) + Grupo_de_edad_19_30 +
               Grupo_de_edad_31_45 + Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76 +
               Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá +
               Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare +
@@ -5566,7 +5564,7 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
               size = 1.1) +
   geom_point(aes(x = Elapsed_time, y = New_cases_day)) +
   expand_limits(x = 130) +
-  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department") +
+  ggtitle("GAM Model", subtitle="New cases/day ~ Elapsed time + Elapsed time^2 + Sex +  Age group + Department") +
   xlab("Days") + ylab("Daily cases") +
   scale_x_discrete(limit = c(0, 21, 42, 63, 84, 105, 122, 128),
                 labels = c("06-3", "29-3", "19-4", "10-5", "31-5", "21-6", "06-7", "12-7")) +
@@ -5584,13 +5582,14 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
 ### Summary table - GAM models for `Cumulative cases`
 
 ```{r summary_gam_cumulative, echo=FALSE, warning=FALSE}
-gam.cumulative.summary<-data.frame(Model="Cumulative cases ~ Elapsed time", AIC = round(AIC(gam1), 2), RMSE = round(gam1.rmse, 2))
-gam2.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", round(AIC(gam2), 2), round(gam2.rmse, 2))
-gam3.summary<-c("Cumulative cases ~ Elapsed time + Sex", round(AIC(gam3), 2), round(gam3.rmse, 2))
-gam4.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(AIC(gam4), 2), round(gam4.rmse, 2))
-gam5.summary<-c("Cumulative cases ~ Elapsed time + Department", round(AIC(gam5), 2), round(gam5.rmse, 2))
-gam6.summary<-c("Cumulative cases ~ Elapsed time + Age group + Department", round(AIC(gam6), 2), round(gam6.rmse, 2))
-gam7.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Age group + Department", round(AIC(gam7), 2), round(gam7.rmse, 2))
+gam.cumulative.summary<-data.frame(Model="Cumulative cases ~ s(Elapsed time)", AIC = round(AIC(gam1), 2), RMSE = round(gam1.rmse, 2))
+gam2.summary<-c("Cumulative cases ~ s(Elapsed time) + s(Elapsed time)
+                ^2)", round(AIC(gam2), 2), round(gam2.rmse, 2))
+gam3.summary<-c("Cumulative cases ~ s(Elapsed time) + s(Sex)", round(AIC(gam3), 2), round(gam3.rmse, 2))
+gam4.summary<-c("Cumulative cases ~ s(Elapsed time) + Age group", round(AIC(gam4), 2), round(gam4.rmse, 2))
+gam5.summary<-c("Cumulative cases ~ s(Elapsed time) + Department", round(AIC(gam5), 2), round(gam5.rmse, 2))
+gam6.summary<-c("Cumulative cases ~ s(Elapsed time) + Age group + Department", round(AIC(gam6), 2), round(gam6.rmse, 2))
+gam7.summary<-c("Cumulative cases ~ s(Elapsed time) + s(Elapsed time^2) + Age group + Department", round(AIC(gam7), 2), round(gam7.rmse, 2))
 
 gam.cumulative.summary$Model<-as.character(gam.cumulative.summary$Model)
 colnames(gam.cumulative.summary)[1] <- "GAM models for daily cases"
@@ -5604,13 +5603,13 @@ kable(gam.cumulative.summary) %>%
 ### Summary table - GAM models for `New cases/day`
 
 ```{r summary_gam_cases, echo=FALSE, warning=FALSE}
-gam.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", AIC = round(AIC(gam1bis), 2), RMSE = round(gam1bis.rmse, 2))
-gam2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", round(AIC(gam2bis), 2), round(gam2bis.rmse, 2))
-gam3bis.summary<-c("New cases/day ~ Elapsed time + Sex", round(AIC(gam3bis), 2), round(gam3bis.rmse, 2))
-gam4bis.summary<-c("New cases/day ~ Elapsed time + Age group", round(AIC(gam4bis), 2), round(gam4bis.rmse, 2))
-gam5bis.summary<-c("New cases/day ~ Elapsed time + Department", round(AIC(gam5bis), 2), round(gam5bis.rmse, 2))
-gam6bis.summary<-c("New cases/day ~ Elapsed time + Age group + Department", round(AIC(gam6bis), 2), round(gam6bis.rmse, 2))
-gam7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Age group + Department", round(AIC(gam7bis), 2), round(gam7bis.rmse, 2))
+gam.cases.summary<-data.frame(Model="New cases/day ~ s(Elapsed time)", AIC = round(AIC(gam1bis), 2), RMSE = round(gam1bis.rmse, 2))
+gam2bis.summary<-c("New cases/day ~ s(Elapsed time) + s(Elapsed time^2)", round(AIC(gam2bis), 2), round(gam2bis.rmse, 2))
+gam3bis.summary<-c("New cases/day ~ s(Elapsed time) + s(Sex)", round(AIC(gam3bis), 2), round(gam3bis.rmse, 2))
+gam4bis.summary<-c("New cases/day ~ s(Elapsed time) + s(Sex) + Age group", round(AIC(gam4bis), 2), round(gam4bis.rmse, 2))
+gam5bis.summary<-c("New cases/day ~ s(Elapsed time) + s(Sex) + Department", round(AIC(gam5bis), 2), round(gam5bis.rmse, 2))
+gam6bis.summary<-c("New cases/day ~ s(Elapsed time) + s(Sex) + Age group + Department", round(AIC(gam6bis), 2), round(gam6bis.rmse, 2))
+gam7bis.summary<-c("New cases/day ~ s(Elapsed time) + s(Elapsed time^2) + s(Sex) + Age group + Department", round(AIC(gam7bis), 2), round(gam7bis.rmse, 2))
 
 gam.cases.summary$Model<-as.character(gam.cases.summary$Model)
 colnames(gam.cases.summary)[1] <- "GAM models for daily cases"
@@ -5625,17 +5624,14 @@ kable(gam.cases.summary) %>%
 
 #### Response variable: Cumulative cases
 ```{r ANOVAgam, echo=TRUE, warning=FALSE}
-anova(gam1,gam5,gam6, test="Chisq")
+anova(gam1, gam5, gam6, gam7, test="Chisq")
 ```
 
 #### Response variable: New cases/day
 ```{r ANOVAgam2, echo=TRUE, warning=FALSE}
-anova(gam1bis,gam2bis, test="Chisq")
+anova(gam1bis,gam4bis, gam6bis, gam7bis, test="Chisq")
 ```
 
-```{r ANOVAgam3, echo=TRUE, warning=FALSE}
-anova(gam1bis,gam5bis,gam6bis, test="Chisq")
-```
 
 # The Bayesian approach
 
@@ -6404,10 +6400,10 @@ axis(1, c(1:4), c("Poisson", "NB-sl", "NB-ml",
 <img src="stan_figs/looic.png" alt="looic" style="zoom:100%;" class="center"/>
 
 ```{r save/load, include=FALSE}
-setwd("/home/angela/Documenti/Statistical Methods for Data Science/Project/SMDS-project/")
+#setwd("/home/angela/Documenti/Statistical Methods for Data Science/Project/SMDS-project/")
 
 ## save the workspace
-save.image("./data/data.RData")
+#save.image("./data/data.RData")
 
 ## load the workspace
 #load("./data/data.RData")
