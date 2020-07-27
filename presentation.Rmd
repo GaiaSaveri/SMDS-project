@@ -2355,8 +2355,14 @@ ggplot(x1, aes(x=variable, y=value, fill=variable)) +
 
 ### ANOVA to compare the Poisson models
 
+#### Response variable: Cumulative cases
 ```{r Angela11, echo=TRUE, warning=FALSE}
-anova(poisson1, poisson2, poisson3, poisson4, poisson5, poisson6, poisson7, test="Chisq")
+anova(poisson1, poisson4, poisson6, test="Chisq")
+```
+
+#### Response variable: New cases/day
+```{r Angela11ab, echo=TRUE, warning=FALSE}
+anova(poisson1bis, poisson2bis, test="Chisq")
 ```
 
 
@@ -4752,9 +4758,17 @@ ggplot(x1, aes(x=variable, y=value, fill=variable)) +
 
 ### Applying ANOVA to compare the negative binomial models
 
+#### Response variable: Cumulative cases
+
 ```{r anova_nb, echo=TRUE, warning=FALSE}
 #Applying ANOVA to compare the negative binomial models
-anova(nb1, nb2, nb3, nb4, nb5, nb6, nb7)
+anova(nb1, nb5, nb6)
+```
+
+#### Response variable: New cases/day
+```{r anova_nba, echo=TRUE, warning=FALSE}
+#Applying ANOVA to compare the negative binomial models
+#anova()
 ```
 
 ## GAM 
@@ -4954,7 +4968,8 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time` and `Elapsed time^2` as covariate for `New cases/day`
 
 ```{r gam2bis, echo=TRUE, warning=FALSE}
-gam2bis <- gam(New_cases_day~s(Elapsed_time)+I(Elapsed_time^2), family = poisson, data = df[1:120,])
+gam2bis <- gam(New_cases_day ~ s(Elapsed_time) + I(Elapsed_time^2),
+               family = poisson, data = df[1:120,])
 ```
 
 ```{r gam2bis_ind, echo=FALSE, warning=FALSE, results="hold"}
@@ -5057,7 +5072,8 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time` and `Sex` as covariate for `New cases/day`
 
 ```{r gam3bis, echo=TRUE, warning=FALSE}
-gam3bis <- gam(New_cases_day~s(Elapsed_time)+s(Sexo_M), family = poisson(), data = df[1:120,])
+gam3bis <- gam(New_cases_day ~ s(Elapsed_time) + s(Sexo_M),
+               family = poisson(), data = df[1:120,])
 ```
 
 ```{r gam3bis_indexes, echo=FALSE, warning=FALSE, results="hold"}
@@ -5162,8 +5178,10 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time` and `Age group` as covariate for `New cases/day`
 
 ```{r gam4bis, echo=TRUE, warning=FALSE}
-#fit, predict, intervals
-gam4bis <- gam(New_cases_day~s(Elapsed_time)+s(Sexo_M)+Grupo_de_edad_19_30 + Grupo_de_edad_31_45 + Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76, family = poisson(), data = df[1:120,])
+gam4bis <- gam(New_cases_day ~ s(Elapsed_time) + Grupo_de_edad_19_30 +
+                 Grupo_de_edad_31_45 + Grupo_de_edad_46_60 +
+                 Grupo_de_edad_60_75 + Grupo_de_edad_76,
+               family = poisson(), data = df[1:120,])
 ```
 
 ```{r gam4bis_index, echo=FALSE, warning=FALSE, results="hold"}
@@ -5224,6 +5242,7 @@ gam5 <- gam(Cumulative_cases ~ s(Elapsed_time) + Departamento_o_Distrito_Bogotá
 ```
 
 ```{r gam5_inedx, echo=FALSE, warning=FALSE, results="hold"}
+gam.check(gam5, old.style=TRUE, select=2)
 gam5.pred<-predict(gam5, newdata=df[120:126,], type="response")
 paste("RMSE:", gam5.rmse <- sqrt(mean((gam5.pred - df$Cumulative_cases[120:126])^2)))
 paste("AIC:", AIC(gam5))
@@ -5235,7 +5254,9 @@ train.upr.gam5<-gam5$fitted.values + 1.96 * se.gam5.train
 se.gam5.test<-predict(gam5, se=TRUE, df[120:126,])$se.fit
 test.lwr.gam5<-gam5.pred - 1.96*se.gam5.test
 test.upr.gam5<-gam5.pred + 1.96*se.gam5.test
+```
 
+```{r gam5_pred_acc_plot, echo=FALSE, warning=FALSE, results="hold"}
 ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
   geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam5, ymax = train.upr.gam5),
               data = df[1:120, ],
@@ -5271,11 +5292,17 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time` and `Department` as covariate for `New cases/day`
 
 ```{r gam5bis, echo=TRUE, warning=FALSE}
-#fit, predict, intervals
-gam5bis <- gam(New_cases_day~s(Elapsed_time)+s(Sexo_M)+Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca + Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta + Departamento_o_Distrito_Quindío + Departamento_o_Distrito_Risaralda + Departamento_o_Distrito_Santander + Departamento_o_Distrito_Tolima, family = poisson(), data = df[1:120,])
+gam5bis <- gam(New_cases_day~s(Elapsed_time) + Departamento_o_Distrito_Bogotá_D.C. +
+                 Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas +
+                 Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca +
+                 Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta +
+                 Departamento_o_Distrito_Quindío + Departamento_o_Distrito_Risaralda +
+                 Departamento_o_Distrito_Santander + Departamento_o_Distrito_Tolima,
+               family = poisson(), data = df[1:120,])
 ```
 
 ```{r gam5bis_index, echo=FALSE, warning=FALSE, results="hold"}
+gam.check(gam5bis, old.style=TRUE, select=2)
 gam5bis.pred<-predict(gam5bis, newdata=df[120:126,], type="response")
 paste("RMSE:", gam5bis.rmse <- sqrt(mean((gam5bis.pred - df$New_cases_day[120:126])^2)))
 paste("AIC:", AIC(gam5bis))
@@ -5287,7 +5314,9 @@ train.upr.gam5bis<-gam5bis$fitted.values + 1.96 * se.gam5bis.train
 se.gam5bis.test<-predict(gam5bis, se=TRUE, df[120:126,])$se.fit
 test.lwr.gam5bis<-gam5bis.pred - 1.96*se.gam5bis.test
 test.upr.gam5bis<-gam5bis.pred + 1.96*se.gam5bis.test
+```
 
+```{r gam5bis_pred_acc_plot, echo=FALSE, warning=FALSE, results="hold"}
 ggplot(df, aes(Elapsed_time, New_cases_day)) +
   geom_ribbon(aes(x = Elapsed_time, ymin = train.lwr.gam5bis, ymax = train.upr.gam5bis),
               data = df[1:120, ],
@@ -5323,7 +5352,6 @@ ggplot(df, aes(Elapsed_time, New_cases_day)) +
 ### Gam with `Elapsed time`, `Age group` and `Department` as covariate for `Cumulative cases`
 
 ```{r gam6_fit, echo=TRUE, warning=FALSE, results="hold"}
-#fit, predict, intervals
 gam6 <- gam(Cumulative_cases ~ s(Elapsed_time) + Grupo_de_edad_19_30 + Grupo_de_edad_31_45 +
               Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76 +
               Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá +
@@ -5382,8 +5410,14 @@ ggplot(df, aes(Elapsed_time, Cumulative_cases)) +
 ### Gam with `Elapsed time` and `Department` and `Age group` as covariate for `New cases/day`
 
 ```{r gam6bis, echo=TRUE, warning=FALSE}
-#fit, predict, intervals
-gam6bis <- gam(New_cases_day~s(Elapsed_time)+s(Sexo_M)+Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá + Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare + Departamento_o_Distrito_Cauca + Departamento_o_Distrito_Cundinamarca + Departamento_o_Distrito_Meta + Departamento_o_Distrito_Quindío + Departamento_o_Distrito_Risaralda + Departamento_o_Distrito_Santander + Departamento_o_Distrito_Tolima + Grupo_de_edad_19_30 + Grupo_de_edad_31_45 + Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76, family = poisson(), data = df[1:120,])
+gam6bis <- gam(New_cases_day ~ s(Elapsed_time) + Grupo_de_edad_19_30 + Grupo_de_edad_31_45 +
+                 Grupo_de_edad_46_60 + Grupo_de_edad_60_75 + Grupo_de_edad_76 +
+                 Departamento_o_Distrito_Bogotá_D.C. + Departamento_o_Distrito_Boyacá +
+                 Departamento_o_Distrito_Caldas + Departamento_o_Distrito_Casanare +
+                 Departamento_o_Distrito_Cauca + Departamento_o_Distrito_Cundinamarca +
+                 Departamento_o_Distrito_Meta + Departamento_o_Distrito_Quindío +
+                 Departamento_o_Distrito_Risaralda + Departamento_o_Distrito_Santander +
+                 Departamento_o_Distrito_Tolima, family = poisson(), data = df[1:120,])
 ```
 
 ```{r gam6bis_index, echo=FALSE, warning=FALSE, results="hold"}
@@ -5585,6 +5619,22 @@ gam.cases.summary<-rbind(gam.cases.summary, gam2bis.summary, gam3bis.summary, ga
 
 kable(gam.cases.summary) %>%
   kable_styling(bootstrap_options = "striped")
+```
+
+### ANOVA to compare the GAM models
+
+#### Response variable: Cumulative cases
+```{r ANOVAgam, echo=TRUE, warning=FALSE}
+anova(gam1,gam5,gam6, test="Chisq")
+```
+
+#### Response variable: New cases/day
+```{r ANOVAgam2, echo=TRUE, warning=FALSE}
+anova(gam1bis,gam2bis, test="Chisq")
+```
+
+```{r ANOVAgam3, echo=TRUE, warning=FALSE}
+anova(gam1bis,gam5bis,gam6bis, test="Chisq")
 ```
 
 # The Bayesian approach
