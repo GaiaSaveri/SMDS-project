@@ -3396,12 +3396,12 @@ kable(quasipoisson.cumulative.summary) %>%
 
 ```{r summary_quasi_poisson_cases, echo=FALSE, warning=FALSE}
 quasipoisson.cases.summary<-data.frame(Model="New cases/day ~ Elapsed time", RMSE = round(quasipoisson1bis.rmse, 2))
-quasipoisson2bis.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2", round(quasipoisson2bis.rmse, 2))
-quasipoisson3bis.summary<-c("Cumulative cases ~ Elapsed time + Sex", round(quasipoisson3bis.rmse, 2))
-quasipoisson4bis.summary<-c("Cumulative cases ~ Elapsed time + Age group", round(quasipoisson4bis.rmse, 2))
-quasipoisson5bis.summary<-c("Cumulative cases ~ Elapsed time + Department", round(quasipoisson5bis.rmse, 2))
-quasipoisson6bis.summary<-c("Cumulative cases ~ Elapsed time + Department + Age group", round(quasipoisson6bis.rmse, 2))
-quasipoisson7bis.summary<-c("Cumulative cases ~ Elapsed time + Elapsed time^2 + Department + Age group", round(quasipoisson7bis.rmse, 2))
+quasipoisson2bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2", round(quasipoisson2bis.rmse, 2))
+quasipoisson3bis.summary<-c("New cases/day ~ Elapsed time + Sex", round(quasipoisson3bis.rmse, 2))
+quasipoisson4bis.summary<-c("New cases/day ~ Elapsed time + Age group", round(quasipoisson4bis.rmse, 2))
+quasipoisson5bis.summary<-c("New cases/day ~ Elapsed time + Department", round(quasipoisson5bis.rmse, 2))
+quasipoisson6bis.summary<-c("New cases/day ~ Elapsed time + Department + Age group", round(quasipoisson6bis.rmse, 2))
+quasipoisson7bis.summary<-c("New cases/day ~ Elapsed time + Elapsed time^2 + Department + Age group", round(quasipoisson7bis.rmse, 2))
 
 quasipoisson.cases.summary$Model<-as.character(quasipoisson.cases.summary$Model)
 colnames(quasipoisson.cases.summary)[1] <- "Quasi Poisson models for daily cases"
