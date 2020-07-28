@@ -21,8 +21,6 @@ parameters {
 }
 transformed parameters {
   real phi = inv(inv_phi);
-  //reparametrization
-  //vector[J] alpha_d = mu + dep_data * zeta + sigma_alpha * alpha;
 }
 model {
   //alpha ~ normal(0,1);

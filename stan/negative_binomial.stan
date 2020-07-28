@@ -15,7 +15,6 @@ model {
   vector[N] eta = alpha + beta * time;
   alpha ~ normal(0, 10);
   beta ~ normal(0, 2.5);
-  //inv_phi ~ normal(0, 1);
   inv_phi ~ cauchy(0., 5);
   
   cases ~ neg_binomial_2_log(eta, phi);

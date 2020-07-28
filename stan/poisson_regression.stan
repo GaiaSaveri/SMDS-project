@@ -10,12 +10,9 @@ parameters {
 model {
   beta ~ normal(0.25, 1);
   alpha ~ normal(log(4), 1);
-  
-  // poisson_log(eta) is more efficient and stable alternative to poisson(exp(eta))
   cases ~ poisson_log(alpha + beta * time);
 } 
 generated quantities {
-  // sample predicted values from the model for posterior predictive checks
   int<lower=0> y_rep[N];
   vector[N] log_lik;
   for (n in 1:N) {

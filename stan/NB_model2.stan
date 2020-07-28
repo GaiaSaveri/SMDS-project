@@ -6,8 +6,7 @@ data {
 }
 parameters {
   real<lower=0> inv_phi;   
-  real beta_t; //time coefficient               
-  //real beta_d; 
+  real beta_t; //time coefficient  
   real beta_a; //age coefficient
   real alpha;            
   real<lower=0> sigma; //sd of alpha
@@ -28,18 +27,13 @@ model {
   inv_phi ~ cauchy(0., 5);
   
   cases ~ neg_binomial_2_log(eta, phi);
-  //alpha ~ normal(mu, sigma);
-  //sigma ~ normal(0,1);
-  //mu ~ normal(log(4), 1);
-  
-  //cases ~ neg_binomial_2_log(alpha+beta_t*time+beta_a*age, phi);
 } 
 generated quantities {
   int y_rep[N];
   vector[N] log_lik;
   for (n in 1:N) {
     real eta_n = alpha + beta_t * time[n] + beta_a * age[n];
-    y_rep[n] = neg_binomial_2_safe_rng(eta_n, phi);
+    y_rep[n] = neg_binomial_2_rng(eta_n, phi);
     log_lik[n] = neg_binomial_2_log_lpmf(cases[n]|eta_n, phi);  
   }
 }
