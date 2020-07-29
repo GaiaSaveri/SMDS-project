@@ -5630,7 +5630,7 @@ anova(gam1, gam5, gam6, gam7, test="Chisq")
 
 #### Response variable: New cases/day
 ```{r ANOVAgam2, echo=TRUE, warning=FALSE}
-anova(gam1bis,gam4bis, gam6bis, gam7bis, test="Chisq")
+anova(gam1bis,gam5bis, gam6bis, gam7bis, test="Chisq")
 ```
 
 
